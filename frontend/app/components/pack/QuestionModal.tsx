@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Modal from "../Modal";
-import { Question } from "./PackEditor";
+import { Question, QuestionType } from "./PackEditor";
 import { toast } from "react-toastify";
 
 export default function QuestionModal({
@@ -18,12 +18,10 @@ export default function QuestionModal({
 }) {
   const [value, setValue] = useState(question.value);
   const [text, setText] = useState(question.text);
-  const [attachment, setAttachment] = useState<{
-    mediaType: "image" | "audio" | "video";
-    contentUrl: string;
-  } | null>(question.attachment);
-  const [answers, setAnswers] = useState<string[]>(question.answers);
-  const [comment, setComment] = useState<string | null>(question.comment);
+  const [attachment, setAttachment] = useState(question.attachment);
+  const [type, setType] = useState(question.type);
+  const [answers, setAnswers] = useState(question.answers);
+  const [comment, setComment] = useState(question.comment);
 
   const [answerInput, setAnswerInput] = useState("");
 
@@ -58,6 +56,7 @@ export default function QuestionModal({
         value: numValue,
         text,
         attachment,
+        type,
         answers,
         comment,
       });
@@ -69,7 +68,7 @@ export default function QuestionModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={close}>
+    <Modal isOpen={isOpen} onClose={close} closeByClickingOutside>
       <h3 className="text-base/7 font-medium">Edit question</h3>
 
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-2">
@@ -79,10 +78,15 @@ export default function QuestionModal({
             <input
               className="w-full h-8 rounded-md mt-1 p-1 text-black"
               type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               placeholder="Value"
               name="value"
               value={value}
-              onChange={(e) => setValue(Number(e.target.value))}
+              onChange={(e) => {
+                const onlyNums = e.target.value.replace(/[^0-9]/g, '');
+                setValue(Number(onlyNums));
+              }}
               required
               readOnly={readOnly}
             />
@@ -99,6 +103,20 @@ export default function QuestionModal({
               required
               readOnly={readOnly}
             />
+          </label>
+          <label>
+            <p className="text-sm font-medium">Type</p>
+            <select
+              className="w-48 h-8 mt-1 p-0.5 rounded-md text-black"
+              value={type}
+              onChange={(e) =>
+                setType(e.target.value as QuestionType)
+              }
+            >
+              <option value="regular">Regular</option>
+              <option value="catInBag">Cat in bag</option>
+              <option value="auction">Auction</option>
+            </select>
           </label>
           <div className="flex flex-col gap-2">
             <p className="text-sm font-medium">Answers</p>
@@ -131,7 +149,7 @@ export default function QuestionModal({
                   value={answerInput}
                   onChange={(e) => setAnswerInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
+                    if (e.code !== "Enter") return;
                     setAnswers((answers) => [...answers, answerInput]);
                     setAnswerInput("");
                   }}
@@ -169,12 +187,15 @@ export default function QuestionModal({
               type="checkbox"
               name="hasAttachment"
               checked={!!attachment}
-              onChange={readOnly ? undefined : (e) =>
-                setAttachment(
-                  e.target.checked
-                    ? { mediaType: "image", contentUrl: "" }
-                    : null
-                )
+              onChange={
+                readOnly
+                  ? undefined
+                  : (e) =>
+                      setAttachment(
+                        e.target.checked
+                          ? { mediaType: "image", contentUrl: "" }
+                          : null
+                      )
               }
             />
           </label>

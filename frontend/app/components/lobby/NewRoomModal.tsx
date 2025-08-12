@@ -4,51 +4,46 @@ import { useState, FormEvent, useMemo, useEffect } from "react";
 import Modal from "../Modal";
 import { useDebouncedCallback } from "use-debounce";
 import { useRouter } from "next/navigation";
-import { ErrorDTO, isError } from "@/middleware";
+import { ErrorBody, isError } from "@/middleware";
+import { toast } from "react-toastify";
+import { createRoom, getPacksPreviews } from "@/app/actions";
 
 export type PackPreview = { id: string; name: string };
-type CreateRoomParams = {
+export type CreateRoomParams = {
   name: string;
   packId: string;
   options: {
     maxPlayers: number;
     type: string;
     password?: string;
-    thinkingTime: number;
-    thinkingTimeFinal: number;
-    isFalseStartAllowed: boolean;
+    questionThinkingTime: number;
+    answerThinkingTime: number;
+    questionThinkingTimeFinal: number;
+    falseStartAllowed: boolean;
   };
 };
-
-const FILTER_QUERY_PARAM = "filter";
-
-const getPacksPreview = async (packFilter: string) => {
-  const params = new URLSearchParams();
-  params.set(FILTER_QUERY_PARAM, packFilter);
-  const resp = await fetch(
-    `api/rest/packsPreview?${params.toString()}`,
-  ).catch(console.log);
-  const packs: PackPreview[] | ErrorDTO = await resp?.json();
-  if (isError(packs)) throw new Error(packs.error);
-  return packs;
-}
 
 export default function NewRoomModal({
   isOpen,
   close,
   fixedPack,
+  toastContainerId,
 }: {
   isOpen: boolean;
   close: () => void;
   fixedPack?: PackPreview;
+  toastContainerId: string;
 }) {
   const router = useRouter();
-  const [pack, setPack] = useState<PackPreview>(fixedPack ?? { id: "", name: "" });
+  const [pack, setPack] = useState<PackPreview>(
+    fixedPack ?? { id: "", name: "" }
+  );
   const [packs, setPacks] = useState<PackPreview[]>([]);
   const [maxPlayers, setMaxPlayers] = useState(4);
   const [privacyType, setPrivacyType] = useState("public");
-  const [thinkingTime, setThinkingTime] = useState(10);
-  const [thinkingTimeFinal, setThinkingTimeFinal] = useState(60);
+  const [questionThinkingTime, setQuestionThinkingTime] = useState(10);
+  const [answerThinkingTime, setAnswerThinkingTime] = useState(10);
+  const [questionThinkingTimeFinal, setQuestionThinkingTimeFinal] = useState(60);
 
   useEffect(() => {
     setPack(fixedPack ?? { id: "", name: "" });
@@ -56,8 +51,13 @@ export default function NewRoomModal({
 
   const fetchPacks = useDebouncedCallback(async (packFilter: string) => {
     if (!packFilter) return;
-    const packs = await getPacksPreview(packFilter);
-    setPacks(packs);
+    try {
+      const packs = await getPacksPreviews(packFilter);
+      setPacks(packs);
+    } catch (error) {
+      if (error instanceof Error)
+        toast.error(error.message, { containerId: toastContainerId });
+    }
   }, 500);
 
   const onPackInputChange = (packFilter: string) => {
@@ -76,27 +76,23 @@ export default function NewRoomModal({
         maxPlayers,
         type: privacyType,
         password: data.password?.toString(),
-        thinkingTime,
-        thinkingTimeFinal,
-        isFalseStartAllowed: data.isFalseStartAllowed === "on",
+        questionThinkingTime,
+        answerThinkingTime,
+        questionThinkingTimeFinal,
+        falseStartAllowed: data.falseStartAllowed === "on",
       },
     };
 
     close();
-    const resp = await fetch("api/rest/room", {
-      method: "POST",
-      body: JSON.stringify(params),
-    });
-    const obj: { id: string; } | ErrorDTO = await resp?.json();
-    if (isError(obj)) throw new Error(obj.error);
+    const id = await createRoom(params)
 
     const pwd = params.options.password;
-    const url = `/room/${obj.id}${pwd ? `?password=${pwd}` : ""}`;
+    const url = `/rooms/${id}${pwd ? `?password=${pwd}` : ""}`;
     router.push(url);
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={close}>
+    <Modal isOpen={isOpen} onClose={close} closeByClickingOutside>
       <h3 className="text-base/7 font-medium">Create new room</h3>
       <form method="dialog" action="" onSubmit={onSubmit}>
         <div className="flex flex-col sm:flex-row gap-2 mt-2">
@@ -191,31 +187,45 @@ export default function NewRoomModal({
               />
             </label>
             <label>
-              <p className="text-sm font-medium">Thinking Time</p>
+              <p className="text-sm font-medium">Question Thinking Time</p>
               <p className="text-center text-sm font-semibold">
-                {thinkingTime}
+                {questionThinkingTime}
               </p>
               <input
                 className="w-full"
                 type="range"
                 min="1"
                 max="30"
-                value={thinkingTime}
-                onChange={(e) => setThinkingTime(Number(e.target.value))}
+                value={questionThinkingTime}
+                onChange={(e) => setQuestionThinkingTime(Number(e.target.value))}
               />
             </label>
             <label>
-              <p className="text-sm font-medium">Thinking Time Final</p>
+              <p className="text-sm font-medium">Answer Thinking Time</p>
               <p className="text-center text-sm font-semibold">
-                {thinkingTimeFinal}
+                {answerThinkingTime}
+              </p>
+              <input
+                className="w-full"
+                type="range"
+                min="1"
+                max="30"
+                value={answerThinkingTime}
+                onChange={(e) => setAnswerThinkingTime(Number(e.target.value))}
+              />
+            </label>
+            <label>
+              <p className="text-sm font-medium">Question Thinking Time Final</p>
+              <p className="text-center text-sm font-semibold">
+                {questionThinkingTimeFinal}
               </p>
               <input
                 className="w-full"
                 type="range"
                 min="1"
                 max="60"
-                value={thinkingTimeFinal}
-                onChange={(e) => setThinkingTimeFinal(Number(e.target.value))}
+                value={questionThinkingTimeFinal}
+                onChange={(e) => setQuestionThinkingTimeFinal(Number(e.target.value))}
               />
             </label>
             <label>
@@ -223,7 +233,7 @@ export default function NewRoomModal({
               <input
                 className="w-full h-4"
                 type="checkbox"
-                name="isFalseStartAllowed"
+                name="falseStartAllowed"
                 defaultChecked
               />
             </label>

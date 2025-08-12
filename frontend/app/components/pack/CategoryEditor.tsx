@@ -60,6 +60,7 @@ export default function CategoryEditor({
         value: 0,
         text: "",
         attachment: null,
+        type: "regular",
         answers: [],
         comment: null,
       });
@@ -160,109 +161,115 @@ export default function CategoryEditor({
           </>
         )}
       </div>
-      <div className="flex justify-center mt-4">
-        <table className="border">
-          <thead>
-            <tr>
-              <th className="p-2 border"></th>
-              {category.questions.map((question, questionIndex) => (
-                <th
-                  className="p-2 border text-xl font-bold"
-                  key={questionIndex}
-                >
-                  {question.value}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th className="p-2 border">{category.name}</th>
-              {category.questions.map((question, questionIndex) => (
-                <td className="p-2 border" align="center" key={questionIndex}>
-                  <button
-                    className="p-2 aspect-square rounded primary"
-                    type="button"
-                    onClick={() =>
-                      setQuestionModal({
-                        isOpen: true,
-                        question,
-                        roundIndex,
-                        categoryIndex,
-                        questionIndex,
-                      })
-                    }
-                  >
-                    Q{questionIndex + 1}
-                  </button>
-                </td>
-              ))}
-            </tr>
-            {!readOnly && (
+      {category.questions.length > 0 && (
+        <div className="flex justify-center mt-4">
+          <table className="border">
+            <thead>
               <tr>
-                <td className="p-2 border"></td>
+                <th className="p-2 border"></th>
                 {category.questions.map((question, questionIndex) => (
-                  <td className="p-2 border" key={questionIndex}>
+                  <th
+                    className="p-2 border text-xl font-bold"
+                    key={questionIndex}
+                  >
+                    {question.value}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th className="p-2 border">{category.name}</th>
+                {category.questions.map((question, questionIndex) => (
+                  <td className="p-2 border" align="center" key={questionIndex}>
                     <button
-                      className="h-8 aspect-square px-2 py-1 border rounded-l"
-                      type="button"
-                      onClick={() => {
-                        if (questionIndex === 0) return;
-                        const questionBefore =
-                          pack.rounds[roundIndex].categories[categoryIndex]
-                            .questions[questionIndex - 1];
-                        pack.rounds[roundIndex].categories[
-                          categoryIndex
-                        ].questions[questionIndex - 1] = question;
-                        pack.rounds[roundIndex].categories[
-                          categoryIndex
-                        ].questions[questionIndex] = questionBefore;
-                        setPack({ ...pack });
-                      }}
-                    >
-                      <IoIosArrowBack size="auto" />
-                    </button>
-                    <button
-                      className="h-8 aspect-square px-2 py-1 border-t border-b text-red-600"
+                      className="p-2 aspect-square rounded primary"
                       type="button"
                       onClick={() =>
-                        deleteQuestion(roundIndex, categoryIndex, questionIndex)
+                        setQuestionModal({
+                          isOpen: true,
+                          question,
+                          roundIndex,
+                          categoryIndex,
+                          questionIndex,
+                        })
                       }
                     >
-                      <FaTrashCan size="auto" />
-                    </button>
-                    <button
-                      className="h-8 aspect-square px-2 py-1 border rounded-r"
-                      type="button"
-                      onClick={() => {
-                        if (
-                          questionIndex ===
-                          pack.rounds[roundIndex].categories[categoryIndex]
-                            .questions.length -
-                            1
-                        )
-                          return;
-                        const questionAfter =
-                          pack.rounds[roundIndex].categories[categoryIndex]
-                            .questions[questionIndex + 1];
-                        pack.rounds[roundIndex].categories[
-                          categoryIndex
-                        ].questions[questionIndex + 1] = question;
-                        pack.rounds[roundIndex].categories[
-                          categoryIndex
-                        ].questions[questionIndex] = questionAfter;
-                        setPack({ ...pack });
-                      }}
-                    >
-                      <IoIosArrowForward size="auto" />
+                      Q{questionIndex + 1}
                     </button>
                   </td>
                 ))}
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              {!readOnly && (
+                <tr>
+                  <td className="p-2 border"></td>
+                  {category.questions.map((question, questionIndex) => (
+                    <td className="p-2 border" key={questionIndex}>
+                      <button
+                        className="h-8 aspect-square px-2 py-1 border rounded-l"
+                        type="button"
+                        onClick={() => {
+                          if (questionIndex === 0) return;
+                          const questionBefore =
+                            pack.rounds[roundIndex].categories[categoryIndex]
+                              .questions[questionIndex - 1];
+                          pack.rounds[roundIndex].categories[
+                            categoryIndex
+                          ].questions[questionIndex - 1] = question;
+                          pack.rounds[roundIndex].categories[
+                            categoryIndex
+                          ].questions[questionIndex] = questionBefore;
+                          setPack({ ...pack });
+                        }}
+                      >
+                        <IoIosArrowBack size="auto" />
+                      </button>
+                      <button
+                        className="h-8 aspect-square px-2 py-1 border-t border-b text-red-600"
+                        type="button"
+                        onClick={() =>
+                          deleteQuestion(
+                            roundIndex,
+                            categoryIndex,
+                            questionIndex
+                          )
+                        }
+                      >
+                        <FaTrashCan size="auto" />
+                      </button>
+                      <button
+                        className="h-8 aspect-square px-2 py-1 border rounded-r"
+                        type="button"
+                        onClick={() => {
+                          if (
+                            questionIndex ===
+                            pack.rounds[roundIndex].categories[categoryIndex]
+                              .questions.length -
+                              1
+                          )
+                            return;
+                          const questionAfter =
+                            pack.rounds[roundIndex].categories[categoryIndex]
+                              .questions[questionIndex + 1];
+                          pack.rounds[roundIndex].categories[
+                            categoryIndex
+                          ].questions[questionIndex + 1] = question;
+                          pack.rounds[roundIndex].categories[
+                            categoryIndex
+                          ].questions[questionIndex] = questionAfter;
+                          setPack({ ...pack });
+                        }}
+                      >
+                        <IoIosArrowForward size="auto" />
+                      </button>
+                    </td>
+                  ))}
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }

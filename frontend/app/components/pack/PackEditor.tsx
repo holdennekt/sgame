@@ -8,8 +8,9 @@ import { toast, ToastContainer } from "react-toastify";
 import { usePathname, useRouter } from "next/navigation";
 import RoundEditor from "./RoundEditor";
 import Accordion from "../Accordion";
-import FinalCategoryModal from "./FinalCategoryModal";
 import Link from "next/link";
+import FinalRoundCategoryModal from "./FinalRoundCategoryModal";
+import { FaTrashCan } from "react-icons/fa6";
 
 export type PackDTO = {
   name: string;
@@ -28,15 +29,32 @@ export type Answer = {
   answers: string[];
   comment: string | null;
 };
-export type Question = HiddenQuestion & Answer;
+export type QuestionType = "regular" | "catInBag" | "auction";
+export type Question = HiddenQuestion & { type: QuestionType } & Answer;
+
+const dummyQuestion: Question = {
+  index: 0,
+  value: 0,
+  text: "",
+  attachment: null,
+  type: "regular",
+  answers: [],
+  comment: null,
+};
+
+export const isQuestion = (obj: unknown): obj is Question => {
+  if (typeof obj !== "object" || obj === null) return false;
+  return Object.keys(dummyQuestion).every((key) => Object.hasOwn(obj, key));
+};
+
 export type FinalRound = {
-  categories: FinalCategory[];
+  categories: FinalRoundCategory[];
 };
-export type FinalCategory = {
+export type FinalRoundCategory = {
   name: string;
-  question: FinalQuestion;
+  question: FinalRoundQuestion;
 };
-export type FinalQuestion = Answer & {
+export type FinalRoundQuestion = Answer & {
   text: string;
   attachment: {
     mediaType: "image" | "audio" | "video";
@@ -60,11 +78,12 @@ export default function PackEditor({
     initialPack ?? {
       name: "",
       type: "public",
-      rounds: [{ name: "", categories: [] }],
+      rounds: [{ name: "Round 1", categories: [] }],
       finalRound: { categories: [] },
     }
   );
-  const [finalCategoryNameInput, setFinalCategoryNameInput] = useState("");
+  const [finalRoundCategoryNameInput, setFinalRoundCategoryNameInput] =
+    useState("");
   const [questionModal, setQuestionModal] = useState<{
     isOpen: boolean;
     roundIndex: number;
@@ -81,14 +100,15 @@ export default function PackEditor({
       value: 0,
       text: "",
       attachment: null,
+      type: "regular",
       answers: [],
       comment: null,
     },
   });
-  const [finalCategoryModal, setFinalCategoryModal] = useState<{
+  const [finalRoundCategoryModal, setFinalCategoryModal] = useState<{
     isOpen: boolean;
     index: number;
-    category: FinalCategory;
+    category: FinalRoundCategory;
   }>({
     isOpen: false,
     index: -1,
@@ -104,7 +124,10 @@ export default function PackEditor({
   });
 
   const addRound = () => {
-    pack.rounds.push({ name: "", categories: [] });
+    pack.rounds.push({
+      name: `Round ${pack.rounds.length + 1}`,
+      categories: [],
+    });
     setPack({ ...pack });
   };
 
@@ -119,7 +142,7 @@ export default function PackEditor({
     setPack({ ...pack });
   };
 
-  const addFinalCategory = (name: string) => {
+  const addFinalRoundCategory = (name: string) => {
     pack.finalRound.categories.push({
       name,
       question: { text: "", attachment: null, answers: [], comment: null },
@@ -127,9 +150,21 @@ export default function PackEditor({
     setPack({ ...pack });
   };
 
-  const changeFinalCategory = (index: number, category: FinalCategory) => {
+  const changeFinalRoundCategory = (
+    index: number,
+    category: FinalRoundCategory
+  ) => {
     pack.finalRound.categories[index] = category;
     setPack({ ...pack });
+  };
+
+  const deleteFinalRoundCategory = (categoryIndex: number) => {
+    setPack((pack) => {
+      pack.finalRound.categories = pack.finalRound.categories.filter(
+        (c, i) => categoryIndex !== i
+      );
+      return { ...pack };
+    });
   };
 
   const onSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
@@ -198,7 +233,7 @@ export default function PackEditor({
         </div>
         <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
           {pack.rounds.map((round, roundIndex) => (
-            <Accordion title={`Round ${roundIndex + 1}`} key={roundIndex}>
+            <Accordion title={round.name} key={roundIndex}>
               <RoundEditor
                 round={round}
                 index={roundIndex}
@@ -218,8 +253,10 @@ export default function PackEditor({
                     className="w-48 h-8 rounded-md mt-1 p-1 text-black"
                     type="text"
                     placeholder="Name"
-                    value={finalCategoryNameInput}
-                    onChange={(e) => setFinalCategoryNameInput(e.target.value)}
+                    value={finalRoundCategoryNameInput}
+                    onChange={(e) =>
+                      setFinalRoundCategoryNameInput(e.target.value)
+                    }
                     readOnly={readOnly}
                   />
                 </label>
@@ -227,8 +264,8 @@ export default function PackEditor({
                   className="w-fit h-fit ml-4 rounded px-2 py-1 primary"
                   type="button"
                   onClick={() => {
-                    addFinalCategory(finalCategoryNameInput);
-                    setFinalCategoryNameInput("");
+                    addFinalRoundCategory(finalRoundCategoryNameInput);
+                    setFinalRoundCategoryNameInput("");
                   }}
                 >
                   Add category
@@ -246,6 +283,13 @@ export default function PackEditor({
                     }
                   >
                     {category.name}
+                  </button>
+                  <button
+                    className="h-8 aspect-square px-2 py-1 border rounded text-red-600"
+                    type="button"
+                    onClick={() => deleteFinalRoundCategory(index)}
+                  >
+                    <FaTrashCan size="auto" />
                   </button>
                 </li>
               ))}
@@ -292,13 +336,16 @@ export default function PackEditor({
         )}
         readOnly={readOnly}
       />
-      <FinalCategoryModal
-        isOpen={finalCategoryModal.isOpen}
+      <FinalRoundCategoryModal
+        isOpen={finalRoundCategoryModal.isOpen}
         close={() =>
-          setFinalCategoryModal({ ...finalCategoryModal, isOpen: false })
+          setFinalCategoryModal({ ...finalRoundCategoryModal, isOpen: false })
         }
-        category={finalCategoryModal.category}
-        saveCategory={changeFinalCategory.bind(null, finalCategoryModal.index)}
+        category={finalRoundCategoryModal.category}
+        saveCategory={changeFinalRoundCategory.bind(
+          null,
+          finalRoundCategoryModal.index
+        )}
         readOnly={readOnly}
       />
       <ToastContainer

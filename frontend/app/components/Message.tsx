@@ -1,17 +1,17 @@
 import Image from "next/image";
-import { UserDTO } from "../../middleware";
+import { User } from "../../middleware";
 
-export type ChatMessageDTO = {
-  from: UserDTO;
+export type ChatMessage = {
+  from: User;
   text: string;
 };
 
-const dummyChatMessage: ChatMessageDTO = {
+const dummyChatMessage: ChatMessage = {
   from: { id: "1", name: "user", avatar: null },
   text: "hello",
 };
 
-export const isChatMessageDTO = (obj: unknown): obj is ChatMessageDTO => {
+export const isChatMessage = (obj: unknown): obj is ChatMessage => {
   if (typeof obj !== 'object' || obj === null) return false;
   return Object.keys(dummyChatMessage).every((key) => Object.hasOwn(obj, key));
 };
@@ -22,7 +22,7 @@ export default function Message({
   isPrevUserSame,
   isNextUserSame,
 }: {
-  message: ChatMessageDTO;
+  message: ChatMessage;
   isOwn: boolean;
   isPrevUserSame: boolean;
   isNextUserSame: boolean;
@@ -47,7 +47,7 @@ export default function Message({
   return (
     <div
       className={
-        `flex items-center gap-2 ${isPrevUserSame ? "mt-0.5" : "mt-1.5"}` +
+        `flex items-center gap-2 ${isPrevUserSame ? "-mt-1" : ""}` +
         (isOwn ? " flex-row-reverse" : "")
       }
     >

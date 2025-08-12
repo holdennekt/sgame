@@ -1,7 +1,7 @@
 import { getPack, updatePack } from "@/app/actions";
 import Navbar from "@/app/components/Navbar";
 import PackEditor from "@/app/components/pack/PackEditor";
-import { USER_HEADER_NAME, UserDTO } from "@/middleware";
+import { USER_HEADER_NAME, User } from "@/middleware";
 import { headers } from "next/headers";
 
 export default async function Page({
@@ -11,7 +11,7 @@ export default async function Page({
   params: { id: string };
   searchParams: { [key: string]: string | undefined };
 }) {
-  const user: UserDTO = JSON.parse(headers().get(USER_HEADER_NAME)!);
+  const user: User = JSON.parse(headers().get(USER_HEADER_NAME)!);
   const pack = await getPack(params.id);
 
   return (

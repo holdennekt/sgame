@@ -1,32 +1,32 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChatMessageDTO, isChatMessageDTO } from "../Message";
-import { isError, UserDTO } from "../../../middleware";
+import { ChatMessage, isChatMessage } from "../Message";
+import { isError, User } from "../../../middleware";
 import RoomsList from "./RoomsList";
 import NewRoomModal from "./NewRoomModal";
 import { toast, ToastContainer } from "react-toastify";
 import PasswordModal from "./PasswordModal";
-import { isLobbyRoom, LobbyRoomDTO } from "./LobbyRoom";
-import LobbyChat from "./LobbyChat";
+import { isRoomLobby, RoomLobby } from "./Room";
+import Chat from "../Chat";
 import AddButton from "../AddButton";
 
 export type WsMessage = { event: string; payload: unknown };
 export type WsMessageHandler = (payload: unknown) => void;
 
-type LobbyRoomDeletedDTO = {
+type RoomLobbyDeletedDTO = {
   id: string;
 };
 
-const dummyLobbyRoomDeleted: LobbyRoomDeletedDTO = {
+const dummyRoomLobbyDeleted: RoomLobbyDeletedDTO = {
   id: "1",
 };
 
-export const isLobbyRoomDeleted = (
+export const isRoomLobbyDeleted = (
   obj: unknown
-): obj is LobbyRoomDeletedDTO => {
+): obj is RoomLobbyDeletedDTO => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyLobbyRoomDeleted).every((key) =>
+  return Object.keys(dummyRoomLobbyDeleted).every((key) =>
     Object.hasOwn(obj, key)
   );
 };
@@ -35,11 +35,11 @@ export default function Lobby({
   user,
   initialRooms,
 }: {
-  user: UserDTO;
-  initialRooms: LobbyRoomDTO[];
+  user: User;
+  initialRooms: RoomLobby[];
 }) {
   const [rooms, setRooms] = useState(initialRooms);
-  const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [searchInput, setSearchInput] = useState("");
   const [isNewRoomModalOpen, setIsNewRoomModalOpen] = useState(false);
 
@@ -54,36 +54,38 @@ export default function Lobby({
   const wsConn = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    wsConn.current = new WebSocket(
-      `ws://${process.env.NEXT_PUBLIC_BACKEND_HOST}/ws/lobby`
-    );
     const handlers = new Map<string, WsMessageHandler>();
 
-    handlers.set("lobby-room", (payload) => {
-      if (!isLobbyRoom(payload)) return;
+    handlers.set("room_updated", (payload) => {
+      if (!isRoomLobby(payload)) return;
       setRooms((rooms) =>
         rooms.some((room) => room.id === payload.id)
           ? rooms.map((room) => (room.id === payload.id ? payload : room))
           : [...rooms, payload]
       );
     });
-    handlers.set("lobby-room-deleted", (payload) => {
-      if (!isLobbyRoomDeleted(payload)) return;
+    handlers.set("room_deleted", (payload) => {
+      if (!isRoomLobbyDeleted(payload)) return;
       setRooms((rooms) => rooms.filter((room) => room.id !== payload.id));
     });
     handlers.set("chat", (payload) => {
-      if (!isChatMessageDTO(payload)) return;
-      setMessages((messages) => [...messages, payload]);
+      if (!isChatMessage(payload)) return;
+      setChatMessages((chatMessages) => [...chatMessages, payload]);
     });
     handlers.set("error", (payload) => {
       if (!isError(payload)) return;
       toast.error(payload.error, { containerId: "lobby" });
     });
 
+    wsConn.current = new WebSocket(
+      `ws://${process.env.NEXT_PUBLIC_BACKEND_HOST}/ws/lobby`
+    );
+
     wsConn.current.addEventListener("message", (ev: MessageEvent<string>) => {
       const message: WsMessage = JSON.parse(ev.data);
       const handler = handlers.get(message.event);
       if (handler) handler(message.payload);
+      console.log("incoming message", message);
     });
 
     wsConn.current.addEventListener("close", () => {
@@ -103,7 +105,7 @@ export default function Lobby({
     [rooms, searchInput]
   );
 
-  const sendMessage = (text: string) => {
+  const sendChatMessage = (text: string) => {
     wsConn.current?.send(JSON.stringify({ event: "chat", payload: { text } }));
   };
 
@@ -136,15 +138,18 @@ export default function Lobby({
           />
           <AddButton onClick={() => setIsNewRoomModalOpen(true)} />
         </div>
-        <LobbyChat
-          user={user}
-          messages={messages}
-          sendMessage={sendMessage}
-        />
+        <div className="flex min-w-0 min-h-0 flex-[1_0_0%] sm:flex-[2_0_0%]">
+          <Chat
+            user={user}
+            messages={chatMessages}
+            sendMessage={sendChatMessage}
+          />
+        </div>
       </main>
       <NewRoomModal
         isOpen={isNewRoomModalOpen}
         close={() => setIsNewRoomModalOpen(false)}
+        toastContainerId="lobby"
       />
       <PasswordModal
         isOpen={passwordModal.isOpen}

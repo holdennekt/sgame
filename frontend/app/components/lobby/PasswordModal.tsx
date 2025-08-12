@@ -15,7 +15,7 @@ export default function PasswordModal({
   const router = useRouter();
   const [password, setPassword] = useState("");
 
-  const roomLink = `/room/${roomId}?password=${password}`;
+  const roomLink = `/rooms/${roomId}?password=${password}`;
 
   return (
     <Modal
@@ -24,6 +24,7 @@ export default function PasswordModal({
         setPassword("");
         close();
       }}
+      closeByClickingOutside
     >
       <h3 className="text-base/7 font-medium">
         Enter password
@@ -37,7 +38,7 @@ export default function PasswordModal({
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") router.push(roomLink);
+            if (e.code === "Enter") router.push(roomLink);
           }}
         />
       </div>

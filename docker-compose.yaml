@@ -4,7 +4,7 @@ services:
     ports:
       - '127.0.0.1:6379:6379/tcp'
     environment:
-      REDIS_ARGS: "--user nikitagryshchak allcommands allkeys allchannels on >feniks2003"
+      REDIS_ARGS: "--user ${REDIS_USERNAME} allcommands allkeys allchannels on >${REDIS_PASSWORD}"
     healthcheck:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
     volumes:
@@ -12,10 +12,11 @@ services:
 
   mongodb:
     image: mongodb/mongodb-community-server:6.0-ubi8
+    init: true
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: rootpassword
-      MONGO_INITDB_DATABASE: sgame
+      MONGODB_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DB_NAME}
     ports:
       - 27017:27017
     volumes:
@@ -29,15 +30,15 @@ services:
       - redis
       - mongodb
     environment:
-      HOST: ""
+      HOST: 0.0.0.0
       PORT: 80
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_USERNAME: nikitagryshchak
-      REDIS_PASSWORD: feniks2003
+      REDIS_USERNAME: ${REDIS_USERNAME}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_DB: 0
-      MONGO_DB_NAME: sgame
-      MONGO_CONN: mongodb://root:rootpassword@mongodb:27017/sgame?authSource=admin
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
+      MONGO_CONN: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DB_NAME}?authSource=admin
       MY_CLIENT_ORIGIN: http://localhost:3000
 
   # frontend:
@@ -48,8 +49,8 @@ services:
   #     - backend
   #   environment:
   #     PORT: 80
+  #     NEXT_PUBLIC_BACKEND_HOST: localhost:8080
   #     BACKEND_HOST: backend
-
 
 volumes:
   redis_data:

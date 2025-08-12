@@ -1,11 +1,11 @@
 import { createPack } from "@/app/actions";
 import Navbar from "@/app/components/Navbar";
 import PackEditor, { PackDTO } from "@/app/components/pack/PackEditor";
-import { USER_HEADER_NAME, UserDTO } from "@/middleware";
+import { USER_HEADER_NAME, User } from "@/middleware";
 import { headers } from "next/headers";
 
 export default function Page() {
-  const user: UserDTO = JSON.parse(headers().get(USER_HEADER_NAME)!);
+  const user: User = JSON.parse(headers().get(USER_HEADER_NAME)!);
 
   return (
     <>

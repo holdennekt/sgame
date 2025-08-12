@@ -5,7 +5,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { ToastContainer } from "react-toastify";
 import { getPacks } from "../actions";
 import NewRoomModal, { PackPreview } from "./lobby/NewRoomModal";
-import { UserDTO } from "@/middleware";
+import { User } from "@/middleware";
 import Private from "@/public/private.png";
 import Public from "@/public/public.png";
 import Image from "next/image";
@@ -14,10 +14,16 @@ import AddButton from "./AddButton";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export type PacksResp = { count: number; portionRes: HiddenPack[] };
+export type PacksResp = {
+  items: HiddenPack[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasNext: boolean;
+};
 export type HiddenPack = {
   id: string;
-  author: UserDTO;
+  createdBy: User;
   name: string;
   type: "public" | "private";
   rounds: HiddenRound[];
@@ -31,26 +37,25 @@ export type HiddenCategory = {
   name: string;
 };
 type HiddenFinalRound = {
-  categories: HiddenCategory;
+  categories: HiddenCategory[];
 };
 
-const PACKS_PER_PAGE = 10;
 const MAX_VISIBLE_PAGES = 5;
 
 export default function PacksList({
   user,
   initialPacks,
 }: {
-  user: UserDTO;
+  user: User;
   initialPacks: PacksResp;
 }) {
   const router = useRouter();
   const [packsFilter, setPacksFilter] = useState("");
   const [pagesCount, setPagesCount] = useState(
-    Math.floor(initialPacks.count / PACKS_PER_PAGE) + 1
+    Math.floor(initialPacks.total / initialPacks.pageSize) + 1
   );
   const [currentPage, setCurrentPage] = useState(1);
-  const [packs, setPacks] = useState(initialPacks.portionRes);
+  const [packs, setPacks] = useState(initialPacks.items);
   const [newRoomModal, setNewRoomModal] = useState<{
     isOpen: boolean;
     pack?: PackPreview;
@@ -58,9 +63,9 @@ export default function PacksList({
 
   const fetchPacks = useDebouncedCallback(async (packFilter: string) => {
     const packs = await getPacks(packFilter);
-    setPacks(packs.portionRes);
+    setPacks(packs.items);
     setCurrentPage(1);
-    setPagesCount(Math.floor(packs.count / PACKS_PER_PAGE) + 1);
+    setPagesCount(Math.ceil(packs.total / packs.pageSize));
   }, 500);
 
   const onPacksFilterChange = (packsFilter: string) => {
@@ -71,21 +76,21 @@ export default function PacksList({
   const selectPage = async (page: number) => {
     if (page === currentPage) return;
     const packs = await getPacks(packsFilter, page);
-    setPacks(packs.portionRes);
+    setPacks(packs.items);
   };
 
   const selectPrevPage = async () => {
     if (currentPage === 1) return;
     const packs = await getPacks(packsFilter, currentPage - 1);
     setCurrentPage(currentPage - 1);
-    setPacks(packs.portionRes);
+    setPacks(packs.items);
   };
 
   const selectNextPage = async () => {
     if (currentPage === pagesCount) return;
     const packs = await getPacks(packsFilter, currentPage + 1);
     setCurrentPage(currentPage + 1);
-    setPacks(packs.portionRes);
+    setPacks(packs.items);
   };
 
   return (
@@ -94,7 +99,7 @@ export default function PacksList({
         <div className="flex flex-col h-full rounded relative surface p-4">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
             <div className="flex items-center">
-              <p className="w-fit text-2xl font-semibold leading-none">
+              <p className="w-fit text-xl font-semibold leading-none">
                 Search for packs:
               </p>
               <input
@@ -145,7 +150,7 @@ export default function PacksList({
                 >
                   <div className="flex-1">
                     <div className="flex items-center">
-                      {user.id === pack.author.id ? (
+                      {user.id === pack.createdBy.id ? (
                         <Link
                           className="w-fit text-lg underline leading-none font-semibold truncate"
                           href={`/packs/${pack.id}`}
@@ -168,12 +173,12 @@ export default function PacksList({
                       />
                     </div>
                     <p className="mt-1 text-sm font-normal">
-                      Author: <span className="italic">{pack.author.name}</span>
+                      Author: <span className="italic">{pack.createdBy.name}</span>
                     </p>
                     <div className="mt-1">
                       {pack.rounds.map((round, index) => (
                         <Accordion
-                          title={`Round ${index + 1}: "${round.name}"`}
+                          title={round.name}
                           key={index}
                         >
                           <ul className="px-5 list-inside list-disc">
@@ -183,6 +188,13 @@ export default function PacksList({
                           </ul>
                         </Accordion>
                       ))}
+                      <Accordion title="Final round">
+                        <ul className="px-5 list-inside list-disc">
+                          {pack.finalRound.categories.map((category, index) => (
+                            <li key={index}>{category.name}</li>
+                          ))}
+                        </ul>
+                      </Accordion>
                     </div>
                   </div>
                   <div className="flex flex-col justify-center">
@@ -213,6 +225,7 @@ export default function PacksList({
         isOpen={newRoomModal.isOpen}
         close={() => setNewRoomModal({ isOpen: false })}
         fixedPack={newRoomModal.pack}
+        toastContainerId="packs"
       />
       <ToastContainer
         containerId="packs"

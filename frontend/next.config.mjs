@@ -4,7 +4,7 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/api/:path*',
+        source: '/transport/:path*',
         destination: `http://${process.env.BACKEND_HOST}/:path*`,
       },
     ];

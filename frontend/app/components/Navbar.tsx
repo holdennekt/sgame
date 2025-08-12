@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { UserDTO } from "../../middleware";
+import { User } from "../../middleware";
 
 export default function Navbar({
   user,
   openNewTab = false,
 }: {
-  user?: UserDTO;
+  user?: User;
   openNewTab?: boolean;
 }) {
   const links = [

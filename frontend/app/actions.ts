@@ -1,57 +1,122 @@
 "use server";
 
-import { ErrorDTO, isError } from "@/middleware";
+import { ErrorBody, isError } from "@/middleware";
 import { PacksResp } from "./components/PacksList";
 import { cookies } from "next/headers";
 import { PackDTO } from "./components/pack/PackEditor";
+import { RoomLobby } from "./components/lobby/Room";
+import { CreateRoomParams, PackPreview } from "./components/lobby/NewRoomModal";
+import { Room } from "./components/room/Room";
 
 const PAGE_QUERY_PARAM = "page";
-const FILTER_QUERY_PARAM = "filter";
+const PASSWORD_QUERY_PARAM = "password";
+const SEARCH_QUERY_PARAM = "search";
 
-export const getPacks = async (packFilter: string, page?: number) => {
-  const url = new URL(`http://${process.env.BACKEND_HOST}/rest/packs`);
-  url.searchParams.set(FILTER_QUERY_PARAM, packFilter);
-  if (page) url.searchParams.set(PAGE_QUERY_PARAM, page.toString());
-  const resp = await fetch(url.toString(), {
+export const getRooms = async () => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/rooms`);
+  const resp = await fetch(url, {
+    cache: "no-store",
+    headers: { cookie: cookies().toString() },
+  });
+  const rooms: RoomLobby[] | ErrorBody = await resp?.json();
+  if (isError(rooms)) throw new Error(rooms.error);
+  return rooms;
+};
+
+export const createRoom = async (body: CreateRoomParams) => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/rooms`);
+  const resp = await fetch(url, {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: { cookie: cookies().toString() },
+  });
+  const obj: { id: string; } | ErrorBody = await resp?.json();
+  if (isError(obj)) throw new Error(obj.error);
+  return obj.id;
+};
+
+export const joinRoom = async (id: string, password: string | undefined) => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/rooms/${id}/join`);
+  if (password) url.searchParams.set(PASSWORD_QUERY_PARAM, password);
+  const resp = await fetch(url, {
+    method: "PATCH",
     cache: "no-store",
     headers: { cookie: cookies().toString() },
   }).catch(console.log);
-  const packs: PacksResp | ErrorDTO = await resp?.json();
+  const room: Room | ErrorBody = await resp?.json();
+  if (isError(room)) throw new Error(room.error);
+  return room;
+};
+
+export const leaveRoom = async (id: string) => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/rooms/${id}/leave`);
+  const resp = await fetch(url, {
+    method: "PATCH",
+    headers: { cookie: cookies().toString() },
+  });
+  if (!resp.ok) {
+    const obj = await resp?.json();
+    if (isError(obj)) throw new Error(obj.error);
+  }
+};
+
+export const getPacks = async (packFilter: string, page?: number) => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs`);
+  url.searchParams.set(SEARCH_QUERY_PARAM, packFilter);
+  if (page) url.searchParams.set(PAGE_QUERY_PARAM, page.toString());
+  const resp = await fetch(url, {
+    cache: "no-store",
+    headers: { cookie: cookies().toString() },
+  });
+  const packs: PacksResp | ErrorBody = await resp?.json();
+  if (isError(packs)) throw new Error(packs.error);
+  return packs;
+};
+
+export const getPacksPreviews = async (packFilter: string) => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/packsPreview`);
+  url.searchParams.set(SEARCH_QUERY_PARAM, packFilter);
+  const resp = await fetch(url, {
+    cache: "no-store",
+    headers: { cookie: cookies().toString() },
+  });
+  const packs: PackPreview[] | ErrorBody = await resp?.json();
   if (isError(packs)) throw new Error(packs.error);
   return packs;
 };
 
 export const getPack = async (id: string) => {
-  const url = new URL(`http://${process.env.BACKEND_HOST}/rest/pack/${id}`);
-  const resp = await fetch(url.toString(), {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/${id}`);
+  const resp = await fetch(url, {
     cache: "no-store",
     headers: { cookie: cookies().toString() },
-  }).catch(console.log);
-  const pack: PackDTO | ErrorDTO = await resp?.json();
+  });
+  const pack: PackDTO | ErrorBody = await resp?.json();
   if (isError(pack)) throw new Error(pack.error);
   return pack;
 };
 
 export const createPack = async (pack: PackDTO) => {
-  const url = new URL(`http://${process.env.BACKEND_HOST}/rest/pack`);
-  const resp = await fetch(url.toString(), {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs`);
+  const resp = await fetch(url, {
     method: "POST",
     headers: { cookie: cookies().toString() },
     body: JSON.stringify(pack),
-  }).catch(console.log);
-  const obj: { id: string } | ErrorDTO = await resp?.json();
+  });
+  const obj: { id: string; } | ErrorBody = await resp?.json();
   if (isError(obj)) throw new Error(obj.error);
   return obj;
 };
 
 export const updatePack = async (id: string, pack: PackDTO) => {
-  const url = new URL(`http://${process.env.BACKEND_HOST}/rest/pack/${id}`);
-  const resp = await fetch(url.toString(), {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/${id}`);
+  const resp = await fetch(url, {
     method: "PUT",
     headers: { cookie: cookies().toString() },
     body: JSON.stringify(pack),
-  }).catch(console.log);
-  const obj: { id: string } | ErrorDTO = await resp?.json();
-  if (isError(obj)) throw new Error(obj.error);
-  return obj;
+  });
+  if (!resp.ok) {
+    const obj = await resp?.json();
+    if (isError(obj)) throw new Error(obj.error);
+  }
 };

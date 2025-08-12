@@ -44,7 +44,10 @@ export default function RoundEditor({
 
   const addCategory = (roundIndex: number) => {
     setPack((pack) => {
-      pack.rounds[roundIndex].categories.push({ name: "", questions: [] });
+      pack.rounds[roundIndex].categories.push({
+        name: `Category ${pack.rounds[roundIndex].categories.length + 1}`,
+        questions: [],
+      });
       return { ...pack };
     });
   };
@@ -55,7 +58,7 @@ export default function RoundEditor({
         <label>
           <p className="font-medium">Round name</p>
           <input
-            className="w-48 h-8 rounded-md mt-1 p-1 text-black"
+            className="w-48 h-8 rounded-md mt-2 p-2 text-black"
             type="text"
             placeholder="Name"
             value={round.name}
@@ -80,7 +83,7 @@ export default function RoundEditor({
             <div className="flex-1 flex flex-row-reverse">
               <div className="flex items-center gap-4">
                 <button
-                  className="p-1 border rounded"
+                  className="h-8 aspect-square px-2 py-1 border rounded"
                   type="button"
                   onClick={() => {
                     if (roundIndex === 0) return;
@@ -90,10 +93,10 @@ export default function RoundEditor({
                     setPack({ ...pack });
                   }}
                 >
-                  <IoIosArrowUp size="24" />
+                  <IoIosArrowUp size="auto" />
                 </button>
                 <button
-                  className="p-1 border rounded"
+                  className="h-8 aspect-square px-2 py-1 border rounded"
                   type="button"
                   onClick={() => {
                     if (roundIndex === pack.rounds.length - 1) return;
@@ -103,24 +106,24 @@ export default function RoundEditor({
                     setPack({ ...pack });
                   }}
                 >
-                  <IoIosArrowDown size="24" />
+                  <IoIosArrowDown size="auto" />
                 </button>
                 <button
-                  className="p-1.5 border rounded text-red-600"
+                  className="h-8 aspect-square px-2 py-1 border rounded text-red-600"
                   type="button"
                   onClick={() => deleteRound(roundIndex)}
                 >
-                  <FaTrashCan size="20" />
+                  <FaTrashCan size="auto" />
                 </button>
               </div>
             </div>
           </>
         )}
       </div>
-      <div className="mt-3 px-8 flex flex-col gap-2">
+      <div className="mt-4 pl-6 flex flex-col gap-2">
         {round.categories.map((category, categoryIndex) => (
           <Accordion
-            title={`Category ${categoryIndex + 1}`}
+            title={category.name}
             key={categoryIndex}
           >
             <CategoryEditor

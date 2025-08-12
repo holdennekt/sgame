@@ -1,4 +1,4 @@
-FROM golang:1.22.2 AS server_builder
+FROM golang:1.24.4 AS server_builder
 
 WORKDIR /app
 
@@ -7,7 +7,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 go build -o bin/
+RUN CGO_ENABLED=0 go build -o bin/sgame ./cmd/server
 
 FROM scratch
 

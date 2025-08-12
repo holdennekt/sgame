@@ -2,16 +2,18 @@ import { MouseEventHandler, ReactNode, useRef } from "react";
 
 export default function Modal({
   isOpen,
-  onClose = () => {},
+  onClose,
+  closeByClickingOutside,
   children,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  closeByClickingOutside: boolean;
   children?: ReactNode;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   if (isOpen) {
-    dialog.current?.showModal();
+    if (!dialog.current?.open) dialog.current?.showModal();
   } else {
     dialog.current?.close();
   }
@@ -32,7 +34,7 @@ export default function Modal({
     <dialog
       className="w-fit rounded-lg p-6 surface border backdrop:bg-transparent"
       ref={dialog}
-      onMouseDown={onClick}
+      onClick={closeByClickingOutside ? onClick : undefined}
       onClose={onClose}
     >
       {children}

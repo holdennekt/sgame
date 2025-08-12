@@ -1,9 +1,10 @@
 import { headers } from "next/headers";
 import Navbar from "../components/Navbar";
-import { USER_HEADER_NAME, UserDTO } from "../../middleware";
+import { User, USER_HEADER_NAME } from "../../middleware";
+import TimerBar from "../components/room/mainSection/TimerBar";
 
 export default function About() {
-  const user: UserDTO = JSON.parse(headers().get(USER_HEADER_NAME)!);
+  const user: User = JSON.parse(headers().get(USER_HEADER_NAME)!);
   return (
     <>
       <Navbar user={user} />
