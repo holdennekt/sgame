@@ -52,7 +52,7 @@ minikube addons enable ingress
 
 ```
 minikube image build -t sgame-backend:local backend
-minikube image -t sgame-frontend:local frontend
+minikube image build -t sgame-frontend:local frontend
 ```
 
 4. Create a secrets file from the provided template and fill in the values:
@@ -76,7 +76,7 @@ minikube ip
 7. Map the domain in your `/etc/hosts` file:
 
 ```
-<MINIKUBE-IP> sgame.local
+<MINIKUBE_IP> sgame.local
 ```
 
 Testing
