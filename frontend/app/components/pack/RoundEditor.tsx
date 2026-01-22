@@ -1,6 +1,6 @@
 import React from "react";
 import Accordion from "../Accordion";
-import { Category, PackDTO, Question, Round } from "./PackEditor";
+import { Pack, Question, Round } from "./PackEditor";
 import { FaTrashCan } from "react-icons/fa6";
 import { IoIosArrowUp, IoIosArrowDown } from "react-icons/io";
 import CategoryEditor from "./CategoryEditor";
@@ -15,8 +15,8 @@ export default function RoundEditor({
 }: {
   round: Round;
   index: number;
-  pack: PackDTO;
-  setPack: React.Dispatch<React.SetStateAction<PackDTO>>;
+  pack: Pack;
+  setPack: React.Dispatch<React.SetStateAction<Pack>>;
   setQuestionModal: React.Dispatch<
     React.SetStateAction<{
       isOpen: boolean;
@@ -29,21 +29,21 @@ export default function RoundEditor({
   readOnly?: boolean;
 }) {
   const changeRound = (roundIndex: number, round: Round) => {
-    setPack((pack) => {
+    setPack(pack => {
       pack.rounds[roundIndex] = round;
       return { ...pack };
     });
   };
 
   const deleteRound = (roundIndex: number) => {
-    setPack((pack) => {
+    setPack(pack => {
       pack.rounds = pack.rounds.filter((r, i) => roundIndex !== i);
       return { ...pack };
     });
   };
 
   const addCategory = (roundIndex: number) => {
-    setPack((pack) => {
+    setPack(pack => {
       pack.rounds[roundIndex].categories.push({
         name: `Category ${pack.rounds[roundIndex].categories.length + 1}`,
         questions: [],
@@ -62,7 +62,7 @@ export default function RoundEditor({
             type="text"
             placeholder="Name"
             value={round.name}
-            onChange={(e) =>
+            onChange={e =>
               changeRound(roundIndex, {
                 ...round,
                 name: e.target.value,

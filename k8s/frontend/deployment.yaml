@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sgame-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sgame-frontend
+  template:
+    metadata:
+      labels:
+        app: sgame-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: sgame-frontend:local
+          ports:
+            - containerPort: 80
+          env:
+            - name: BACKEND_HOST
+              value: sgame-backend-service

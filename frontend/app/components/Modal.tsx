@@ -17,7 +17,7 @@ export default function Modal({
   } else {
     dialog.current?.close();
   }
-  const onClick: MouseEventHandler<HTMLDialogElement> = (ev) => {
+  const onClick: MouseEventHandler<HTMLDialogElement> = ev => {
     const rect = ev.currentTarget.getBoundingClientRect();
     if (!rect) return;
     if (

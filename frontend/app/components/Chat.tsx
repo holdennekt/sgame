@@ -30,7 +30,7 @@ export default function Chat({
     setInput("");
   };
 
-  const onInputKeyDown: KeyboardEventHandler = (ev) => {
+  const onInputKeyDown: KeyboardEventHandler = ev => {
     if (ev.key !== "Enter") return;
     handleSend();
   };
@@ -66,7 +66,7 @@ export default function Chat({
           className="flex-1 rounded-lg p-1 text-black"
           placeholder="Say something to others"
           value={input}
-          onChange={(ev) => setInput(ev.target.value)}
+          onChange={ev => setInput(ev.target.value)}
           onKeyDown={onInputKeyDown}
         />
         <button

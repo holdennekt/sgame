@@ -75,10 +75,10 @@ export default function PlayerTable({
         {room.state === "answering" &&
           player.id === room.answeringPlayer?.id &&
           player.betAmount && (
-            <p className="w-full text-center text-sm font-bold truncate">
-              {player.betAmount}
-            </p>
-          )}
+          <p className="w-full text-center text-sm font-bold truncate">
+            {player.betAmount}
+          </p>
+        )}
       </div>
     </div>
   );

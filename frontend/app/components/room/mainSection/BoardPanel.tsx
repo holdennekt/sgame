@@ -1,6 +1,12 @@
 import React from "react";
 import { BoardQuestion } from "../Room";
 
+type BoardQuestionView = {
+  value: number;
+  hasBeenPlayed: boolean;
+  onClick: () => void;
+};
+
 export default function BoardPanel({
   currentRoundQuestions,
   selectQuestion,
@@ -10,33 +16,33 @@ export default function BoardPanel({
   selectQuestion: (question: { category: string; index: number }) => void;
   canSelectQuestion: boolean;
 }) {
-  const getTableData = (currentRoundQuestions: { [key: string]: BoardQuestion[] }) => {
-    const categoriesCount = Object.keys(currentRoundQuestions).length;
-    const questionsInCategoryCount = Object.values(currentRoundQuestions)[0].length;
-  
-    const tableData: {
-      value: number;
-      hasBeenPlayed: boolean;
-      onClick: () => void;
-    }[][] = new Array(questionsInCategoryCount)
-      .fill(undefined)
-      .map(() => new Array(categoriesCount).fill(undefined));
-  
-    for (const [categoryIndex, [category, questions]] of Object.entries(
-      currentRoundQuestions
-    ).entries()) {
-      for (const question of questions) {
-        tableData[question.index][categoryIndex] = {
-          value: question.value,
-          hasBeenPlayed: question.hasBeenPlayed,
-          onClick: () => selectQuestion({ category, index: question.index }),
-        };
-      }
-    }
-    return tableData;
-  };
+  const categoriesCount = Object.keys(currentRoundQuestions).length;
+  const questionsInCategoryCount = Object.values(currentRoundQuestions)[0]
+    .length;
 
-  const tableData = getTableData(currentRoundQuestions);
+  const tableData: BoardQuestionView[][] = new Array<BoardQuestionView[]>(
+    questionsInCategoryCount
+  )
+    .fill([])
+    .map(() =>
+      new Array<BoardQuestionView>(categoriesCount).fill({
+        value: 0,
+        hasBeenPlayed: true,
+        onClick: () => {},
+      })
+    );
+
+  for (const [categoryIndex, [category, questions]] of Object.entries(
+    currentRoundQuestions
+  ).entries()) {
+    for (const question of questions) {
+      tableData[question.index][categoryIndex] = {
+        value: question.value,
+        hasBeenPlayed: question.hasBeenPlayed,
+        onClick: () => selectQuestion({ category, index: question.index }),
+      };
+    }
+  }
 
   return (
     <table className="w-full h-full table-fixed">
@@ -53,8 +59,10 @@ export default function BoardPanel({
         {tableData.map((row, i) => (
           <tr key={i}>
             {row.map(({ value, hasBeenPlayed, onClick }, j) =>
-              hasBeenPlayed ? (
-                <td className="border" key={j}>&nbsp;</td>
+              (hasBeenPlayed ? (
+                <td className="border" key={j}>
+                  &nbsp;
+                </td>
               ) : (
                 <td
                   className={`text-center text-lg font-bold border${
@@ -65,7 +73,7 @@ export default function BoardPanel({
                 >
                   {value}
                 </td>
-              )
+              ))
             )}
           </tr>
         ))}

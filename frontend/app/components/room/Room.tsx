@@ -102,7 +102,7 @@ const dummyRoom: Room = {
 
 export const isRoom = (obj: unknown): obj is Room => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyRoom).every((key) => Object.hasOwn(obj, key));
+  return Object.keys(dummyRoom).every(key => Object.hasOwn(obj, key));
 };
 
 export type HiddenQuestion = {
@@ -153,7 +153,7 @@ const dummyRoundDemo: RoundDemo = {
 
 export const isRoundDemo = (obj: unknown): obj is RoundDemo => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyRoundDemo).every((key) => Object.hasOwn(obj, key));
+  return Object.keys(dummyRoundDemo).every(key => Object.hasOwn(obj, key));
 };
 
 export type CorrectAnswerDemo = {
@@ -170,7 +170,7 @@ const dummyCorrectAnswerDemo: CorrectAnswerDemo = {
 
 export const isCorrectAnswerDemo = (obj: unknown): obj is CorrectAnswerDemo => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyCorrectAnswerDemo).every((key) =>
+  return Object.keys(dummyCorrectAnswerDemo).every(key =>
     Object.hasOwn(obj, key)
   );
 };
@@ -194,42 +194,55 @@ export default function RoomPage({
   const answerButton = useRef<HTMLDivElement>(null);
 
   const handlers = new Map<string, WsMessageHandler>();
-
-  handlers.set("error", (payload) => {
+  handlers.set("error", payload => {
     if (!isError(payload)) return;
     toast.error(payload.error, { containerId: "room" });
     mainContainer.current?.focus();
   });
-  handlers.set("chat", (payload) => {
+  handlers.set("chat", payload => {
     if (!isChatMessage(payload)) return;
-    setChatMessages((chatMessages) => [...chatMessages, payload]);
+    setChatMessages(chatMessages => [...chatMessages, payload]);
   });
-  handlers.set("room_updated", (payload) => {
+  handlers.set("room_updated", payload => {
     if (!isRoom(payload)) return;
     setRoom(payload);
   });
   handlers.set("room_deleted", () => router.push("/"));
 
   useEffect(() => {
+    let isMounted = true;
+
     mainContainer.current?.focus();
-    wsConn.current = new WebSocket(
-      `ws://${process.env.NEXT_PUBLIC_BACKEND_HOST}/ws/room/${room.id}`
-    );
 
-    wsConn.current.addEventListener("message", (ev: MessageEvent<string>) => {
-      const message: WsMessage = JSON.parse(ev.data, (key, val) =>
-        key.endsWith("At") && val ? new Date(val) : val
+    const connectWebsocket = () => {
+      wsConn.current = new WebSocket(
+        `ws://${window.location.host}/api/ws/room/${room.id}`
       );
-      console.log("incoming message", message);
-      const handler = handlers.get(message.event);
-      if (handler) handler(message.payload);
-    });
 
-    wsConn.current.addEventListener("close", () => {
-      toast.error("Disconnected from server", { containerId: "room" });
-    });
+      wsConn.current.onmessage = (ev: MessageEvent<string>) => {
+        const message: WsMessage = JSON.parse(ev.data, (key, val) =>
+          (key.endsWith("At") && val ? new Date(val as string) : val)
+        );
+        console.log("incoming message", message);
+        const handler = handlers.get(message.event);
+        if (handler) handler(message.payload);
+      };
 
-    return () => wsConn.current?.close();
+      wsConn.current.onclose = () => {
+        toast.error("Disconnected from server. Trying to recoonect in 3s", {
+          containerId: "room",
+        });
+
+        if (isMounted) setTimeout(connectWebsocket, 3000);
+      };
+    };
+
+    connectWebsocket();
+
+    return () => {
+      isMounted = false;
+      wsConn.current?.close();
+    };
   }, [room.id]);
 
   const sendChatMessage = (text: string) => {
@@ -275,11 +288,11 @@ export default function RoomPage({
         className="flex flex-col-reverse md:flex-row gap-2 flex-1 min-w-0 min-h-0 p-2 focus:outline-none"
         tabIndex={-1}
         ref={mainContainer}
-        onKeyDown={(e) => {
+        onKeyDown={e => {
           if (e.code !== "Space") return;
           answerButton.current?.focus();
         }}
-        onKeyUp={(e) => {
+        onKeyUp={e => {
           if (e.code !== "Space") return;
           submitAnswer();
         }}

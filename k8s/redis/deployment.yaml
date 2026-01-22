@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sgame-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sgame-redis
+  template:
+    metadata:
+      labels:
+        app: sgame-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis/redis-stack-server:latest
+          ports:
+            - containerPort: 6379
+          env:
+            - name: REDIS_ARGS
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: redis-args
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: redis-port
+            - name: REDIS_USER
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: redis-user
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: redis-password
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: sgame-redis-data
+              mountPath: /data
+      volumes:
+        - name: sgame-redis-data
+          persistentVolumeClaim:
+            claimName: sgame-redis-pvc

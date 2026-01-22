@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, FormEvent, useMemo, useEffect } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import Modal from "../Modal";
 import { useDebouncedCallback } from "use-debounce";
 import { useRouter } from "next/navigation";
-import { ErrorBody, isError } from "@/middleware";
 import { toast } from "react-toastify";
 import { createRoom, getPacksPreviews } from "@/app/actions";
 
@@ -70,12 +69,12 @@ export default function NewRoomModal({
 
     const data = Object.fromEntries(new FormData(e.currentTarget).entries());
     const params: CreateRoomParams = {
-      name: data.name.toString(),
+      name: data.name as string,
       packId: pack.id,
       options: {
         maxPlayers,
         type: privacyType,
-        password: data.password?.toString(),
+        password: data.password as string | undefined,
         questionThinkingTime,
         answerThinkingTime,
         questionThinkingTimeFinal,
@@ -84,7 +83,7 @@ export default function NewRoomModal({
     };
 
     close();
-    const id = await createRoom(params)
+    const id = await createRoom(params);
 
     const pwd = params.options.password;
     const url = `/rooms/${id}${pwd ? `?password=${pwd}` : ""}`;
@@ -118,7 +117,7 @@ export default function NewRoomModal({
                 type="text"
                 placeholder="Name"
                 value={pack.name}
-                onChange={(e) => onPackInputChange(e.target.value)}
+                onChange={e => onPackInputChange(e.target.value)}
                 required
                 readOnly={!!fixedPack}
               />
@@ -152,7 +151,7 @@ export default function NewRoomModal({
               <select
                 className="w-full h-8 mt-1 p-0.5 rounded-md text-black"
                 value={privacyType}
-                onChange={(e) => setPrivacyType(e.target.value)}
+                onChange={e => setPrivacyType(e.target.value)}
               >
                 <option value="public">Public</option>
                 <option value="private">Private</option>
@@ -183,7 +182,7 @@ export default function NewRoomModal({
                 min="1"
                 max="10"
                 value={maxPlayers}
-                onChange={(e) => setMaxPlayers(Number(e.target.value))}
+                onChange={e => setMaxPlayers(Number(e.target.value))}
               />
             </label>
             <label>
@@ -197,7 +196,7 @@ export default function NewRoomModal({
                 min="1"
                 max="30"
                 value={questionThinkingTime}
-                onChange={(e) => setQuestionThinkingTime(Number(e.target.value))}
+                onChange={e => setQuestionThinkingTime(Number(e.target.value))}
               />
             </label>
             <label>
@@ -211,7 +210,7 @@ export default function NewRoomModal({
                 min="1"
                 max="30"
                 value={answerThinkingTime}
-                onChange={(e) => setAnswerThinkingTime(Number(e.target.value))}
+                onChange={e => setAnswerThinkingTime(Number(e.target.value))}
               />
             </label>
             <label>
@@ -225,7 +224,7 @@ export default function NewRoomModal({
                 min="1"
                 max="60"
                 value={questionThinkingTimeFinal}
-                onChange={(e) => setQuestionThinkingTimeFinal(Number(e.target.value))}
+                onChange={e => setQuestionThinkingTimeFinal(Number(e.target.value))}
               />
             </label>
             <label>

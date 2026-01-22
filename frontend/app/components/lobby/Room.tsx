@@ -27,9 +27,9 @@ const dummyRoom: RoomLobby = {
 };
 
 export const isRoomLobby = (obj: unknown): obj is RoomLobby => {
-  if (typeof obj !== 'object' || obj === null) return false;
-  return Object.keys(dummyRoom).every((key) => Object.hasOwn(obj, key));
-}
+  if (typeof obj !== "object" || obj === null) return false;
+  return Object.keys(dummyRoom).every(key => Object.hasOwn(obj, key));
+};
 
 export const getAvatar = (user: User | null) => {
   if (!user) return <div></div>;
@@ -41,7 +41,7 @@ export const getAvatar = (user: User | null) => {
     <div className="w-full aspect-square flex justify-center items-center bg-indigo-500">
       {user.name
         .split(" ")
-        .map((word) => word[0].toUpperCase())
+        .map(word => word[0].toUpperCase())
         .join("")}
     </div>
   );

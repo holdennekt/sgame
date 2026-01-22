@@ -18,6 +18,7 @@ export type PackDTO = {
   rounds: Round[];
   finalRound: FinalRound;
 };
+export type Pack = PackDTO & { id: string; };
 export type Round = {
   name: string;
   categories: Category[];
@@ -44,7 +45,7 @@ const dummyQuestion: Question = {
 
 export const isQuestion = (obj: unknown): obj is Question => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyQuestion).every((key) => Object.hasOwn(obj, key));
+  return Object.keys(dummyQuestion).every(key => Object.hasOwn(obj, key));
 };
 
 export type FinalRound = {
@@ -62,20 +63,24 @@ export type FinalRoundQuestion = Answer & {
   } | null;
 };
 
+export type CreatePack = (pack: PackDTO) => Promise<{ id: string; }>;
+export type UpdatePack = (pack: Pack) => Promise<{ id: string; }>
+
 export default function PackEditor({
-  handlePack,
+  savePack,
   initialPack,
   readOnly = false,
 }: {
-  handlePack: (pack: PackDTO) => Promise<{ id: string }>;
-  initialPack?: PackDTO;
+  savePack: CreatePack | UpdatePack;
+  initialPack?: Pack;
   readOnly?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [pack, setPack] = useState<PackDTO>(
+  const [pack, setPack] = useState<Pack>(
     initialPack ?? {
+      id: "",
       name: "",
       type: "public",
       rounds: [{ name: "Round 1", categories: [] }],
@@ -159,7 +164,7 @@ export default function PackEditor({
   };
 
   const deleteFinalRoundCategory = (categoryIndex: number) => {
-    setPack((pack) => {
+    setPack(pack => {
       pack.finalRound.categories = pack.finalRound.categories.filter(
         (c, i) => categoryIndex !== i
       );
@@ -167,11 +172,11 @@ export default function PackEditor({
     });
   };
 
-  const onSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
+  const onSubmit: FormEventHandler<HTMLFormElement> = async e => {
     e.preventDefault();
 
     try {
-      const obj = await handlePack(pack);
+      const obj = await savePack(pack);
       const url = `/packs/${obj.id}`;
       router.push(url);
       toast.success("Pack successfully saved!", { containerId: "editor" });
@@ -192,7 +197,7 @@ export default function PackEditor({
               type="text"
               placeholder="Name"
               value={pack.name}
-              onChange={(e) => setPack({ ...pack, name: e.target.value })}
+              onChange={e => setPack({ ...pack, name: e.target.value })}
               readOnly={readOnly}
             />
           </label>
@@ -209,7 +214,7 @@ export default function PackEditor({
               <select
                 className="w-48 h-8 mt-1 p-0.5 rounded-md text-black"
                 value={pack.type}
-                onChange={(e) =>
+                onChange={e =>
                   setPack({
                     ...pack,
                     type: e.target.value as "public" | "private",
@@ -254,7 +259,7 @@ export default function PackEditor({
                     type="text"
                     placeholder="Name"
                     value={finalRoundCategoryNameInput}
-                    onChange={(e) =>
+                    onChange={e =>
                       setFinalRoundCategoryNameInput(e.target.value)
                     }
                     readOnly={readOnly}
@@ -300,7 +305,7 @@ export default function PackEditor({
           <div className="flex flex-row-reverse">
             <Link
               className="w-fit h-fit rounded px-2 py-1 primary"
-              href={`${usePathname()}?edit=true`}
+              href={`${pathname}?edit=true`}
             >
               Edit
             </Link>

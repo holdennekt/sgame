@@ -6,7 +6,7 @@ import {
   IoIosArrowBack,
   IoIosArrowForward,
 } from "react-icons/io";
-import { Category, PackDTO, Question } from "./PackEditor";
+import { Category, Pack, Question } from "./PackEditor";
 
 export default function CategoryEditor({
   roundIndex,
@@ -20,8 +20,8 @@ export default function CategoryEditor({
   roundIndex: number;
   category: Category;
   index: number;
-  pack: PackDTO;
-  setPack: React.Dispatch<React.SetStateAction<PackDTO>>;
+  pack: Pack;
+  setPack: React.Dispatch<React.SetStateAction<Pack>>;
   setQuestionModal: React.Dispatch<
     React.SetStateAction<{
       isOpen: boolean;
@@ -38,14 +38,14 @@ export default function CategoryEditor({
     categoryIndex: number,
     category: Category
   ) => {
-    setPack((pack) => {
+    setPack(pack => {
       pack.rounds[roundIndex].categories[categoryIndex] = category;
       return { ...pack };
     });
   };
 
   const deleteCategory = (roundIndex: number, categoryIndex: number) => {
-    setPack((pack) => {
+    setPack(pack => {
       pack.rounds[roundIndex].categories = pack.rounds[
         roundIndex
       ].categories.filter((c, i) => categoryIndex !== i);
@@ -54,7 +54,7 @@ export default function CategoryEditor({
   };
 
   const addQuestion = (roundIndex: number, categoryIndex: number) => {
-    setPack((pack) => {
+    setPack(pack => {
       pack.rounds[roundIndex].categories[categoryIndex].questions.push({
         index: 0,
         value: 0,
@@ -73,7 +73,7 @@ export default function CategoryEditor({
     categoryIndex: number,
     questionIndex: number
   ) => {
-    setPack((pack) => {
+    setPack(pack => {
       pack.rounds[roundIndex].categories[categoryIndex].questions = pack.rounds[
         roundIndex
       ].categories[categoryIndex].questions.filter(
@@ -93,7 +93,7 @@ export default function CategoryEditor({
             type="text"
             placeholder="Name"
             value={category.name}
-            onChange={(e) =>
+            onChange={e =>
               changeCategory(roundIndex, categoryIndex, {
                 ...category,
                 name: e.target.value,

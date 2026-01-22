@@ -41,16 +41,16 @@ services:
       MONGO_CONN: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DB_NAME}?authSource=admin
       MY_CLIENT_ORIGIN: http://localhost:3000
 
-  # frontend:
-  #   build: frontend
-  #   ports:
-  #     - 3000:80
-  #   depends_on:
-  #     - backend
-  #   environment:
-  #     PORT: 80
-  #     NEXT_PUBLIC_BACKEND_HOST: localhost:8080
-  #     BACKEND_HOST: backend
+  frontend:
+    build: frontend
+    ports:
+      - 3000:80
+    depends_on:
+      - backend
+    environment:
+      PORT: 80
+      NEXT_PUBLIC_BACKEND_HOST: localhost:8080
+      BACKEND_HOST: backend
 
 volumes:
   redis_data:

@@ -26,7 +26,7 @@ export const isRoomLobbyDeleted = (
   obj: unknown
 ): obj is RoomLobbyDeletedDTO => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyRoomLobbyDeleted).every((key) =>
+  return Object.keys(dummyRoomLobbyDeleted).every(key =>
     Object.hasOwn(obj, key)
   );
 };
@@ -53,53 +53,63 @@ export default function Lobby({
 
   const wsConn = useRef<WebSocket | null>(null);
 
-  useEffect(() => {
-    const handlers = new Map<string, WsMessageHandler>();
-
-    handlers.set("room_updated", (payload) => {
-      if (!isRoomLobby(payload)) return;
-      setRooms((rooms) =>
-        rooms.some((room) => room.id === payload.id)
-          ? rooms.map((room) => (room.id === payload.id ? payload : room))
-          : [...rooms, payload]
-      );
-    });
-    handlers.set("room_deleted", (payload) => {
-      if (!isRoomLobbyDeleted(payload)) return;
-      setRooms((rooms) => rooms.filter((room) => room.id !== payload.id));
-    });
-    handlers.set("chat", (payload) => {
-      if (!isChatMessage(payload)) return;
-      setChatMessages((chatMessages) => [...chatMessages, payload]);
-    });
-    handlers.set("error", (payload) => {
-      if (!isError(payload)) return;
-      toast.error(payload.error, { containerId: "lobby" });
-    });
-
-    wsConn.current = new WebSocket(
-      `ws://${process.env.NEXT_PUBLIC_BACKEND_HOST}/ws/lobby`
+  const handlers = new Map<string, WsMessageHandler>();
+  handlers.set("room_updated", payload => {
+    if (!isRoomLobby(payload)) return;
+    setRooms(rooms =>
+      (rooms.some(room => room.id === payload.id) ?
+        rooms.map(room => (room.id === payload.id ? payload : room)) :
+        [...rooms, payload])
     );
+  });
+  handlers.set("room_deleted", payload => {
+    if (!isRoomLobbyDeleted(payload)) return;
+    setRooms(rooms => rooms.filter(room => room.id !== payload.id));
+  });
+  handlers.set("chat", payload => {
+    if (!isChatMessage(payload)) return;
+    setChatMessages(chatMessages => [...chatMessages, payload]);
+  });
+  handlers.set("error", payload => {
+    if (!isError(payload)) return;
+    toast.error(payload.error, { containerId: "lobby" });
+  });
 
-    wsConn.current.addEventListener("message", (ev: MessageEvent<string>) => {
-      const message: WsMessage = JSON.parse(ev.data);
-      const handler = handlers.get(message.event);
-      if (handler) handler(message.payload);
-      console.log("incoming message", message);
-    });
+  useEffect(() => {
+    let isMounted = true;
 
-    wsConn.current.addEventListener("close", () => {
-      toast.error("Disconnected from server", { containerId: "lobby" });
-    });
+    const connectWebsocket = () => {
+      wsConn.current = new WebSocket(
+        `ws://${window.location.host}/api/ws/lobby`
+      );
+
+      wsConn.current.onmessage = (ev: MessageEvent<string>) => {
+        const message: WsMessage = JSON.parse(ev.data);
+        const handler = handlers.get(message.event);
+        if (handler) handler(message.payload);
+        console.log("incoming message", message);
+      };
+
+      wsConn.current.onclose = () => {
+        toast.error("Disconnected from server. Trying to recoonect in 3s", {
+          containerId: "lobby",
+        });
+
+        if (isMounted) setTimeout(connectWebsocket, 3000);
+      };
+    };
+
+    connectWebsocket();
 
     return () => {
+      isMounted = false;
       wsConn.current?.close();
     };
   }, []);
 
   const filteredRooms = useMemo(
     () =>
-      rooms.filter((room) =>
+      rooms.filter(room =>
         room.name.toLowerCase().includes(searchInput.trim().toLowerCase())
       ),
     [rooms, searchInput]
@@ -127,7 +137,7 @@ export default function Lobby({
               className="search-room w-full rounded-lg p-1 text-black"
               placeholder="Search existing rooms"
               value={searchInput}
-              onChange={(ev) => setSearchInput(ev.target.value)}
+              onChange={ev => setSearchInput(ev.target.value)}
             />
           </div>
           <RoomsList

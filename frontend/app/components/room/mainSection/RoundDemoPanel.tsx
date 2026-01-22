@@ -64,12 +64,12 @@ export default function RoundDemoPanel({
           ref={textRef}
           className="inline-block"
           style={{
-            transform: animation.start
-              ? `translateX(-${animation.offset}px)`
-              : "translateX(0)",
-            transition: animation.start
-              ? `transform ${animation.duration}ms linear`
-              : undefined,
+            transform: animation.start ?
+              `translateX(-${animation.offset}px)` :
+              "translateX(0)",
+            transition: animation.start ?
+              `transform ${animation.duration}ms linear` :
+              undefined,
           }}
         >
           {text}

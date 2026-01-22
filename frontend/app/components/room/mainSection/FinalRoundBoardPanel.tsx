@@ -11,7 +11,7 @@ export default function FinalRoundBoard({
 }) {
   return (
     <ul className="w-full h-full">
-      { Object.keys(availableCategories).map((category, index) => 
+      { Object.keys(availableCategories).map((category, index) =>
         <li key={index} onClick={() => {
           if (canRemoveCategory) removeCategory(category);
         }}>{category}</li>

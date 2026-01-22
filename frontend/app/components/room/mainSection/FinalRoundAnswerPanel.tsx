@@ -20,8 +20,8 @@ export default function FinalRoundAnswerPanel({
         type="text"
         name="value"
         value={answer}
-        onChange={(e) => setAnswer(e.target.value)}
-        onKeyDown={(e) => {
+        onChange={e => setAnswer(e.target.value)}
+        onKeyDown={e => {
           if (e.key !== "Enter") return;
           submitFinalRoundAnswer(answer);
         }}
@@ -29,7 +29,7 @@ export default function FinalRoundAnswerPanel({
       />
       <button
         className="primary rounded-lg font-medium px-4"
-        onClick={() => setAnswer(answer)}
+        onClick={() => submitFinalRoundAnswer(answer)}
         disabled={!allowedToAnswer}
       >
         Answer

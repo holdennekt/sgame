@@ -12,12 +12,14 @@ export const isError = (obj: unknown): obj is ErrorBody =>
 const unprotectedPages = ["/register", "/login", "/about"];
 
 export const config = {
-  matcher: ["/((?!transport|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|transport|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };
 
 export async function middleware(request: NextRequest) {
   const sessionId = request.cookies.get(SESSION_ID_COOKIE_NAME)?.value;
-
+  
   const path = request.nextUrl.pathname;
 
   if (unprotectedPages.some((prefix) => path.startsWith(prefix))) {
@@ -41,7 +43,6 @@ export async function middleware(request: NextRequest) {
     response.cookies.delete(SESSION_ID_COOKIE_NAME);
     return response;
   }
-  // const user = {"id":"3","name":"nikita","avatar":null,"isConnected":true}
 
   const clonedRequest = request.clone();
   clonedRequest.headers.set(USER_HEADER_NAME, JSON.stringify(user));

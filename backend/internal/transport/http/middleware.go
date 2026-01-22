@@ -1,10 +1,15 @@
 package http
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"log"
+	"net"
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -72,4 +77,67 @@ func ErrorMiddleware(ctx *gin.Context) {
 	default:
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
+}
+
+func LoggingMiddleware(ctx *gin.Context) {
+	start := time.Now()
+
+	clientIP := ctx.ClientIP()
+	serverIP := getServerIP()
+
+	var requestBody []byte
+	if ctx.Request.Body != nil {
+		requestBody, _ = io.ReadAll(ctx.Request.Body)
+		ctx.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+	}
+
+	respBody := &bytes.Buffer{}
+	writer := &bodyWriter{body: respBody, ResponseWriter: ctx.Writer}
+	ctx.Writer = writer
+
+	ctx.Next()
+
+	statusCode := ctx.Writer.Status()
+	responseBody := respBody.String()
+	duration := time.Since(start)
+
+	log.Printf(
+		"[GIN] %v | %3d | %13v | %s %s\nClientIP: %s | ServerIP: %s\nRequest: %s\nResponse: %s\n",
+		start.Format(time.RFC3339),
+		statusCode,
+		duration,
+		ctx.Request.Method,
+		ctx.Request.URL.Path,
+		clientIP,
+		serverIP,
+		string(requestBody),
+		responseBody,
+	)
+}
+
+type bodyWriter struct {
+	gin.ResponseWriter
+	body *bytes.Buffer
+}
+
+func (w *bodyWriter) Write(b []byte) (int, error) {
+	w.body.Write(b)
+	return w.ResponseWriter.Write(b)
+}
+
+// --- функція для отримання IP сервера ---
+func getServerIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "unknown"
+	}
+	for _, addr := range addrs {
+		// пропускаємо loopback
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return "unknown"
 }

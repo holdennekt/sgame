@@ -18,6 +18,7 @@ import (
 )
 
 func init() {
+	log.SetFlags(0)
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation(custvalid.SameLength, custvalid.ValidateSameLength)
 	}
@@ -28,47 +29,50 @@ func main() {
 
 	rds := redis.NewClient(&redis.Options{
 		Addr:     envvar.GetEnvVar("REDIS_HOST") + ":" + envvar.GetEnvVar("REDIS_PORT"),
-		Username: envvar.GetEnvVar("REDIS_USERNAME"),
+		Username: envvar.GetEnvVar("REDIS_USER"),
 		Password: envvar.GetEnvVar("REDIS_PASSWORD"),
 		DB:       envvar.GetEnvVarInt("REDIS_DB"),
 	})
 	defer rds.Close()
 
-	opts := options.Client().ApplyURI(envvar.GetEnvVar("MONGO_CONN"))
+	opts := options.Client().ApplyURI(envvar.GetEnvVar("MONGO_CONN_STR"))
 	conn, err := mongo.Connect(context.Background(), opts)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer conn.Disconnect(context.Background())
 
-	mdb := conn.Database(envvar.GetEnvVar("MONGO_DB_NAME"))
-
-	engine := gin.Default()
+	mdb := conn.Database(envvar.GetEnvVar("MONGO_NAME"))
 
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{envvar.GetEnvVar("MY_CLIENT_ORIGIN")}
+	corsConfig.AllowOrigins = []string{envvar.GetEnvVar("ORIGIN")}
 	corsConfig.AllowCredentials = true
-	engine.Use(cors.New(corsConfig))
 
-	engine.Use(http.ErrorMiddleware)
+	engine := gin.New()
+	engine.Use(
+		gin.Recovery(),
+		http.LoggingMiddleware,
+		cors.New(corsConfig),
+		http.ErrorMiddleware,
+	)
 
-	root := engine.Group("/")
+	api := engine.Group("/api")
 
 	authController := InitializeAuthController(mdb, rds)
-	authController.RegisterRoutes(root)
+	authController.RegisterRoutes(api)
 
-	restGroup := root.Group("/api", authController.Authorize)
+	protected := api.Group("/", authController.Authorize)
 
 	userController := InitializeUserController(mdb)
-	userController.RegisterRoutes(restGroup)
+	userController.RegisterRoutes(protected)
 
 	packController := InitializePackController(mdb)
-	packController.RegisterRoutes(restGroup)
+	packController.RegisterRoutes(protected)
 
 	roomController := InitializeRoomController(mdb, rds)
-	roomController.RegisterRoutes(restGroup)
+	roomController.RegisterRoutes(protected)
 
-	wsGroup := root.Group("/ws", authController.Authorize)
+	wsGroup := protected.Group("/ws")
 
 	lobbyHandler := InitializeLobbyHandler(mdb, rds)
 	lobbyHandler.RegisterRoute(wsGroup)

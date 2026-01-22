@@ -25,7 +25,7 @@ export default function BettingPanel({
         max={player.score}
         step={1}
         value={amount}
-        onChange={(e) => setAmount(Number(e.target.value))}
+        onChange={e => setAmount(Number(e.target.value))}
         disabled={!allowedToBet}
       />
       <input
@@ -35,11 +35,11 @@ export default function BettingPanel({
         pattern="[0-9]*"
         name="value"
         value={amount}
-        onChange={(e) => {
+        onChange={e => {
           const onlyNums = e.target.value.replace(/[^0-9]/g, "");
           setAmount(Math.min(Number(onlyNums), player.score));
         }}
-        onKeyDown={(e) => {
+        onKeyDown={e => {
           if (e.key !== "Enter") return;
           placeBet(amount);
         }}

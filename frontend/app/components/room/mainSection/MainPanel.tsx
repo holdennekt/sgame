@@ -47,7 +47,7 @@ export default function MainPanel({
   const [correctAnswerDemo, setCorrectAnswerDemo] =
     useState<CorrectAnswerDemo | null>(null);
 
-  handlers.set("round_demo", (payload) => {
+  handlers.set("round_demo", payload => {
     if (!isRoundDemo(payload)) return;
     if (correctAnswerDemo) {
       delayedRoundDemoRef.current = payload;
@@ -56,7 +56,7 @@ export default function MainPanel({
     setRoundDemo(payload);
   });
 
-  handlers.set("correct_answer_demo", (payload) => {
+  handlers.set("correct_answer_demo", payload => {
     if (!isCorrectAnswerDemo(payload)) return;
     setCorrectAnswerDemo(payload);
     setTimeout(() => setCorrectAnswerDemo(null), payload.duration * 1000);
@@ -70,7 +70,7 @@ export default function MainPanel({
   }, [correctAnswerDemo]);
 
   const isHost = user.id === room.host?.id;
-  const player = room.players.find((player) => player.id === user.id);
+  const player = room.players.find(player => player.id === user.id);
 
   const selectQuestion = (question: { category: string; index: number }) => {
     wsConn.current?.send(
@@ -131,141 +131,141 @@ export default function MainPanel({
 
   const getMainTopSection = (room: Room) => {
     switch (room.state) {
-      case "waiting_for_start":
-        return <TextPanel topText="Waiting for start" />;
-      case "selecting_question":
-        if (correctAnswerDemo)
-          return (
-            <TextPanel
-              topText={correctAnswerDemo.answers.join(", ")}
-              bottomText={correctAnswerDemo.comment}
-            />
-          );
-        if (roundDemo)
-          return (
-            <RoundDemoPanel
-              roundDemo={roundDemo}
-              onFinish={() => setRoundDemo(null)}
-            />
-          );
-        return (
-          <BoardPanel
-            currentRoundQuestions={room.currentRoundQuestions!}
-            selectQuestion={selectQuestion}
-            canSelectQuestion={isHost || user.id === room.currentPlayer}
-          />
-        );
-
-      case "revealing_question":
-        return <QuestionPanel text={room.currentQuestion?.text!} />;
-
-      case "showing_question":
-        return (
-          <QuestionPanel
-            text={room.currentQuestion?.text!}
-            timeBar={{
-              progress: room.currentQuestion?.timerLastProgress!,
-              durationMs:
-                room.currentQuestion!.timerEndsAt.getTime() - Date.now(),
-            }}
-          />
-        );
-      case "answering":
-        return (
-          <QuestionPanel
-            text={room.currentQuestion?.text!}
-            timeBar={{
-              progress: 1,
-              durationMs:
-                room.answeringPlayer!.timerEndsAt.getTime() - Date.now(),
-            }}
-          />
-        );
-
-      case "passing":
+    case "waiting_for_start":
+      return <TextPanel topText="Waiting for start" />;
+    case "selecting_question":
+      if (correctAnswerDemo)
         return (
           <TextPanel
-            topText="Cat in bag!"
-            bottomText="Pass the question to another player"
+            topText={correctAnswerDemo.answers.join(", ")}
+            bottomText={correctAnswerDemo.comment}
           />
         );
-
-      case "betting":
-        return <TextPanel topText="Auction!" bottomText="Place your bet" />;
-
-      case "selecting_final_round_category":
+      if (roundDemo)
         return (
-          <FinalRoundBoardPanel
-            availableCategories={room.finalRoundState?.availableCategories!}
-            canRemoveCategory={user.id === room.currentPlayer || isHost}
-            removeCategory={removeFinalRoundCategory}
+          <RoundDemoPanel
+            roundDemo={roundDemo}
+            onFinish={() => setRoundDemo(null)}
           />
         );
+      return (
+        <BoardPanel
+          currentRoundQuestions={room.currentRoundQuestions!}
+          selectQuestion={selectQuestion}
+          canSelectQuestion={isHost || user.id === room.currentPlayer}
+        />
+      );
 
-      case "final_round_betting":
-        return <TextPanel topText="Final round!" bottomText="Place your bet" />;
+    case "revealing_question":
+      return <QuestionPanel text={room.currentQuestion?.text!} />;
 
-      case "showing_final_round_question":
-        return (
-          <QuestionPanel
-            text={room.finalRoundState!.question!.text}
-            timeBar={{
-              progress: 1,
-              durationMs:
+    case "showing_question":
+      return (
+        <QuestionPanel
+          text={room.currentQuestion?.text!}
+          timeBar={{
+            progress: room.currentQuestion?.timerLastProgress!,
+            durationMs:
+                room.currentQuestion!.timerEndsAt.getTime() - Date.now(),
+          }}
+        />
+      );
+    case "answering":
+      return (
+        <QuestionPanel
+          text={room.currentQuestion?.text!}
+          timeBar={{
+            progress: 1,
+            durationMs:
+                room.answeringPlayer!.timerEndsAt.getTime() - Date.now(),
+          }}
+        />
+      );
+
+    case "passing":
+      return (
+        <TextPanel
+          topText="Cat in bag!"
+          bottomText="Pass the question to another player"
+        />
+      );
+
+    case "betting":
+      return <TextPanel topText="Auction!" bottomText="Place your bet" />;
+
+    case "selecting_final_round_category":
+      return (
+        <FinalRoundBoardPanel
+          availableCategories={room.finalRoundState?.availableCategories!}
+          canRemoveCategory={user.id === room.currentPlayer || isHost}
+          removeCategory={removeFinalRoundCategory}
+        />
+      );
+
+    case "final_round_betting":
+      return <TextPanel topText="Final round!" bottomText="Place your bet" />;
+
+    case "showing_final_round_question":
+      return (
+        <QuestionPanel
+          text={room.finalRoundState!.question!.text}
+          timeBar={{
+            progress: 1,
+            durationMs:
                 room.finalRoundState!.timerEndsAt!.getTime() - Date.now(),
-            }}
+          }}
+        />
+      );
+
+    case "validating_final_round_answers":
+      return <TextPanel topText={room.finalRoundState?.question?.text!} />;
+
+    case "game_over":
+      if (correctAnswerDemo)
+        return (
+          <TextPanel
+            topText={correctAnswerDemo.answers.join(", ")}
+            bottomText={correctAnswerDemo.comment}
           />
         );
+      return <TextPanel topText="Game over!" />;
 
-      case "validating_final_round_answers":
-        return <TextPanel topText={room.finalRoundState?.question?.text!} />;
-
-      case "game_over":
-        if (correctAnswerDemo)
-          return (
-            <TextPanel
-              topText={correctAnswerDemo.answers.join(", ")}
-              bottomText={correctAnswerDemo.comment}
-            />
-          );
-        return <TextPanel topText="Game over!" />;
-
-      default:
-        return <TextPanel topText={`Unexpected room state: ${room.state}`} />;
+    default:
+      return <TextPanel topText={`Unexpected room state: ${room.state}`} />;
     }
   };
 
   const getMainBottomSection = (room: Room) => {
     switch (room.state) {
-      case "betting":
-      case "final_round_betting":
-        return (
-          <BettingPanel
-            player={player!}
-            allowedToBet={player!.score > 0 && !player!.betAmount}
-            placeBet={room.state === "betting" ? placeBet : placeFinalRoundBet}
-          />
-        );
-      case "showing_final_round_question":
-        return (
-          <FinalRoundAnswerPanel
-            allowedToAnswer={room.allowedToAnswer.includes(user.id)}
-            submitFinalRoundAnswer={submitFinalRoundAnswer}
-          />
-        );
+    case "betting":
+    case "final_round_betting":
+      return (
+        <BettingPanel
+          player={player!}
+          allowedToBet={player!.score > 0 && !player!.betAmount}
+          placeBet={room.state === "betting" ? placeBet : placeFinalRoundBet}
+        />
+      );
+    case "showing_final_round_question":
+      return (
+        <FinalRoundAnswerPanel
+          allowedToAnswer={room.allowedToAnswer.includes(user.id)}
+          submitFinalRoundAnswer={submitFinalRoundAnswer}
+        />
+      );
 
-      case "validating_final_round_answers":
-        return;
+    case "validating_final_round_answers":
+      return;
 
-      default:
-        return (
-          <div
-            className="w-full h-12 rounded primary hover:opacity-85 focus:outline-none focus:opacity-85"
-            tabIndex={-1}
-            ref={answerButton}
-            onClick={submitAnswer}
-          ></div>
-        );
+    default:
+      return (
+        <div
+          className="w-full h-12 rounded primary hover:opacity-85 focus:outline-none focus:opacity-85"
+          tabIndex={-1}
+          ref={answerButton}
+          onClick={submitAnswer}
+        ></div>
+      );
     }
   };
 
@@ -277,7 +277,9 @@ export default function MainPanel({
         </div>
         {room.players.length > 0 && (
           <div
-            className={`w-full flex flex-wrap justify-around gap-3 border rounded p-3`}
+            className={
+              "w-full flex flex-wrap justify-around gap-3 border rounded p-3"
+            }
           >
             {room.players.map((p, index) => (
               <PlayerTable
@@ -299,24 +301,21 @@ export default function MainPanel({
             room.state === "validating_final_round_answers"
           }
           question={
-            {
-              answering: room.currentQuestion as CurrentQuestion,
-              validating_final_round_answers: room.finalRoundState
-                ?.question as FinalRoundQuestion,
-            }[room.state as string]
+            room.state === "answering" ?
+              (room.currentQuestion as CurrentQuestion) :
+              (room.finalRoundState?.question as FinalRoundQuestion)
           }
           playerAnswer={
-            room.state === "validating_final_round_answers"
-              ? (room.finalRoundState as FinalRoundState)?.playersAnswers![
+            room.state === "validating_final_round_answers" ?
+              (room.finalRoundState as FinalRoundState)?.playersAnswers![
                   room.currentPlayer!
-                ]
-              : undefined
+              ] :
+              undefined
           }
           validateAnswer={
-            {
-              answering: validateAnswer,
-              validating_final_round_answers: validateFinalRoundAnswer,
-            }[room.state as string]
+            room.state === "answering" ?
+              validateAnswer :
+              validateFinalRoundAnswer
           }
         />
       )}

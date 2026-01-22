@@ -6,32 +6,31 @@ import { FormEventHandler } from "react";
 import { ErrorBody, isError } from "@/middleware";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import TimerBar from "../components/room/mainSection/TimerBar";
 
-const login = async (body: { login: string; password: string; }) => {
-  console.log(JSON.stringify(body))
-  const url = new URL(`http://${process.env.NEXT_PUBLIC_BACKEND_HOST}/login`);
-  const resp = await fetch(url, {
+const login = async (body: { login: string; password: string }) => {
+  console.log(JSON.stringify(body));
+  const resp = await fetch("/api/login", {
     method: "POST",
     credentials: "include",
     body: JSON.stringify(body),
   });
-  const obj: { id: string; } | ErrorBody = await resp?.json();
+  const obj: { id: string } | ErrorBody = await resp?.json();
   if (isError(obj)) throw new Error(obj.error);
   return obj.id;
 };
 
 export default function Page() {
   const router = useRouter();
-  const onSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
+  const onSubmit: FormEventHandler<HTMLFormElement> = async e => {
     e.preventDefault();
 
-    const data = Object.fromEntries(new FormData(e.currentTarget).entries());
+    const formData = new FormData(e.currentTarget);
     try {
       await login({
-        login: data.login.toString(),
-        password: data.password.toString(),
+        login: formData.get("login") as string,
+        password: formData.get("password") as string,
       });
+      router.refresh();
       router.push("/");
     } catch (error) {
       if (error instanceof Error) {

@@ -20,8 +20,8 @@ export default async function Page({
       <main className="flex-1 min-w-0 min-h-0 p-2">
         <div className="flex flex-col h-full rounded surface p-4">
           <PackEditor
+            savePack={updatePack}
             initialPack={pack}
-            handlePack={updatePack.bind(null, params.id)}
             readOnly={!searchParams.edit}
           />
         </div>

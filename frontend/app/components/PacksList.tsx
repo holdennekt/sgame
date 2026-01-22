@@ -107,18 +107,18 @@ export default function PacksList({
                 type="text"
                 placeholder="Name"
                 value={packsFilter}
-                onChange={(e) => onPacksFilterChange(e.target.value)}
+                onChange={e => onPacksFilterChange(e.target.value)}
               />
             </div>
             <ul className="flex h-fit">
               <li
                 className="border cursor-pointer rounded-l px-2 py-1"
-                onClick={selectPrevPage}
+                onClick={() => selectPrevPage()}
               >
                 prev
               </li>
               {[...Array(Math.min(pagesCount, MAX_VISIBLE_PAGES)).keys()].map(
-                (val) => (
+                val => (
                   <li
                     className={`border cursor-pointer px-2 py-1${
                       val + 1 === currentPage ? " bg-white text-black" : ""

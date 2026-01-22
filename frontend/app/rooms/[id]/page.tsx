@@ -1,5 +1,5 @@
 import { joinRoom } from "@/app/actions";
-import RoomPage, { Room } from "@/app/components/room/Room";
+import RoomPage from "@/app/components/room/Room";
 import { USER_HEADER_NAME, User } from "@/middleware";
 import { headers } from "next/headers";
 

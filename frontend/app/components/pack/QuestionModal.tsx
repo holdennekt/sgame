@@ -83,8 +83,8 @@ export default function QuestionModal({
               placeholder="Value"
               name="value"
               value={value}
-              onChange={(e) => {
-                const onlyNums = e.target.value.replace(/[^0-9]/g, '');
+              onChange={e => {
+                const onlyNums = e.target.value.replace(/[^0-9]/g, "");
                 setValue(Number(onlyNums));
               }}
               required
@@ -98,7 +98,7 @@ export default function QuestionModal({
               placeholder="Question text"
               name="text"
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={e => setText(e.target.value)}
               maxLength={200}
               required
               readOnly={readOnly}
@@ -109,7 +109,7 @@ export default function QuestionModal({
             <select
               className="w-48 h-8 mt-1 p-0.5 rounded-md text-black"
               value={type}
-              onChange={(e) =>
+              onChange={e =>
                 setType(e.target.value as QuestionType)
               }
             >
@@ -126,12 +126,12 @@ export default function QuestionModal({
                   <li
                     className="cursor-pointer"
                     onClick={
-                      readOnly
-                        ? undefined
-                        : () =>
-                            setAnswers((answers) =>
-                              answers.filter((a, i) => index !== i)
-                            )
+                      readOnly ?
+                        undefined :
+                        () =>
+                          setAnswers(answers =>
+                            answers.filter((a, i) => index !== i)
+                          )
                     }
                     key={index}
                   >
@@ -147,17 +147,17 @@ export default function QuestionModal({
                   type="text"
                   placeholder="Answer"
                   value={answerInput}
-                  onChange={(e) => setAnswerInput(e.target.value)}
-                  onKeyDown={(e) => {
+                  onChange={e => setAnswerInput(e.target.value)}
+                  onKeyDown={e => {
                     if (e.code !== "Enter") return;
-                    setAnswers((answers) => [...answers, answerInput]);
+                    setAnswers(answers => [...answers, answerInput]);
                     setAnswerInput("");
                   }}
                 />
                 <button
                   className="h-full rounded-r-lg px-2 py-1 primary"
                   onClick={() => {
-                    setAnswers((answers) => [...answers, answerInput]);
+                    setAnswers(answers => [...answers, answerInput]);
                     setAnswerInput("");
                   }}
                 >
@@ -175,7 +175,7 @@ export default function QuestionModal({
               placeholder="Comment"
               name="text"
               value={comment ?? ""}
-              onChange={(e) => setComment(e.target.value ?? null)}
+              onChange={e => setComment(e.target.value ?? null)}
               maxLength={100}
               readOnly={readOnly}
             />
@@ -188,14 +188,14 @@ export default function QuestionModal({
               name="hasAttachment"
               checked={!!attachment}
               onChange={
-                readOnly
-                  ? undefined
-                  : (e) =>
-                      setAttachment(
-                        e.target.checked
-                          ? { mediaType: "image", contentUrl: "" }
-                          : null
-                      )
+                readOnly ?
+                  undefined :
+                  e =>
+                    setAttachment(
+                      e.target.checked ?
+                        { mediaType: "image", contentUrl: "" } :
+                        null
+                    )
               }
             />
           </label>
@@ -212,7 +212,7 @@ export default function QuestionModal({
                   <select
                     className="w-full h-8 mt-1 p-0.5 rounded-md text-black"
                     value={attachment?.mediaType}
-                    onChange={(e) =>
+                    onChange={e =>
                       setAttachment({
                         ...attachment,
                         mediaType: e.target.value as
@@ -236,7 +236,7 @@ export default function QuestionModal({
                   placeholder="URL"
                   name="contentURL"
                   value={attachment.contentUrl}
-                  onChange={(e) =>
+                  onChange={e =>
                     setAttachment({
                       ...attachment,
                       contentUrl: e.target.value,

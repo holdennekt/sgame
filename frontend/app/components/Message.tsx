@@ -12,8 +12,8 @@ const dummyChatMessage: ChatMessage = {
 };
 
 export const isChatMessage = (obj: unknown): obj is ChatMessage => {
-  if (typeof obj !== 'object' || obj === null) return false;
-  return Object.keys(dummyChatMessage).every((key) => Object.hasOwn(obj, key));
+  if (typeof obj !== "object" || obj === null) return false;
+  return Object.keys(dummyChatMessage).every(key => Object.hasOwn(obj, key));
 };
 
 export default function Message({
@@ -32,7 +32,7 @@ export default function Message({
     <Image
       className="h-8 aspect-square rounded-full"
       src={message.from.avatar!}
-      alt='avatar'
+      alt="avatar"
     />
   );
   const divAvatar = (

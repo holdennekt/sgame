@@ -3,7 +3,7 @@
 import { ErrorBody, isError } from "@/middleware";
 import { PacksResp } from "./components/PacksList";
 import { cookies } from "next/headers";
-import { PackDTO } from "./components/pack/PackEditor";
+import { Pack, PackDTO } from "./components/pack/PackEditor";
 import { RoomLobby } from "./components/lobby/Room";
 import { CreateRoomParams, PackPreview } from "./components/lobby/NewRoomModal";
 import { Room } from "./components/room/Room";
@@ -30,13 +30,15 @@ export const createRoom = async (body: CreateRoomParams) => {
     body: JSON.stringify(body),
     headers: { cookie: cookies().toString() },
   });
-  const obj: { id: string; } | ErrorBody = await resp?.json();
+  const obj: { id: string } | ErrorBody = await resp?.json();
   if (isError(obj)) throw new Error(obj.error);
   return obj.id;
 };
 
 export const joinRoom = async (id: string, password: string | undefined) => {
-  const url = new URL(`http://${process.env.BACKEND_HOST}/api/rooms/${id}/join`);
+  const url = new URL(
+    `http://${process.env.BACKEND_HOST}/api/rooms/${id}/join`
+  );
   if (password) url.searchParams.set(PASSWORD_QUERY_PARAM, password);
   const resp = await fetch(url, {
     method: "PATCH",
@@ -49,7 +51,9 @@ export const joinRoom = async (id: string, password: string | undefined) => {
 };
 
 export const leaveRoom = async (id: string) => {
-  const url = new URL(`http://${process.env.BACKEND_HOST}/api/rooms/${id}/leave`);
+  const url = new URL(
+    `http://${process.env.BACKEND_HOST}/api/rooms/${id}/leave`
+  );
   const resp = await fetch(url, {
     method: "PATCH",
     headers: { cookie: cookies().toString() },
@@ -91,7 +95,7 @@ export const getPack = async (id: string) => {
     cache: "no-store",
     headers: { cookie: cookies().toString() },
   });
-  const pack: PackDTO | ErrorBody = await resp?.json();
+  const pack: Pack | ErrorBody = await resp?.json();
   if (isError(pack)) throw new Error(pack.error);
   return pack;
 };
@@ -103,20 +107,19 @@ export const createPack = async (pack: PackDTO) => {
     headers: { cookie: cookies().toString() },
     body: JSON.stringify(pack),
   });
-  const obj: { id: string; } | ErrorBody = await resp?.json();
+  const obj: { id: string } | ErrorBody = await resp?.json();
   if (isError(obj)) throw new Error(obj.error);
   return obj;
 };
 
-export const updatePack = async (id: string, pack: PackDTO) => {
-  const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/${id}`);
+export const updatePack = async (pack: Pack) => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/${pack.id}`);
   const resp = await fetch(url, {
     method: "PUT",
     headers: { cookie: cookies().toString() },
     body: JSON.stringify(pack),
   });
-  if (!resp.ok) {
-    const obj = await resp?.json();
-    if (isError(obj)) throw new Error(obj.error);
-  }
+  const obj: Record<string, never> | ErrorBody = await resp?.json();
+  if (isError(obj)) throw new Error(obj.error);
+  return { id: pack.id };
 };

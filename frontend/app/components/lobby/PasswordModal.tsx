@@ -36,8 +36,8 @@ export default function PasswordModal({
           type="text"
           placeholder="Password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => {
+          onChange={e => setPassword(e.target.value)}
+          onKeyDown={e => {
             if (e.code === "Enter") router.push(roomLink);
           }}
         />

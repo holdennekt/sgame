@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sgame-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sgame-backend
+  template:
+    metadata:
+      labels:
+        app: sgame-backend
+    spec:
+      containers:
+        - name: backend
+          image: sgame-backend:local
+          ports:
+            - containerPort: 80
+          env:
+            - name: GIN_MODE
+              value: release
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "80"
+            - name: REDIS_HOST
+              value: sgame-redis-service
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: redis-port
+            - name: REDIS_USER
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: redis-user
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: redis-password
+            - name: REDIS_DB
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: redis-db
+            - name: MONGO_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: mongo-name
+            - name: MONGO_CONN_STR
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: mongo-conn-str
+            - name: ORIGIN
+              value: "http://sgame.local"

@@ -78,7 +78,7 @@ export default function FinalRoundCategoryModal({
               placeholder="Value"
               name="value"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={e => setName(e.target.value)}
               required
               readOnly={readOnly}
             />
@@ -90,7 +90,7 @@ export default function FinalRoundCategoryModal({
               placeholder="Question text"
               name="text"
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={e => setText(e.target.value)}
               maxLength={200}
               required
               readOnly={readOnly}
@@ -104,12 +104,12 @@ export default function FinalRoundCategoryModal({
                   <li
                     className="cursor-pointer"
                     onClick={
-                      readOnly
-                        ? undefined
-                        : () =>
-                            setAnswers((answers) =>
-                              answers.filter((a, i) => index !== i)
-                            )
+                      readOnly ?
+                        undefined :
+                        () =>
+                          setAnswers(answers =>
+                            answers.filter((a, i) => index !== i)
+                          )
                     }
                     key={index}
                   >
@@ -125,17 +125,17 @@ export default function FinalRoundCategoryModal({
                   type="text"
                   placeholder="Answer"
                   value={answerInput}
-                  onChange={(e) => setAnswerInput(e.target.value)}
-                  onKeyDown={(e) => {
+                  onChange={e => setAnswerInput(e.target.value)}
+                  onKeyDown={e => {
                     if (e.code !== "Enter") return;
-                    setAnswers((answers) => [...answers, answerInput]);
+                    setAnswers(answers => [...answers, answerInput]);
                     setAnswerInput("");
                   }}
                 />
                 <button
                   className="h-full rounded-r-lg px-2 py-1 primary"
                   onClick={() => {
-                    setAnswers((answers) => [...answers, answerInput]);
+                    setAnswers(answers => [...answers, answerInput]);
                     setAnswerInput("");
                   }}
                 >
@@ -153,7 +153,7 @@ export default function FinalRoundCategoryModal({
               placeholder="Comment"
               name="text"
               value={comment ?? ""}
-              onChange={(e) => setComment(e.target.value ?? null)}
+              onChange={e => setComment(e.target.value ?? null)}
               maxLength={100}
               readOnly={readOnly}
             />
@@ -165,11 +165,11 @@ export default function FinalRoundCategoryModal({
               type="checkbox"
               name="hasAttachment"
               checked={!!attachment}
-              onChange={readOnly ? undefined : (e) =>
+              onChange={readOnly ? undefined : e =>
                 setAttachment(
-                  e.target.checked
-                    ? { mediaType: "image", contentUrl: "" }
-                    : null
+                  e.target.checked ?
+                    { mediaType: "image", contentUrl: "" } :
+                    null
                 )
               }
             />
@@ -187,7 +187,7 @@ export default function FinalRoundCategoryModal({
                   <select
                     className="w-full h-8 mt-1 p-0.5 rounded-md text-black"
                     value={attachment?.mediaType}
-                    onChange={(e) =>
+                    onChange={e =>
                       setAttachment({
                         ...attachment,
                         mediaType: e.target.value as
@@ -211,7 +211,7 @@ export default function FinalRoundCategoryModal({
                   placeholder="URL"
                   name="contentURL"
                   value={attachment.contentUrl}
-                  onChange={(e) =>
+                  onChange={e =>
                     setAttachment({
                       ...attachment,
                       contentUrl: e.target.value,

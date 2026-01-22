@@ -1,0 +1,98 @@
+{
+  "createdBy": {
+    "id": "SYSTEM",
+    "name": "SYSTEM",
+    "avatar": null
+  },
+  "roundsChecksum": {
+    "$binary": {
+      "base64": "c2hhAYDoQ5Fxxjjz9xk8XQt4w0csZWgPbWVudCI6bnVsbCwiYW5zd2VycyI6WyJhbnkiXSwiY29tbWVudCI6IkNvbmdyYXRzISJ9fV19fQAAAAAAAAAAAAAAAAAAAAM3",
+      "subType": "00"
+    }
+  },
+  "content": "Test Pack, Category 1, Round 1",
+  "name": "Test Pack",
+  "type": "public",
+  "rounds": [
+    {
+      "name": "Round 1",
+      "categories": [
+        {
+          "name": "Category 1",
+          "questions": [
+            {
+              "index": 0,
+              "value": 100,
+              "attachment": null,
+              "type": "regular",
+              "text": "Question 1",
+              "answers": [
+                "any"
+              ],
+              "comment": null
+            },
+            {
+              "index": 1,
+              "value": 200,
+              "attachment": null,
+              "type": "regular",
+              "text": "Question 2",
+              "answers": [
+                "any"
+              ],
+              "comment": null
+            },
+            {
+              "index": 2,
+              "value": 300,
+              "attachment": null,
+              "type": "regular",
+              "text": "Question 3",
+              "answers": [
+                "any"
+              ],
+              "comment": null
+            },
+            {
+              "index": 3,
+              "value": 400,
+              "attachment": null,
+              "type": "regular",
+              "text": "Question 4",
+              "answers": [
+                "any"
+              ],
+              "comment": null
+            },
+            {
+              "index": 4,
+              "value": 500,
+              "attachment": null,
+              "type": "regular",
+              "text": "Question 5",
+              "answers": [
+                "any"
+              ],
+              "comment": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "finalRound": {
+    "categories": [
+      {
+        "name": "One and only",
+        "question": {
+          "text": "Fortune favors the brave, u doubled the points",
+          "attachment": null,
+          "answers": [
+            "any"
+          ],
+          "comment": "Congrats!"
+        }
+      }
+    ]
+  }
+}
