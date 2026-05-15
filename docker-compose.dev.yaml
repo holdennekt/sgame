@@ -1,0 +1,102 @@
+services:
+  nginx:
+    image: nginx:alpine3.23
+    ports:
+      - 3000:80
+    volumes:
+      - ./nginx/default.dev.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
+      - minio
+
+  frontend:
+    image: sgame-frontend-dev
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: true
+      BACKEND_HOST: backend
+  
+  backend:
+    image: sgame-backend-dev
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend:/app
+    ports:
+      - 8080:80
+    depends_on:
+      - redis
+      - mongodb
+    environment:
+      HOST: 0.0.0.0
+      PORT: 80
+      MONGO_NAME: ${MONGO_DB_NAME}
+      MONGO_CONN_STR: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DB_NAME}?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_USER: ${REDIS_USERNAME}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: 0
+      STORAGE_PROVIDER: minio
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_USE_SSL: false
+      BUCKET_NAME: attachments
+      FRONTEND_URL: http://localhost:3000
+      USER_AGENT: "SGame/1.0"
+  
+  mongodb:
+    image: mongodb/mongodb-community-server:6.0-ubi8
+    init: true
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DB_NAME}
+    ports:
+      - 27017:27017
+    volumes:
+      - mongodb_data_container:/data/db
+
+  redis:
+    image: redis/redis-stack-server:7.4.0-v8
+    ports:
+      - 6379:6379
+    environment:
+      REDIS_ARGS: "--user ${REDIS_USERNAME} allcommands allkeys allchannels on >${REDIS_PASSWORD} --notify-keyspace-events Ex"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+    volumes:
+      - redis_data:/data
+  
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    ports:
+      - 9000:9000
+      - 9001:9001
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BROWSER: on
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+volumes:
+  redis_data:
+  mongodb_data_container:
+  minio_data:
+  frontend_node_modules:

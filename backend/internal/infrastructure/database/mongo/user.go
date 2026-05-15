@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/interface/repository"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -14,12 +15,12 @@ import (
 
 const USERS_COLLECTION = "users"
 
-type UserRepository struct {
+type userRepository struct {
 	db *mongo.Database
 }
 
-func NewUserRepository(db *mongo.Database) *UserRepository {
-	repo := UserRepository{db}
+func NewUserRepository(db *mongo.Database) repository.User {
+	repo := userRepository{db}
 	if err := repo.init(context.Background()); err != nil {
 		mongoErr := err.(mongo.CommandError)
 		const CODE_NAMESPACE_EXISTS = 48
@@ -30,7 +31,7 @@ func NewUserRepository(db *mongo.Database) *UserRepository {
 	return &repo
 }
 
-func (r *UserRepository) init(ctx context.Context) error {
+func (r *userRepository) init(ctx context.Context) error {
 	err := r.db.CreateCollection(ctx, USERS_COLLECTION)
 	if err != nil {
 		return err
@@ -38,7 +39,7 @@ func (r *UserRepository) init(ctx context.Context) error {
 	_, err = r.db.Collection(USERS_COLLECTION).Indexes().CreateOne(
 		ctx,
 		mongo.IndexModel{
-			Keys:    bson.D{{Key: "login", Value: 1}},
+			Keys:    bson.M{"login": 1},
 			Options: options.Index().SetName("login_unique").SetUnique(true),
 		},
 	)
@@ -55,8 +56,9 @@ type MongoUser struct {
 }
 
 type mongoDbUser struct {
-	MongoUser        `bson:"inline"`
-	domain.DbUserDTO `bson:"inline"`
+	MongoUser `bson:"inline"`
+	Login     string `bson:"login"`
+	Password  string `bson:"password"`
 }
 
 func fromDomainDbUser(dbUser *domain.DbUser) *mongoDbUser {
@@ -67,7 +69,8 @@ func fromDomainDbUser(dbUser *domain.DbUser) *mongoDbUser {
 			Name:   dbUser.Name,
 			Avatar: dbUser.Avatar,
 		},
-		DbUserDTO: dbUser.DbUserDTO,
+		Login:    dbUser.Login,
+		Password: dbUser.Password,
 	}
 }
 
@@ -78,11 +81,12 @@ func toDomainDbUser(dbUser *mongoDbUser) *domain.DbUser {
 			Name:   dbUser.Name,
 			Avatar: dbUser.Avatar,
 		},
-		DbUserDTO: dbUser.DbUserDTO,
+		Login:    dbUser.Login,
+		Password: dbUser.Password,
 	}
 }
 
-func (r *UserRepository) Create(ctx context.Context, dbUser *domain.DbUser) (string, error) {
+func (r *userRepository) Create(ctx context.Context, dbUser *domain.DbUser) (string, error) {
 	mDbUser := fromDomainDbUser(dbUser)
 	res, err := r.db.Collection(USERS_COLLECTION).InsertOne(ctx, mDbUser)
 	if err != nil {
@@ -94,7 +98,7 @@ func (r *UserRepository) Create(ctx context.Context, dbUser *domain.DbUser) (str
 	return res.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func (r *UserRepository) GetById(ctx context.Context, id string) (*domain.DbUser, error) {
+func (r *userRepository) GetById(ctx context.Context, id string) (*domain.DbUser, error) {
 	objId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, custerr.NewBadRequestErr(fmt.Sprintf("\"%s\" is an invalid id", id))
@@ -103,7 +107,7 @@ func (r *UserRepository) GetById(ctx context.Context, id string) (*domain.DbUser
 	var mDbUser mongoDbUser
 	err = r.db.Collection(USERS_COLLECTION).FindOne(
 		ctx,
-		bson.D{{Key: "_id", Value: objId}},
+		bson.M{"_id": objId},
 	).Decode(&mDbUser)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -115,11 +119,11 @@ func (r *UserRepository) GetById(ctx context.Context, id string) (*domain.DbUser
 	return toDomainDbUser(&mDbUser), nil
 }
 
-func (r *UserRepository) GetByLogin(ctx context.Context, login string) (*domain.DbUser, error) {
+func (r *userRepository) GetByLogin(ctx context.Context, login string) (*domain.DbUser, error) {
 	var mDbUser mongoDbUser
 	err := r.db.Collection(USERS_COLLECTION).FindOne(
 		ctx,
-		bson.D{{Key: "login", Value: login}},
+		bson.M{"login": login},
 	).Decode(&mDbUser)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -131,11 +135,11 @@ func (r *UserRepository) GetByLogin(ctx context.Context, login string) (*domain.
 	return toDomainDbUser(&mDbUser), nil
 }
 
-func (r *UserRepository) Update(ctx context.Context, dbUser *domain.DbUser) error {
+func (r *userRepository) Update(ctx context.Context, dbUser *domain.DbUser) error {
 	mDbUser := fromDomainDbUser(dbUser)
 	res, err := r.db.Collection(USERS_COLLECTION).ReplaceOne(
 		ctx,
-		bson.D{{Key: "_id", Value: mDbUser.Id}},
+		bson.M{"_id": mDbUser.Id},
 		mDbUser,
 	)
 	if err != nil {
@@ -147,12 +151,12 @@ func (r *UserRepository) Update(ctx context.Context, dbUser *domain.DbUser) erro
 	return nil
 }
 
-func (r *UserRepository) Delete(ctx context.Context, id string) error {
+func (r *userRepository) Delete(ctx context.Context, id string) error {
 	objId, _ := primitive.ObjectIDFromHex(id)
 
 	res, err := r.db.Collection(USERS_COLLECTION).DeleteOne(
 		ctx,
-		bson.D{{Key: "_id", Value: objId}},
+		bson.M{"_id": objId},
 	)
 	if err != nil {
 		return custerr.NewInternalErr(err)

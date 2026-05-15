@@ -7,27 +7,36 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/eventsprocessor"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client"
-	"github.com/holdennekt/sgame/internal/infrastructure/realtime/ws"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/service"
-	"github.com/holdennekt/sgame/internal/transport/http"
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	_ "github.com/holdennekt/sgame/backend/internal/dto"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client"
+	"github.com/holdennekt/sgame/backend/internal/infrastructure/realtime/ws"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/service"
+	"github.com/holdennekt/sgame/backend/internal/transport/http"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
 type LobbyHandler struct {
-	serverChannelGetter realtime.ServerChannelGetter
-	roomCache           cache.Room
-	userService         *service.UserService
+	userService                *service.UserService
+	lobbyChannelGetter         realtime.ServerChannelGetter
+	lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter
 }
 
-func NewLobbyHandler(serverChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, userService *service.UserService) *LobbyHandler {
-	return &LobbyHandler{serverChannelGetter, roomCache, userService}
+func NewLobbyHandler(userService *service.UserService, lobbyChannelGetter realtime.ServerChannelGetter, lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter) *LobbyHandler {
+	return &LobbyHandler{userService, lobbyChannelGetter, lobbyEventsProcessorGetter}
 }
 
+// @Summary      Connect to Lobby WebSocket
+// @Description  Establishes a WebSocket connection to the global lobby.
+// @Description  Requires a valid session cookie. Once connected, sends a chat message "{User} has connected".
+// @Tags         lobby
+// @Success      101  {string}  string "Switching Protocols"
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized: Session missing"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /lobby [get]
 func (h *LobbyHandler) RegisterRoute(r *gin.RouterGroup) {
 	r.GET("/lobby", h.connect)
 }
@@ -51,7 +60,7 @@ func (h *LobbyHandler) connect(ctx *gin.Context) {
 	}
 
 	clientChannel := ws.NewChannel(conn)
-	serverChannel := h.serverChannelGetter.Get(domain.LOBBY).(realtime.Channel)
+	serverChannel := h.lobbyChannelGetter.Get(domain.LOBBY)
 
 	chatMessage := client.NewSystemChatMessage(fmt.Sprintf("%s has connected", user.Name))
 	if err := clientChannel.Send(ctx, chatMessage); err != nil {
@@ -63,10 +72,8 @@ func (h *LobbyHandler) connect(ctx *gin.Context) {
 		return
 	}
 
-	processor := eventsprocessor.NewLobbyEventsProcessor(
+	processor := h.lobbyEventsProcessorGetter(
 		clientChannel,
-		serverChannel,
-		h.roomCache,
 		*user,
 	)
 	go processor.Listen(context.Background())

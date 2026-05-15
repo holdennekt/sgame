@@ -12,47 +12,55 @@ type RoomPlayer struct {
 	CurrentRoundName      *string                `json:"currentRoundName"`
 	CurrentRoundQuestions CurrentRoundQuestions  `json:"currentRoundQuestions"`
 	CurrentPlayer         *string                `json:"currentPlayer"`
-	CurrentQuestion       *hiddenCurrentQuestion `json:"currentQuestion"`
+	CurrentQuestion       *HiddenCurrentQuestion `json:"currentQuestion"`
 	AnsweringPlayer       *AnsweringPlayer       `json:"answeringPlayer"`
 	AllowedToAnswer       []string               `json:"allowedToAnswer"`
-	FinalRoundState       *hiddenFinalRoundState `json:"finalRoundState"`
+	FinalRoundState       *HiddenFinalRoundState `json:"finalRoundState"`
 	PausedState           PausedState            `json:"pausedState"`
 }
 
-type hiddenCurrentQuestion struct {
+type HiddenCurrentQuestion struct {
 	HiddenQuestion
-	Type              QuestionType `json:"type"`
-	Text              string       `json:"text"`
-	TimerLastProgress float64      `json:"timerLastProgress" bson:"timerLastProgress"`
-	TimerStartsAt     time.Time    `json:"timerStartsAt"`
-	TimerEndsAt       time.Time    `json:"timerEndsAt"`
+	Type                         QuestionType `json:"type"`
+	Text                         string       `json:"text"`
+	AttachmentRevealEndsAt       time.Time    `json:"attachmentRevealEndsAt"`
+	AttachmentRevealLastProgress float64      `json:"attachmentRevealLastProgress"`
+	TextRevealLastProgress       float64      `json:"textRevealLastProgress"`
+	TimerStartsAt                time.Time    `json:"timerStartsAt"`
+	TimerEndsAt                  time.Time    `json:"timerEndsAt"`
+	TimerLastProgress            float64      `json:"timerLastProgress"`
 }
 
-type hiddenFinalRoundState struct {
+type HiddenFinalRoundState struct {
 	AvailableCategories map[string]bool           `json:"availableCategories"`
 	Question            *HiddenFinalRoundQuestion `json:"question"`
 	Players             []string                  `json:"players"`
-	PlayersAnswers      map[string]bool           `json:"playersAnswers" bson:"playersAnswers"`
+	PlayersAnswers      map[string]bool           `json:"playersAnswers"`
 	TimerEndsAt         *time.Time                `json:"timerEndsAt"`
 }
 
 func NewPlayerRoom(room *Room) RoomPlayer {
-	var currentQuestion *hiddenCurrentQuestion
+	var currentQuestion *HiddenCurrentQuestion
 	if room.CurrentQuestion != nil {
-		currentQuestion = &hiddenCurrentQuestion{
+		currentQuestion = &HiddenCurrentQuestion{
 			HiddenQuestion: HiddenQuestion{
+				Round:      room.CurrentQuestion.Round,
+				Category:   room.CurrentQuestion.Category,
 				Index:      room.CurrentQuestion.Index,
 				Value:      room.CurrentQuestion.Value,
 				Attachment: room.CurrentQuestion.Attachment,
 			},
-			Type:              room.CurrentQuestion.Type,
-			Text:              room.CurrentQuestion.Text,
-			TimerLastProgress: room.CurrentQuestion.TimerLastProgress,
-			TimerStartsAt:     room.CurrentQuestion.TimerStartsAt,
-			TimerEndsAt:       room.CurrentQuestion.TimerEndsAt,
+			Type:                         room.CurrentQuestion.Type,
+			Text:                         room.CurrentQuestion.Text,
+			AttachmentRevealEndsAt:       room.CurrentQuestion.AttachmentRevealEndsAt,
+			AttachmentRevealLastProgress: room.CurrentQuestion.AttachmentRevealLastProgress,
+			TextRevealLastProgress:       room.CurrentQuestion.TextRevealLastProgress,
+			TimerStartsAt:                room.CurrentQuestion.TimerStartsAt,
+			TimerEndsAt:                  room.CurrentQuestion.TimerEndsAt,
+			TimerLastProgress:            room.CurrentQuestion.TimerLastProgress,
 		}
 	}
-	var finalRoundState *hiddenFinalRoundState
+	var finalRoundState *HiddenFinalRoundState
 	if room.FinalRoundState != nil {
 		var finalRoundQuestion *HiddenFinalRoundQuestion
 		if room.FinalRoundState.Question != nil {
@@ -65,7 +73,7 @@ func NewPlayerRoom(room *Room) RoomPlayer {
 		for id := range room.FinalRoundState.PlayersAnswers {
 			finalRoundPlayersAnswers[id] = true
 		}
-		finalRoundState = &hiddenFinalRoundState{
+		finalRoundState = &HiddenFinalRoundState{
 			AvailableCategories: room.FinalRoundState.AvailableCategories,
 			Question:            finalRoundQuestion,
 			Players:             room.FinalRoundState.Players,

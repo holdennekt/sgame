@@ -7,8 +7,8 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
-	"github.com/holdennekt/sgame/internal/message"
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/internal/message"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
 type channel struct {

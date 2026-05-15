@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client/outgoing"
-	serverevent "github.com/holdennekt/sgame/internal/eventsprocessor/server"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
+	serverevent "github.com/holdennekt/sgame/backend/internal/eventsprocessor/server"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
 type ValidateAnswerPayload struct {
@@ -42,7 +42,7 @@ func HandleValidateAnswerMessage(ctx context.Context, server realtime.Channel, i
 			return err
 		}
 	case domain.ShowingQuestion:
-		questionStartedMessage := serverevent.NewQuestionStartedMessage()
+		questionStartedMessage := serverevent.NewQuestionStartedMessage(question)
 		if err := internalServer.Send(ctx, questionStartedMessage); err != nil {
 			return err
 		}

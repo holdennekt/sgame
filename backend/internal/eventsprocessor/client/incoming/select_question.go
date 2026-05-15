@@ -3,13 +3,15 @@ package incoming
 import (
 	"context"
 	"encoding/json"
+	"log"
+	"time"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client/outgoing"
-	serverevent "github.com/holdennekt/sgame/internal/eventsprocessor/server"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
+	serverevent "github.com/holdennekt/sgame/backend/internal/eventsprocessor/server"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
 type SelectQuestionPayload struct {
@@ -17,44 +19,69 @@ type SelectQuestionPayload struct {
 	Index    int    `json:"index"`
 }
 
-func HandleSelectQuestionMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string, user domain.User, pack *domain.Pack, msg message.Message) error {
+func HandleSelectQuestionMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, getAttachmentUrl func(key string) (string, error), roomId string, user domain.User, pack *domain.Pack, msg message.Message) error {
 	var qsp SelectQuestionPayload
 	if err := json.Unmarshal(msg.Payload, &qsp); err != nil {
 		return err
 	}
-	newRoom, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
-		return room.SelectQuestion(user.Id, pack, qsp.Category, qsp.Index)
-	})
+
+	room, err := roomCache.GetById(ctx, roomId)
 	if err != nil {
 		return err
 	}
-
-	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
-	if err := server.Send(ctx, roomUpdatedMessage); err != nil {
+	question, err := pack.GetQuestion(*room.CurrentRoundName, qsp.Category, qsp.Index)
+	if err != nil {
+		return err
+	}
+	questionDemoMessage := outgoing.NewQuestionDemoMessage(*question)
+	if err := server.Send(ctx, questionDemoMessage); err != nil {
 		return err
 	}
 
-	switch newRoom.State {
-	case domain.RevealingQuestion:
-		revealingStartedMessage := serverevent.NewRevealingStartedMessage()
-		if err := internalServer.Send(ctx, revealingStartedMessage); err != nil {
-			return err
+	time.AfterFunc(outgoing.QuestionDemoDuration*time.Second, func() {
+		newRoom, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
+			return room.SelectQuestion(user.Id, pack, qsp.Category, qsp.Index, getAttachmentUrl)
+		})
+		if err != nil {
+			log.Println(err)
+			return
 		}
-	case domain.Answering:
-		answerStartedMessage := serverevent.NewAnswerStartedMessage()
-		if err := internalServer.Send(ctx, answerStartedMessage); err != nil {
-			return err
+
+		roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
+		if err := server.Send(ctx, roomUpdatedMessage); err != nil {
+			log.Println(err)
+			return
 		}
-	case domain.Passing:
-		passingStartedMessage := serverevent.NewPassingStartedMessage()
-		if err := internalServer.Send(ctx, passingStartedMessage); err != nil {
-			return err
+
+		switch newRoom.State {
+		case domain.RevealingQuestion:
+			revealingStartedMessage := serverevent.NewRevealingStartedMessage(newRoom.CurrentQuestion.Question)
+			if err := internalServer.Send(ctx, revealingStartedMessage); err != nil {
+				log.Println(err)
+				return
+			}
+		case domain.Answering:
+			answerStartedMessage := serverevent.NewAnswerStartedMessage(
+				newRoom.CurrentQuestion.Question,
+				newRoom.AnsweringPlayer.Id,
+			)
+			if err := internalServer.Send(ctx, answerStartedMessage); err != nil {
+				log.Println(err)
+				return
+			}
+		case domain.Passing:
+			passingStartedMessage := serverevent.NewPassingStartedMessage(newRoom.CurrentQuestion.Question)
+			if err := internalServer.Send(ctx, passingStartedMessage); err != nil {
+				log.Println(err)
+				return
+			}
+		case domain.Betting:
+			bettingStartedMessage := serverevent.NewBettingStartedMessage(newRoom.CurrentQuestion.Question)
+			if err := internalServer.Send(ctx, bettingStartedMessage); err != nil {
+				log.Println(err)
+				return
+			}
 		}
-	case domain.Betting:
-		bettingStartedMessage := serverevent.NewBettingStartedMessage()
-		if err := internalServer.Send(ctx, bettingStartedMessage); err != nil {
-			return err
-		}
-	}
+	})
 	return nil
 }

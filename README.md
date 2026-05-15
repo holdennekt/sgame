@@ -76,7 +76,8 @@ minikube ip
 7. Map the domain in your `/etc/hosts` file:
 
 ```
-<MINIKUBE_IP> sgame.local
+<MINIKUBE-IP> sgame.local
+<MINIKUBE-IP> minio.sgame.local
 ```
 
 Testing

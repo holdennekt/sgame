@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/dto"
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/dto"
+	"github.com/holdennekt/sgame/backend/internal/interface/repository"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -14,12 +15,12 @@ import (
 
 const ROOMS_COLLECTION = "rooms"
 
-type RoomRepository struct {
+type roomRepository struct {
 	db *mongo.Database
 }
 
-func NewRoomRepository(db *mongo.Database) *RoomRepository {
-	repo := RoomRepository{db}
+func NewRoomRepository(db *mongo.Database) repository.Room {
+	repo := roomRepository{db}
 	if err := repo.init(context.Background()); err != nil {
 		mongoErr := err.(mongo.CommandError)
 		const CODE_NAMESPACE_EXISTS = 48
@@ -30,11 +31,11 @@ func NewRoomRepository(db *mongo.Database) *RoomRepository {
 	return &repo
 }
 
-func (r *RoomRepository) init(ctx context.Context) error {
+func (r *roomRepository) init(ctx context.Context) error {
 	return r.db.CreateCollection(ctx, ROOMS_COLLECTION)
 }
 
-func (r *RoomRepository) Create(ctx context.Context, room *domain.Room) error {
+func (r *roomRepository) Create(ctx context.Context, room *domain.Room) error {
 	_, err := r.db.Collection(ROOMS_COLLECTION).InsertOne(ctx, room)
 	if err != nil {
 		return custerr.NewInternalErr(err)
@@ -42,11 +43,11 @@ func (r *RoomRepository) Create(ctx context.Context, room *domain.Room) error {
 	return nil
 }
 
-func (r *RoomRepository) GetById(ctx context.Context, id string) (*domain.Room, error) {
+func (r *roomRepository) GetById(ctx context.Context, id string) (*domain.Room, error) {
 	var room domain.Room
 	err := r.db.Collection(ROOMS_COLLECTION).FindOne(
 		ctx,
-		bson.D{{Key: "_id", Value: id}},
+		bson.M{"_id": id},
 	).Decode(&room)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -58,15 +59,15 @@ func (r *RoomRepository) GetById(ctx context.Context, id string) (*domain.Room, 
 	return &room, nil
 }
 
-func (r *RoomRepository) GetByCreatedBy(ctx context.Context, dto dto.GetRoomsByCreatedByDTO) ([]domain.Room, error) {
+func (r *roomRepository) GetByCreatedBy(ctx context.Context, id string, search dto.SearchRequest) ([]domain.Room, error) {
 	cur, err := r.db.Collection(ROOMS_COLLECTION).Find(
 		ctx,
-		bson.D{{Key: "createdBy", Value: dto.Id}},
+		bson.M{"createdBy": id},
 		options.
 			Find().
-			SetSort(bson.D{{Key: "_id", Value: 1}}).
-			SetSkip(int64((dto.Page-1)*dto.Limit)).
-			SetLimit(int64(dto.Limit)),
+			SetSort(bson.M{"_id": 1}).
+			SetSkip(int64((search.Page-1)*search.Limit)).
+			SetLimit(int64(search.Limit)),
 	)
 	if err != nil {
 		return nil, custerr.NewInternalErr(err)

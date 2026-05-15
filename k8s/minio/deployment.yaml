@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sgame-minio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sgame-minio
+  template:
+    metadata:
+      labels:
+        app: sgame-minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+          args:
+            - minio server /data/db --console-address :9001
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: minio-root-user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: minio-root-password
+          volumeMounts:
+            - name: sgame-minio-data
+              mountPath: /data/db
+      volumes:
+        - name: sgame-minio-data
+          persistentVolumeClaim:
+            claimName: sgame-minio-pvc

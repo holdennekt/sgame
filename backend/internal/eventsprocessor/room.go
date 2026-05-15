@@ -7,15 +7,22 @@ import (
 	"slices"
 	"time"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client/incoming"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client/outgoing"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/server"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/interface/repository"
-	"github.com/holdennekt/sgame/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/incoming"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/server"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/interface/repository"
+	"github.com/holdennekt/sgame/backend/internal/interface/storage"
+	"github.com/holdennekt/sgame/backend/internal/message"
+)
+
+const (
+	OWNER_TTL          = 10 * time.Second
+	OWNER_REFRESH_RATE = 5 * time.Second
+	GET_URL_TTL        = 3 * time.Hour
 )
 
 type RoomEventsProcessor struct {
@@ -25,13 +32,37 @@ type RoomEventsProcessor struct {
 	roomInternalServer realtime.Channel
 	roomCache          cache.Room
 	roomRepository     repository.Room
+	storage            storage.Storage
 	id                 string
 	user               domain.User
 	pack               *domain.Pack
 }
 
-func NewRoomEventsProcessor(client realtime.Channel, lobbyServer realtime.Channel, roomServer realtime.Channel, roomInternalServer realtime.Channel, roomCache cache.Room, roomRepository repository.Room, id string, user domain.User, pack *domain.Pack) *RoomEventsProcessor {
-	return &RoomEventsProcessor{client, lobbyServer, roomServer, roomInternalServer, roomCache, roomRepository, id, user, pack}
+type RoomEventsProcessorGetter func(client realtime.Channel, id string, user domain.User) (*RoomEventsProcessor, error)
+
+func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage) RoomEventsProcessorGetter {
+	return func(client realtime.Channel, id string, user domain.User) (*RoomEventsProcessor, error) {
+		room, err := roomCache.GetById(context.Background(), id)
+		if err != nil {
+			return nil, err
+		}
+		pack, err := packRepository.GetById(context.Background(), room.PackPreview.Id)
+		if err != nil {
+			return nil, err
+		}
+		return &RoomEventsProcessor{
+			client,
+			lobbyChannelGetter.Get(domain.LOBBY),
+			roomChannelGetter.Get(domain.ROOM_PREFIX + id),
+			roomInternalChannelGetter.Get(domain.ROOM_PREFIX + id + domain.INTERNAL_POSTFIX),
+			roomCache,
+			roomRepository,
+			storage,
+			id,
+			user,
+			pack,
+		}, nil
+	}
 }
 
 func (p *RoomEventsProcessor) Listen(ctx context.Context) {
@@ -75,13 +106,16 @@ func (p *RoomEventsProcessor) Listen(ctx context.Context) {
 }
 
 func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg message.Message) error {
+	getURL := func(key string) (string, error) {
+		return p.storage.URL(ctx, key, GET_URL_TTL)
+	}
 	switch msg.Event {
 	case domain.Chat:
 		return client.HandleClientChatMessage(ctx, p.roomServer, p.user, msg)
 	case domain.StartGame:
 		return incoming.HandleStartGameMessage(ctx, p.lobbyServer, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, p.pack, msg)
 	case domain.SelectQuestion:
-		return incoming.HandleSelectQuestionMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, p.pack, msg)
+		return incoming.HandleSelectQuestionMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, getURL, p.id, p.user, p.pack, msg)
 	case domain.SubmitAnswer:
 		return incoming.HandleSubmitAnswerMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
 	case domain.ValidateAnswer:
@@ -91,7 +125,7 @@ func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg messa
 	case domain.PlaceBet:
 		return incoming.HandlePlaceBetMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
 	case domain.RemoveFinalRoundCategory:
-		return incoming.HandleRemoveFinalRoundCategoryMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, p.pack, msg)
+		return incoming.HandleRemoveFinalRoundCategoryMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, getURL, p.id, p.user, p.pack, msg)
 	case domain.PlaceFinalRoundBet:
 		return incoming.HandlePlaceFinalRoundBetMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
 	case domain.SubmitFinalRoundAnswer:
@@ -146,6 +180,8 @@ func (p *RoomEventsProcessor) handleServerMessage(ctx context.Context, msg messa
 		return outgoing.HandleRoomUpdatedMessage(ctx, p.roomCache, p.client, p.user, msg)
 	case domain.RoundDemo:
 		return outgoing.HandleRoundDemoMessage(ctx, p.client, msg)
+	case domain.QuestionDemo:
+		return outgoing.HandleQuestionDemoMessage(ctx, p.client, msg)
 	case domain.CorrectAnswerDemo:
 		return outgoing.HandleCorrectAnswerDemoMessage(ctx, p.client, msg)
 	case domain.RoomDeleted:
@@ -159,34 +195,91 @@ func (p *RoomEventsProcessor) handleServerClosure(ctx context.Context) error {
 	return nil
 }
 
-func (p *RoomEventsProcessor) ListenInternal(ctx context.Context) error {
-	for msg := range p.roomInternalServer.Recieve(ctx) {
-		log.Printf("Server has recieved room \"%s\" internal message with event \"%s\": %v\n", p.id, msg.Event, string(msg.Payload))
-		if err := p.handleInternalMessage(ctx, msg); err != nil {
-			log.Println(err)
-			return err
-		}
-	}
-	p.handleInternalServerClosure(ctx)
-	return nil
+type RoomInternalEventsProcessor struct {
+	lobbyServer        realtime.Channel
+	roomServer         realtime.Channel
+	roomInternalServer realtime.Channel
+	roomCache          cache.Room
+	roomRepository     repository.Room
+	storage            storage.Storage
+	id                 string
+	pack               *domain.Pack
 }
 
-func (p *RoomEventsProcessor) handleInternalMessage(ctx context.Context, msg message.Message) error {
+type RoomInternalEventsProcessorGetter func(id string) (*RoomInternalEventsProcessor, error)
+
+func NewRoomInternalEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage) RoomInternalEventsProcessorGetter {
+	return func(id string) (*RoomInternalEventsProcessor, error) {
+		room, err := roomCache.GetById(context.Background(), id)
+		if err != nil {
+			return nil, err
+		}
+		pack, err := packRepository.GetById(context.Background(), room.PackPreview.Id)
+		if err != nil {
+			return nil, err
+		}
+		return &RoomInternalEventsProcessor{
+			lobbyChannelGetter.Get(domain.LOBBY),
+			roomChannelGetter.Get(domain.ROOM_PREFIX + id),
+			roomInternalChannelGetter.Get(domain.ROOM_PREFIX + id + domain.INTERNAL_POSTFIX),
+			roomCache,
+			roomRepository,
+			storage,
+			id,
+			pack,
+		}, nil
+	}
+}
+
+func (p *RoomInternalEventsProcessor) Listen(ctx context.Context) error {
+	defer p.handleServerClosure(ctx)
+
+	go func() {
+		tickerC := time.Tick(OWNER_REFRESH_RATE)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tickerC:
+				p.roomCache.UpdateOwner(ctx, p.id, OWNER_TTL)
+			}
+		}
+	}()
+
+	messages := p.roomInternalServer.Recieve(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case msg := <-messages:
+			log.Printf("Server has recieved room \"%s\" internal message with event \"%s\": %v\n", p.id, msg.Event, string(msg.Payload))
+			if err := p.handleMessage(ctx, msg); err != nil {
+				log.Println(err)
+				return err
+			}
+		}
+	}
+}
+
+func (p *RoomInternalEventsProcessor) handleMessage(ctx context.Context, msg message.Message) error {
+	getURL := func(key string) (string, error) {
+		return p.storage.URL(ctx, key, GET_URL_TTL)
+	}
 	switch msg.Event {
 	case domain.RoundStarted:
 		return server.HandleRoundStartedMessage(ctx, p.roomServer, p.roomCache, p.id, p.pack)
 	case domain.RevealingStarted:
-		return server.HandleRevealingStartedMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id)
+		return server.HandleRevealingStartedMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, msg)
 	case domain.QuestionStarted:
-		return server.HandleQuestionStartedMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id)
+		return server.HandleQuestionStartedMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, msg)
 	case domain.AnswerStarted:
-		return server.HandleAnswerStartedMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id)
+		return server.HandleAnswerStartedMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, msg)
 	case domain.QuestionEnded:
-		return server.HandleQuestionEndedMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.pack, msg)
+		return server.HandleQuestionEndedMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, getURL, p.id, p.pack, msg)
 	case domain.PassingStarted:
-		return server.HandlePassingStartedMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id)
+		return server.HandlePassingStartedMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, msg)
 	case domain.BettingStarted:
-		return server.HandleBettingStartedMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id)
+		return server.HandleBettingStartedMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, msg)
 	case domain.FinalRoundBettingStarted:
 		return server.HandleFinalRoundBettingStartedMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id)
 	case domain.FinalRoundQuestionStarted:
@@ -201,7 +294,7 @@ func (p *RoomEventsProcessor) handleInternalMessage(ctx context.Context, msg mes
 	return nil
 }
 
-func (p *RoomEventsProcessor) handleInternalServerClosure(ctx context.Context) error {
+func (p *RoomInternalEventsProcessor) handleServerClosure(ctx context.Context) error {
 	log.Printf("Server room \"%s\" channel closed\n", p.id)
 	return nil
 }

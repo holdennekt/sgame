@@ -3,8 +3,8 @@ package outgoing
 import (
 	"encoding/json"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
 type errorPayload struct {

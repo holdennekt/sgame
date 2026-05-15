@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/holdennekt/sgame/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/domain"
 )
 
 type User interface {

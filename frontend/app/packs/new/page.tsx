@@ -1,11 +1,18 @@
 import { createPack } from "@/app/actions";
-import Navbar from "@/app/components/Navbar";
-import PackEditor from "@/app/components/pack/PackEditor";
+import Navbar from "@/components/Navbar";
+import PackEditor from "@/components/pack/PackEditor";
 import { USER_HEADER_NAME, User } from "@/middleware";
+import { Pack } from "@/types/pack";
 import { headers } from "next/headers";
 
 export default function Page() {
   const user: User = JSON.parse(headers().get(USER_HEADER_NAME)!);
+  const initialPack: Omit<Pack, "id" | "createdBy"> = {
+    name: "",
+    type: "public",
+    rounds: [{ name: "Round 1", categories: [] }],
+    finalRound: { categories: [] },
+  };
 
   return (
     <>
@@ -15,7 +22,7 @@ export default function Page() {
           <p className="text-xl font-semibold leading-none mb-2">
             Create your pack:
           </p>
-          <PackEditor savePack={createPack} />
+          <PackEditor savePack={createPack} initialPack={initialPack} />
         </div>
       </main>
     </>

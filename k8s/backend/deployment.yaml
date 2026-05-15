@@ -56,5 +56,26 @@ spec:
                 secretKeyRef:
                   name: sgame-secrets
                   key: mongo-conn-str
-            - name: ORIGIN
+            - name: MINIO_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: minio-endpoint
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: minio-access-key
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sgame-secrets
+                  key: minio-secret-key
+            - name: MINIO_USE_SSL
+              value: "false"
+            - name: BUCKET_NAME
+              value: "attachments"
+            - name: FRONTEND_URL
               value: "http://sgame.local"
+            - name: USER_AGENT
+              value: "SGame/1.0"

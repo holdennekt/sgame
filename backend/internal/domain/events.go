@@ -8,6 +8,7 @@ const (
 	RoundStarted              Event = "round_started"
 	RoundDemo                 Event = "round_demo"
 	SelectQuestion            Event = "select_question"
+	QuestionDemo              Event = "question_demo"
 	RevealingStarted          Event = "revealing_started"
 	QuestionStarted           Event = "question_started"
 	SubmitAnswer              Event = "submit_answer"

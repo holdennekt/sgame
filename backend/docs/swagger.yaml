@@ -1,0 +1,1693 @@
+basePath: /api
+definitions:
+  github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer:
+    properties:
+      id:
+        type: string
+      timerEndsAt:
+        type: string
+      timerStartsAt:
+        type: string
+    required:
+    - id
+    - timerEndsAt
+    - timerStartsAt
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.Attachment:
+    properties:
+      duration:
+        type: number
+      key:
+        type: string
+      mimeType:
+        type: string
+      size:
+        type: integer
+      type:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FileType'
+      url:
+        type: string
+    required:
+    - duration
+    - key
+    - mimeType
+    - size
+    - type
+    - url
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.BoardQuestion:
+    properties:
+      hasBeenPlayed:
+        type: boolean
+      index:
+        type: integer
+      value:
+        type: integer
+    required:
+    - hasBeenPlayed
+    - index
+    - value
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.Category:
+    properties:
+      name:
+        type: string
+      questions:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Question'
+        type: array
+    required:
+    - name
+    - questions
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.CurrentQuestion:
+    properties:
+      answers:
+        items:
+          type: string
+        type: array
+      attachment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
+      attachmentRevealEndsAt:
+        type: string
+      attachmentRevealLastProgress:
+        type: number
+      comment:
+        type: string
+      index:
+        type: integer
+      text:
+        type: string
+      textRevealLastProgress:
+        type: number
+      timerEndsAt:
+        type: string
+      timerLastProgress:
+        type: number
+      timerStartsAt:
+        type: string
+      type:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType'
+      value:
+        type: integer
+    required:
+    - answers
+    - attachment
+    - attachmentRevealEndsAt
+    - attachmentRevealLastProgress
+    - comment
+    - index
+    - text
+    - textRevealLastProgress
+    - timerEndsAt
+    - timerLastProgress
+    - timerStartsAt
+    - type
+    - value
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.CurrentRoundQuestions:
+    additionalProperties:
+      items:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.BoardQuestion'
+      type: array
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.DbUser:
+    properties:
+      avatar:
+        type: string
+      id:
+        type: string
+      login:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    required:
+    - avatar
+    - id
+    - login
+    - name
+    - password
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.FileType:
+    enum:
+    - image
+    - audio
+    - video
+    type: string
+    x-enum-varnames:
+    - Image
+    - Audio
+    - Video
+  github_com_holdennekt_sgame_backend_internal_domain.FinalRound:
+    properties:
+      categories:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundCategory'
+        type: array
+    required:
+    - categories
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.FinalRoundCategory:
+    properties:
+      name:
+        type: string
+      question:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundQuestion'
+    required:
+    - name
+    - question
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.FinalRoundQuestion:
+    properties:
+      answers:
+        items:
+          type: string
+        type: array
+      attachment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
+      comment:
+        type: string
+      text:
+        type: string
+    required:
+    - answers
+    - attachment
+    - comment
+    - text
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState:
+    properties:
+      availableCategories:
+        additionalProperties:
+          type: boolean
+        type: object
+      players:
+        items:
+          type: string
+        type: array
+      playersAnswers:
+        additionalProperties:
+          type: string
+        type: object
+      question:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundQuestion'
+      timerEndsAt:
+        type: string
+    required:
+    - availableCategories
+    - players
+    - playersAnswers
+    - question
+    - timerEndsAt
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.HiddenCurrentQuestion:
+    properties:
+      attachment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
+      attachmentRevealEndsAt:
+        type: string
+      attachmentRevealLastProgress:
+        type: number
+      index:
+        type: integer
+      text:
+        type: string
+      textRevealLastProgress:
+        type: number
+      timerEndsAt:
+        type: string
+      timerLastProgress:
+        type: number
+      timerStartsAt:
+        type: string
+      type:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType'
+      value:
+        type: integer
+    required:
+    - attachment
+    - attachmentRevealEndsAt
+    - attachmentRevealLastProgress
+    - index
+    - text
+    - textRevealLastProgress
+    - timerEndsAt
+    - timerLastProgress
+    - timerStartsAt
+    - type
+    - value
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundQuestion:
+    properties:
+      attachment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
+      text:
+        type: string
+    required:
+    - attachment
+    - text
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundState:
+    properties:
+      availableCategories:
+        additionalProperties:
+          type: boolean
+        type: object
+      players:
+        items:
+          type: string
+        type: array
+      playersAnswers:
+        additionalProperties:
+          type: boolean
+        type: object
+      question:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundQuestion'
+      timerEndsAt:
+        type: string
+    required:
+    - availableCategories
+    - players
+    - playersAnswers
+    - question
+    - timerEndsAt
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.Host:
+    properties:
+      avatar:
+        type: string
+      id:
+        type: string
+      isConnected:
+        type: boolean
+      name:
+        type: string
+    required:
+    - avatar
+    - id
+    - isConnected
+    - name
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.Pack:
+    properties:
+      createdBy:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.User'
+      finalRound:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRound'
+      id:
+        type: string
+      name:
+        type: string
+      rounds:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Round'
+        type: array
+      type:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
+    required:
+    - createdBy
+    - finalRound
+    - id
+    - name
+    - rounds
+    - type
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.PackPreview:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    required:
+    - id
+    - name
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.PausedState:
+    properties:
+      paused:
+        type: boolean
+      pausedAt:
+        type: string
+    required:
+    - paused
+    - pausedAt
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.Player:
+    properties:
+      avatar:
+        type: string
+      betAmount:
+        type: integer
+      id:
+        type: string
+      isConnected:
+        type: boolean
+      name:
+        type: string
+      score:
+        type: integer
+    required:
+    - avatar
+    - betAmount
+    - id
+    - isConnected
+    - name
+    - score
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.PrivacyType:
+    enum:
+    - public
+    - private
+    type: string
+    x-enum-varnames:
+    - Public
+    - Private
+  github_com_holdennekt_sgame_backend_internal_domain.Question:
+    properties:
+      answers:
+        items:
+          type: string
+        type: array
+      attachment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
+      comment:
+        type: string
+      index:
+        type: integer
+      text:
+        type: string
+      type:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType'
+      value:
+        type: integer
+    required:
+    - answers
+    - attachment
+    - comment
+    - index
+    - text
+    - type
+    - value
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.QuestionType:
+    enum:
+    - regular
+    - auction
+    - catInBag
+    type: string
+    x-enum-varnames:
+    - Regular
+    - Auction
+    - CatInBag
+  github_com_holdennekt_sgame_backend_internal_domain.Room:
+    properties:
+      allowedToAnswer:
+        items:
+          type: string
+        type: array
+      answeringPlayer:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer'
+      banList:
+        items:
+          type: string
+        type: array
+      createdBy:
+        type: string
+      currentPlayer:
+        type: string
+      currentQuestion:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentQuestion'
+      currentRoundName:
+        type: string
+      currentRoundQuestions:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentRoundQuestions'
+      finalRoundState:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState'
+      host:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host'
+      id:
+        type: string
+      name:
+        type: string
+      options:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions'
+      packPreview:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
+      pausedState:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PausedState'
+      players:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player'
+        type: array
+      state:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomState'
+    required:
+    - allowedToAnswer
+    - answeringPlayer
+    - banList
+    - createdBy
+    - currentPlayer
+    - currentQuestion
+    - currentRoundName
+    - currentRoundQuestions
+    - finalRoundState
+    - host
+    - id
+    - name
+    - options
+    - packPreview
+    - pausedState
+    - players
+    - state
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.RoomHost:
+    properties:
+      allowedToAnswer:
+        items:
+          type: string
+        type: array
+      answeringPlayer:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer'
+      currentPlayer:
+        type: string
+      currentQuestion:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentQuestion'
+      currentRoundName:
+        type: string
+      currentRoundQuestions:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentRoundQuestions'
+      finalRoundState:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState'
+      host:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host'
+      id:
+        type: string
+      name:
+        type: string
+      packPreview:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
+      pausedState:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PausedState'
+      players:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player'
+        type: array
+      state:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomState'
+    required:
+    - allowedToAnswer
+    - answeringPlayer
+    - currentPlayer
+    - currentQuestion
+    - currentRoundName
+    - currentRoundQuestions
+    - finalRoundState
+    - host
+    - id
+    - name
+    - packPreview
+    - pausedState
+    - players
+    - state
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.RoomLobby:
+    properties:
+      host:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host'
+      id:
+        type: string
+      maxPlayers:
+        type: integer
+      name:
+        type: string
+      packPreview:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
+      players:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player'
+        type: array
+      status:
+        type: string
+      type:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
+    required:
+    - host
+    - id
+    - maxPlayers
+    - name
+    - packPreview
+    - players
+    - status
+    - type
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.RoomOptions:
+    properties:
+      answerThinkingTime:
+        maximum: 30
+        minimum: 1
+        type: integer
+      falseStartAllowed:
+        type: boolean
+      maxPlayers:
+        maximum: 10
+        minimum: 1
+        type: integer
+      password:
+        maxLength: 16
+        minLength: 4
+        type: string
+      questionThinkingTime:
+        maximum: 30
+        minimum: 1
+        type: integer
+      questionThinkingTimeFinal:
+        maximum: 120
+        minimum: 1
+        type: integer
+      type:
+        allOf:
+        - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
+        enum:
+        - public
+        - private
+    required:
+    - answerThinkingTime
+    - falseStartAllowed
+    - maxPlayers
+    - password
+    - questionThinkingTime
+    - questionThinkingTimeFinal
+    - type
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.RoomPlayer:
+    properties:
+      allowedToAnswer:
+        items:
+          type: string
+        type: array
+      answeringPlayer:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer'
+      currentPlayer:
+        type: string
+      currentQuestion:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.HiddenCurrentQuestion'
+      currentRoundName:
+        type: string
+      currentRoundQuestions:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentRoundQuestions'
+      finalRoundState:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundState'
+      host:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host'
+      id:
+        type: string
+      name:
+        type: string
+      packPreview:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
+      pausedState:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PausedState'
+      players:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player'
+        type: array
+      state:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomState'
+    required:
+    - allowedToAnswer
+    - answeringPlayer
+    - currentPlayer
+    - currentQuestion
+    - currentRoundName
+    - currentRoundQuestions
+    - finalRoundState
+    - host
+    - id
+    - name
+    - packPreview
+    - pausedState
+    - players
+    - state
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.RoomState:
+    enum:
+    - waiting_for_start
+    - selecting_question
+    - revealing_question
+    - showing_question
+    - answering
+    - betting
+    - passing
+    - selecting_final_round_category
+    - final_round_betting
+    - showing_final_round_question
+    - validating_final_round_answers
+    - game_over
+    type: string
+    x-enum-varnames:
+    - WaitingForStart
+    - SelectingQuestion
+    - RevealingQuestion
+    - ShowingQuestion
+    - Answering
+    - Betting
+    - Passing
+    - SelectingFinalRoundCategory
+    - FinalRoundBetting
+    - ShowingFinalRoundQuestion
+    - ValidatingFinalRoundAnswers
+    - GameOver
+  github_com_holdennekt_sgame_backend_internal_domain.Round:
+    properties:
+      categories:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Category'
+        type: array
+      name:
+        type: string
+    required:
+    - categories
+    - name
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.User:
+    properties:
+      avatar:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    required:
+    - avatar
+    - id
+    - name
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.AuthResponse:
+    properties:
+      userId:
+        example: 507f1f77bcf86cd799439011
+        type: string
+    required:
+    - userId
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest:
+    properties:
+      key:
+        type: string
+      url:
+        type: string
+    required:
+    - key
+    - url
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreateCategoryRequest:
+    properties:
+      name:
+        maxLength: 25
+        minLength: 1
+        type: string
+      questions:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateQuestionRequest'
+        maxItems: 10
+        minItems: 1
+        type: array
+    required:
+    - name
+    - questions
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundCategoryRequest:
+    properties:
+      name:
+        maxLength: 25
+        minLength: 1
+        type: string
+      question:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundQuestionRequest'
+    required:
+    - name
+    - question
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundQuestionRequest:
+    properties:
+      answers:
+        items:
+          type: string
+        maxItems: 10
+        minItems: 1
+        type: array
+      attachment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
+      comment:
+        maxLength: 200
+        type: string
+      text:
+        maxLength: 200
+        type: string
+    required:
+    - answers
+    - attachment
+    - comment
+    - text
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundRequest:
+    properties:
+      categories:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundCategoryRequest'
+        maxItems: 10
+        minItems: 1
+        type: array
+        uniqueItems: true
+    required:
+    - categories
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreatePackRequest:
+    properties:
+      finalRound:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundRequest'
+      name:
+        maxLength: 50
+        minLength: 1
+        type: string
+      rounds:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateRoundRequest'
+        maxItems: 10
+        minItems: 1
+        type: array
+        uniqueItems: true
+      type:
+        allOf:
+        - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
+        enum:
+        - public
+        - private
+    required:
+    - finalRound
+    - name
+    - rounds
+    - type
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse:
+    properties:
+      id:
+        example: 507f1f77bcf86cd799439011
+        type: string
+    required:
+    - id
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreateQuestionRequest:
+    properties:
+      answers:
+        items:
+          type: string
+        maxItems: 10
+        minItems: 1
+        type: array
+      attachment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
+      comment:
+        maxLength: 200
+        type: string
+      index:
+        maximum: 9
+        minimum: 0
+        type: integer
+      text:
+        maxLength: 200
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType'
+        enum:
+        - regular
+        - catInBag
+        - auction
+      value:
+        maximum: 10000
+        type: integer
+    required:
+    - answers
+    - attachment
+    - comment
+    - index
+    - text
+    - type
+    - value
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreateRoomRequest:
+    properties:
+      name:
+        maxLength: 50
+        minLength: 1
+        type: string
+      options:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions'
+      packId:
+        type: string
+    required:
+    - name
+    - options
+    - packId
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreateRoomResponse:
+    properties:
+      id:
+        example: 507f1f77bcf86cd799439011
+        type: string
+    required:
+    - id
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreateRoundRequest:
+    properties:
+      categories:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCategoryRequest'
+        maxItems: 10
+        minItems: 1
+        type: array
+        uniqueItems: true
+      name:
+        maxLength: 50
+        minLength: 1
+        type: string
+    required:
+    - categories
+    - name
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreateUserRequest:
+    properties:
+      login:
+        maxLength: 20
+        minLength: 4
+        type: string
+      password:
+        maxLength: 40
+        minLength: 8
+        type: string
+    required:
+    - login
+    - password
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreateUserResponse:
+    properties:
+      id:
+        example: 507f1f77bcf86cd799439011
+        type: string
+    required:
+    - id
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse:
+    properties:
+      error:
+        example: invalid password
+        type: string
+    required:
+    - error
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.SearchResponse:
+    properties:
+      hasNext:
+        type: boolean
+      items: {}
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+    required:
+    - hasNext
+    - items
+    - page
+    - pageSize
+    - total
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.SignURLResponse:
+    properties:
+      formData:
+        additionalProperties:
+          type: string
+        type: object
+      url:
+        type: string
+    required:
+    - formData
+    - url
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.UpdatePackRequest:
+    properties:
+      finalRound:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundRequest'
+      id:
+        type: string
+      name:
+        maxLength: 50
+        minLength: 1
+        type: string
+      rounds:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateRoundRequest'
+        maxItems: 10
+        minItems: 1
+        type: array
+        uniqueItems: true
+      type:
+        allOf:
+        - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
+        enum:
+        - public
+        - private
+    required:
+    - finalRound
+    - id
+    - name
+    - rounds
+    - type
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Backend API for SGame (Go + Next.js).
+  title: SGame API
+  version: "1.0"
+paths:
+  /lobby:
+    get:
+      description: |-
+        Establishes a WebSocket connection to the global lobby.
+        Requires a valid session cookie. Once connected, sends a chat message "{User} has connected".
+      responses:
+        "101":
+          description: Switching Protocols
+          schema:
+            type: string
+        "401":
+          description: 'Unauthorized: Session missing'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Connect to Lobby WebSocket
+      tags:
+      - lobby
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates user, creates a session, and sets an HttpOnly cookie
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully authenticated
+          headers:
+            Set-Cookie:
+              description: session_id=abc...; HttpOnly; Path=/
+              type: string
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.AuthResponse'
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "401":
+          description: 'Unauthorized: Invalid credentials'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      summary: User Login
+      tags:
+      - auth
+  /packs:
+    get:
+      description: Returns paginated list of packs created by the user
+      parameters:
+      - in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        required: true
+        type: integer
+      - in: query
+        minimum: 1
+        name: page
+        required: true
+        type: integer
+      - in: query
+        maxLength: 30
+        name: search
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SearchResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get user's hidden packs
+      tags:
+      - packs
+    post:
+      consumes:
+      - application/json
+      description: Creates a game pack for the authenticated user
+      parameters:
+      - description: Pack creation data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse'
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "401":
+          description: 'Unauthorized: Session missing or expired'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Create a new pack
+      tags:
+      - packs
+  /packs/{id}:
+    delete:
+      description: Removes a pack by ID
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "403":
+          description: 'Forbidden: Not an owner'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "404":
+          description: Pack not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Delete pack
+      tags:
+      - packs
+    get:
+      description: Retrieves a specific pack by its unique identifier
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Pack'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "404":
+          description: Pack not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get pack by ID
+      tags:
+      - packs
+    put:
+      consumes:
+      - application/json
+      description: Updates pack content by ID
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdatePackRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "403":
+          description: 'Forbidden: Not an owner'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "404":
+          description: Pack not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Update pack
+      tags:
+      - packs
+  /packs/previews:
+    get:
+      description: Retrieves a list of pack previews based on search query
+      parameters:
+      - in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        required: true
+        type: integer
+      - in: query
+        minimum: 1
+        name: page
+        required: true
+        type: integer
+      - in: query
+        maxLength: 30
+        name: search
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get pack previews
+      tags:
+      - packs
+  /packs/signURL:
+    get:
+      description: Generates a URL and form data for file upload
+      parameters:
+      - in: query
+        name: filename
+        required: true
+        type: string
+      - in: query
+        name: public
+        required: true
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SignURLResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get signed upload URL
+      tags:
+      - packs
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new account, automatically logs in, and sets an HttpOnly
+        cookie
+      parameters:
+      - description: Registration data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Account created and logged in
+          headers:
+            Set-Cookie:
+              description: session_id=abc...; HttpOnly; Path=/
+              type: string
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.AuthResponse'
+        "400":
+          description: User already exists or validation failed
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      summary: User Registration
+      tags:
+      - auth
+  /room/{id}:
+    get:
+      description: |-
+        Establishes a WebSocket connection to the playing room.
+        Requires a valid session cookie. Once connected, sends a chat message "{User} has connected".
+      responses:
+        "101":
+          description: Switching Protocols
+          schema:
+            type: string
+        "401":
+          description: 'Unauthorized: Session missing'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Connect to Room WebSocket
+      tags:
+      - room
+  /rooms:
+    get:
+      description: Returns a list of all available game rooms
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomLobby'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: List all rooms
+      tags:
+      - rooms
+    post:
+      consumes:
+      - application/json
+      description: Creates a game room for the authenticated user
+      parameters:
+      - description: Room creation data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateRoomRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateRoomResponse'
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Create a new room
+      tags:
+      - rooms
+  /rooms/{id}:
+    get:
+      description: Retrieves a specific room's state (projection) by ID. Used for
+        initial load.
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Room password (if required)
+        in: query
+        name: password
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Can be RoomLobby, HostRoom, or RoomPlayer
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomPlayer'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "403":
+          description: 'Forbidden: Invalid password'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "404":
+          description: Room not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get room projection
+      tags:
+      - rooms
+  /rooms/{id}/join:
+    patch:
+      description: Adds the authenticated user to a room
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Room password (if required)
+        in: query
+        name: password
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Room'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "403":
+          description: 'Forbidden: Room full or invalid password'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "404":
+          description: Room not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "409":
+          description: Room already full
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Join room
+      tags:
+      - rooms
+  /rooms/{id}/leave:
+    patch:
+      description: Removes the authenticated user from a room
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "404":
+          description: Room not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "409":
+          description: Cannot leave ongoing game
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Leave room
+      tags:
+      - rooms
+  /user:
+    get:
+      description: Retrieves the profile of the currently authenticated user based
+        on session
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.DbUser'
+        "401":
+          description: 'Unauthorized: Session missing or invalid'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get current user
+      tags:
+      - users
+  /users:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account with provided data
+      parameters:
+      - description: User data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.DbUser'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateUserResponse'
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Create a new user
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      description: Permanently removes a user account by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Delete user
+      tags:
+      - users
+    get:
+      description: Retrieves a user profile by their unique identifier
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.DbUser'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get user by ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing user's information by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated user data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.DbUser'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Update user
+      tags:
+      - users
+securityDefinitions:
+  CookieAuth:
+    in: cookie
+    name: sessionId
+    type: apiKey
+swagger: "2.0"

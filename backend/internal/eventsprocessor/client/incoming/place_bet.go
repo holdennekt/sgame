@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client/outgoing"
-	serverevent "github.com/holdennekt/sgame/internal/eventsprocessor/server"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
+	serverevent "github.com/holdennekt/sgame/backend/internal/eventsprocessor/server"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
 type PlaceBetPayload struct {
@@ -34,7 +34,10 @@ func HandlePlaceBetMessage(ctx context.Context, server realtime.Channel, interna
 	}
 
 	if newRoom.State == domain.Answering {
-		answerStartedMessage := serverevent.NewAnswerStartedMessage()
+		answerStartedMessage := serverevent.NewAnswerStartedMessage(
+			newRoom.CurrentQuestion.Question,
+			newRoom.AnsweringPlayer.Id,
+		)
 		if err := internalServer.Send(ctx, answerStartedMessage); err != nil {
 			return err
 		}

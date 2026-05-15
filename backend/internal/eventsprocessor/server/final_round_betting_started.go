@@ -5,11 +5,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client/outgoing"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
 func NewFinalRoundBettingStartedMessage() message.Message {

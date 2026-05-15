@@ -2,22 +2,31 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"log"
-	"reflect"
 	"time"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client/outgoing"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
-func NewRevealingStartedMessage() message.Message {
-	return message.Message{Event: domain.RevealingStarted}
+type RevealingStartedPayload struct {
+	domain.Question
 }
 
-func HandleRevealingStartedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string) error {
+func NewRevealingStartedMessage(question domain.Question) message.Message {
+	payload, _ := json.Marshal(RevealingStartedPayload{Question: question})
+	return message.Message{Event: domain.RevealingStarted, Payload: payload}
+}
+
+func HandleRevealingStartedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string, msg message.Message) error {
+	var rsp RevealingStartedPayload
+	if err := json.Unmarshal(msg.Payload, &rsp); err != nil {
+		return err
+	}
 	room, err := roomCache.GetById(ctx, roomId)
 	if err != nil {
 		return err
@@ -30,7 +39,7 @@ func HandleRevealingStartedMessage(ctx context.Context, server realtime.Channel,
 		_, err := roomCache.SafeSet(ctx, roomId, func(newRoom *domain.Room) error {
 			questionEnded :=
 				newRoom.State != domain.RevealingQuestion ||
-					!reflect.DeepEqual(newRoom.CurrentRoundQuestions, room.CurrentRoundQuestions)
+					!rsp.Question.IsCurrent(newRoom)
 			deadlineChanged := newRoom.CurrentQuestion != nil &&
 				!room.CurrentQuestion.TimerStartsAt.Equal(newRoom.CurrentQuestion.TimerStartsAt)
 			if questionEnded || deadlineChanged {
@@ -53,7 +62,7 @@ func HandleRevealingStartedMessage(ctx context.Context, server realtime.Channel,
 			return
 		}
 
-		questionStartedMessage := NewQuestionStartedMessage()
+		questionStartedMessage := NewQuestionStartedMessage(rsp.Question)
 		if err := internalServer.Send(ctx, questionStartedMessage); err != nil {
 			log.Println(err)
 			return

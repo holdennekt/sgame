@@ -2,36 +2,39 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"log"
-	"reflect"
 	"time"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client/outgoing"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
 const TimeToPass = 30 * time.Second
 
-func NewPassingStartedMessage() message.Message {
-	return message.Message{Event: domain.PassingStarted}
+type PassingStartedPayload struct {
+	domain.Question
 }
 
-func HandlePassingStartedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string) error {
-	room, err := roomCache.GetById(ctx, roomId)
-	if err != nil {
+func NewPassingStartedMessage(question domain.Question) message.Message {
+	payload, _ := json.Marshal(PassingStartedPayload{Question: question})
+	return message.Message{Event: domain.PassingStarted, Payload: payload}
+}
+
+func HandlePassingStartedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string, msg message.Message) error {
+	var psp PassingStartedPayload
+	if err := json.Unmarshal(msg.Payload, &psp); err != nil {
 		return err
 	}
 	time.AfterFunc(TimeToPass, func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		_, err := roomCache.SafeSet(ctx, roomId, func(newRoom *domain.Room) error {
-			questionEnded :=
-				!reflect.DeepEqual(newRoom.CurrentRoundQuestions, room.CurrentRoundQuestions)
-			if newRoom.State != domain.Passing || questionEnded {
+		newerRoom, err := roomCache.SafeSet(ctx, roomId, func(newRoom *domain.Room) error {
+			if newRoom.State != domain.Passing || !psp.Question.IsCurrent(newRoom) {
 				return ErrDeferredFunctionCancelled
 			}
 
@@ -51,7 +54,7 @@ func HandlePassingStartedMessage(ctx context.Context, server realtime.Channel, i
 			return
 		}
 
-		answerStartedMessage := NewAnswerStartedMessage()
+		answerStartedMessage := NewAnswerStartedMessage(psp.Question, newerRoom.AnsweringPlayer.Id)
 		if err := internalServer.Send(ctx, answerStartedMessage); err != nil {
 			log.Println(err)
 			return

@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/interface/repository"
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/interface/repository"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"golang.org/x/crypto/bcrypt"
 )
 

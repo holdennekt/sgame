@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import Navbar from "../components/Navbar";
+import Navbar from "../../components/Navbar";
 import { User, USER_HEADER_NAME } from "../../middleware";
 
 export default function About() {

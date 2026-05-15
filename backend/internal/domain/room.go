@@ -6,19 +6,24 @@ import (
 	"slices"
 	"time"
 
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
-const LOBBY = "lobby"
-const ROOM_PREFIX = "room:"
-const LOCK_PREFIX = "lock:room:"
-const INTERNAL_POSTFIX = ":internal"
+const (
+	LOBBY            = "lobby"
+	ROOM_PREFIX      = "room:"
+	STATE_POSTFIX    = ":state"
+	LOCK_POSTFIX     = ":lock"
+	OWNER_POSTFIX    = ":owner"
+	INTERNAL_POSTFIX = ":internal"
+)
 
 type Room struct {
-	RoomDTO               `bson:"inline"`
 	Id                    string                `json:"id" bson:"_id"`
-	PackPreview           PackPreview           `json:"packPreview" bson:"packPreview"`
+	Name                  string                `json:"name" bson:"name"`
 	CreatedBy             string                `json:"createdBy" bson:"createdBy"`
+	Options               RoomOptions           `json:"options" bson:"options"`
+	PackPreview           PackPreview           `json:"packPreview" bson:"packPreview"`
 	Host                  *Host                 `json:"host" bson:"host"`
 	Players               []Player              `json:"players" bson:"players"`
 	BanList               []string              `json:"banList" bson:"banList"`
@@ -33,13 +38,7 @@ type Room struct {
 	PausedState           PausedState           `json:"pausedState" bson:"pausedState"`
 }
 
-type RoomDTO struct {
-	Name    string      `json:"name" bson:"name" binding:"min=1,max=50"`
-	PackId  string      `json:"packId" bson:"packId" binding:"required"`
-	Options roomOptions `json:"options" bson:"options"`
-}
-
-type roomOptions struct {
+type RoomOptions struct {
 	MaxPlayers                int         `json:"maxPlayers" bson:"maxPlayers" binding:"min=1,max=10"`
 	Type                      PrivacyType `json:"type" bson:"type" binding:"oneof=public private"`
 	Password                  *string     `json:"password" bson:"password" binding:"omitnil,min=4,max=16"`
@@ -82,9 +81,12 @@ type BoardQuestion struct {
 
 type CurrentQuestion struct {
 	Question
-	TimerLastProgress float64   `json:"timerLastProgress" bson:"timerLastProgress"`
-	TimerStartsAt     time.Time `json:"timerStartsAt" bson:"timerStartsAt"`
-	TimerEndsAt       time.Time `json:"timerEndsAt" bson:"timerEndsAt"`
+	AttachmentRevealEndsAt       time.Time `json:"attachmentRevealEndsAt" bson:"attachmentRevealEndsAt"`
+	AttachmentRevealLastProgress float64   `json:"attachmentRevealLastProgress" bson:"attachmentRevealLastProgress"`
+	TextRevealLastProgress       float64   `json:"textRevealLastProgress" bson:"textRevealLastProgress"`
+	TimerStartsAt                time.Time `json:"timerStartsAt" bson:"timerStartsAt"`
+	TimerEndsAt                  time.Time `json:"timerEndsAt" bson:"timerEndsAt"`
+	TimerLastProgress            float64   `json:"timerLastProgress" bson:"timerLastProgress"`
 }
 
 type AnsweringPlayer struct {
@@ -164,7 +166,7 @@ func (r *Room) StartNextRegularRound(pack *Pack) bool {
 	return false
 }
 
-func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index int) error {
+func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index int, getAttachmentUrl func(key string) (string, error)) error {
 	if r.State != SelectingQuestion {
 		return custerr.NewConflictErr("can not select question now")
 	}
@@ -175,12 +177,22 @@ func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index 
 		return custerr.NewConflictErr("question has already been played")
 	}
 
-	question, err := pack.getQuestion(*r.CurrentRoundName, category, index)
+	question, err := pack.GetQuestion(*r.CurrentRoundName, category, index)
 	if err != nil {
 		return err
 	}
 
-	r.CurrentQuestion = &CurrentQuestion{Question: question}
+	if question.Attachment != nil {
+		if question.Attachment.URL == "" {
+			u, err := getAttachmentUrl(question.Attachment.Key)
+			if err != nil {
+				return err
+			}
+			question.Attachment.URL = u
+		}
+	}
+
+	r.CurrentQuestion = &CurrentQuestion{Question: *question}
 	r.CurrentRoundQuestions[category][index].HasBeenPlayed = true
 
 	switch question.Type {
@@ -227,8 +239,12 @@ func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index 
 
 func (r *Room) revealRegularQuestion(allowedToAnswer []string) {
 	r.AllowedToAnswer = allowedToAnswer
-	revealingDuration := r.CurrentQuestion.Question.GetRevealingDuration()
-	r.CurrentQuestion.TimerStartsAt = time.Now().Add(revealingDuration)
+	mediaRevealingDuration := r.CurrentQuestion.GetMediaRevealingDuration()
+	if r.CurrentQuestion.Attachment != nil {
+		r.CurrentQuestion.AttachmentRevealEndsAt = time.Now().Add(mediaRevealingDuration)
+	}
+	textRevealDuration := r.CurrentQuestion.GetTextRevealingDuration()
+	r.CurrentQuestion.TimerStartsAt = time.Now().Add(mediaRevealingDuration).Add(textRevealDuration)
 	r.State = RevealingQuestion
 }
 
@@ -242,7 +258,7 @@ func (r *Room) StartRegularQuestion() {
 func (r *Room) startNonRegularQuestion(allowedToAnswer string) {
 	r.CurrentPlayer = &allowedToAnswer
 	now := time.Now()
-	revealingDuration := r.CurrentQuestion.Question.GetRevealingDuration()
+	revealingDuration := r.CurrentQuestion.GetMediaRevealingDuration() + r.CurrentQuestion.GetTextRevealingDuration()
 	thinkingDuration := time.Duration(r.Options.AnswerThinkingTime) * time.Second
 	r.AnsweringPlayer = &AnsweringPlayer{
 		Id:            allowedToAnswer,
@@ -311,7 +327,16 @@ func (r *Room) continueRegularQuestion() {
 	now := time.Now()
 	answerDuration := now.Sub(r.AnsweringPlayer.TimerStartsAt)
 	if r.AnsweringPlayer.TimerStartsAt.Before(r.CurrentQuestion.TimerStartsAt) {
+		if r.CurrentQuestion.Attachment != nil && r.AnsweringPlayer.TimerStartsAt.Before(r.CurrentQuestion.AttachmentRevealEndsAt) {
+			r.CurrentQuestion.AttachmentRevealEndsAt = r.CurrentQuestion.AttachmentRevealEndsAt.Add(answerDuration)
+			mediaDurationRemained := r.CurrentQuestion.AttachmentRevealEndsAt.Sub(now)
+			r.CurrentQuestion.AttachmentRevealLastProgress = 1 - (float64(mediaDurationRemained) /
+				float64(r.CurrentQuestion.GetMediaRevealingDuration()))
+		}
 		r.CurrentQuestion.TimerStartsAt = r.CurrentQuestion.TimerStartsAt.Add(answerDuration)
+		textDurationRemained := r.CurrentQuestion.TimerStartsAt.Sub(now)
+		r.CurrentQuestion.TextRevealLastProgress = 1 - (float64(textDurationRemained) /
+			float64(r.CurrentQuestion.GetTextRevealingDuration()))
 		r.State = RevealingQuestion
 	} else {
 		r.CurrentQuestion.TimerEndsAt = r.CurrentQuestion.TimerEndsAt.Add(answerDuration)
@@ -455,7 +480,7 @@ func (r *Room) AnyAvailableQuestions() bool {
 	return false
 }
 
-func (r *Room) StartFinalRound(pack *Pack) bool {
+func (r *Room) StartFinalRound(pack *Pack, getAttachmentUrl func(key string) (string, error)) (bool, error) {
 	r.CurrentRoundName = nil
 	r.CurrentRoundQuestions = nil
 	r.CurrentPlayer = nil
@@ -470,7 +495,7 @@ func (r *Room) StartFinalRound(pack *Pack) bool {
 		}
 	}
 	if len(finalRoundPlayers) == 0 {
-		return false
+		return false, nil
 	}
 
 	r.FinalRoundState = &FinalRoundState{
@@ -482,9 +507,11 @@ func (r *Room) StartFinalRound(pack *Pack) bool {
 
 	availableFinalCategories := r.GetAvailableFinalRoundCategories()
 	if len(availableFinalCategories) == 1 {
-		r.chooseFinalRoundCategory(pack, availableFinalCategories[0])
+		if err := r.chooseFinalRoundCategory(pack, availableFinalCategories[0], getAttachmentUrl); err != nil {
+			return false, err
+		}
 	}
-	return true
+	return true, nil
 }
 
 func (r *Room) GetAvailableFinalRoundCategories() []string {
@@ -497,7 +524,7 @@ func (r *Room) GetAvailableFinalRoundCategories() []string {
 	return availableCategories
 }
 
-func (r *Room) RemoveFinalRoundCategory(pack *Pack, userId string, category string) error {
+func (r *Room) RemoveFinalRoundCategory(pack *Pack, userId string, category string, getAttachmentUrl func(key string) (string, error)) error {
 	if r.State != SelectingFinalRoundCategory {
 		return custerr.NewConflictErr("cannot remove final round category now")
 	}
@@ -525,18 +552,30 @@ func (r *Room) RemoveFinalRoundCategory(pack *Pack, userId string, category stri
 
 	availableFinalCategories := r.GetAvailableFinalRoundCategories()
 	if len(availableFinalCategories) == 1 {
-		r.chooseFinalRoundCategory(pack, availableFinalCategories[0])
+		if err := r.chooseFinalRoundCategory(pack, availableFinalCategories[0], getAttachmentUrl); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (r *Room) chooseFinalRoundCategory(pack *Pack, category string) {
+func (r *Room) chooseFinalRoundCategory(pack *Pack, category string, getAttachmentUrl func(key string) (string, error)) error {
 	categoryIndex := slices.IndexFunc(pack.FinalRound.Categories, func(frc FinalRoundCategory) bool {
 		return frc.Name == category
 	})
 	r.FinalRoundState.Question = &pack.FinalRound.Categories[categoryIndex].Question
+	if r.FinalRoundState.Question.Attachment != nil {
+		if r.FinalRoundState.Question.Attachment.URL == "" {
+			u, err := getAttachmentUrl(r.FinalRoundState.Question.Attachment.Key)
+			if err != nil {
+				return err
+			}
+			r.FinalRoundState.Question.Attachment.URL = u
+		}
+	}
 	r.CurrentPlayer = nil
 	r.State = FinalRoundBetting
+	return nil
 }
 
 func (r *Room) PlaceFinalRoundBet(userId string, amount int) error {

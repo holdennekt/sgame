@@ -4,14 +4,17 @@ import (
 	"context"
 	"log"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
-	"github.com/holdennekt/sgame/internal/transport/http"
-	"github.com/holdennekt/sgame/pkg/custvalid"
-	"github.com/holdennekt/sgame/pkg/envvar"
+	"github.com/holdennekt/sgame/backend/internal/app"
+	gcsStorage "github.com/holdennekt/sgame/backend/internal/infrastructure/storage/gcs"
+	minioStorage "github.com/holdennekt/sgame/backend/internal/infrastructure/storage/minio"
+	"github.com/holdennekt/sgame/backend/internal/interface/storage"
+	"github.com/holdennekt/sgame/backend/pkg/custvalid"
+	"github.com/holdennekt/sgame/backend/pkg/envvar"
 	"github.com/joho/godotenv"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -24,16 +27,18 @@ func init() {
 	}
 }
 
+// @title           SGame API
+// @version         1.0
+// @description     Backend API for SGame (Go + Next.js).
+// @host            localhost:8080
+// @BasePath        /api
+
+// @securityDefinitions.apikey CookieAuth
+// @in cookie
+// @name sessionId
+
 func main() {
 	godotenv.Load()
-
-	rds := redis.NewClient(&redis.Options{
-		Addr:     envvar.GetEnvVar("REDIS_HOST") + ":" + envvar.GetEnvVar("REDIS_PORT"),
-		Username: envvar.GetEnvVar("REDIS_USER"),
-		Password: envvar.GetEnvVar("REDIS_PASSWORD"),
-		DB:       envvar.GetEnvVarInt("REDIS_DB"),
-	})
-	defer rds.Close()
 
 	opts := options.Client().ApplyURI(envvar.GetEnvVar("MONGO_CONN_STR"))
 	conn, err := mongo.Connect(context.Background(), opts)
@@ -44,42 +49,33 @@ func main() {
 
 	mdb := conn.Database(envvar.GetEnvVar("MONGO_NAME"))
 
-	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{envvar.GetEnvVar("ORIGIN")}
-	corsConfig.AllowCredentials = true
+	rds := redis.NewClient(&redis.Options{
+		Addr:     envvar.GetEnvVar("REDIS_HOST") + ":" + envvar.GetEnvVar("REDIS_PORT"),
+		Username: envvar.GetEnvVar("REDIS_USER"),
+		Password: envvar.GetEnvVar("REDIS_PASSWORD"),
+		DB:       envvar.GetEnvVarInt("REDIS_DB"),
+	})
+	defer rds.Close()
 
-	engine := gin.New()
-	engine.Use(
-		gin.Recovery(),
-		http.LoggingMiddleware,
-		cors.New(corsConfig),
-		http.ErrorMiddleware,
-	)
+	var storage storage.Storage
 
-	api := engine.Group("/api")
+	if envvar.GetEnvVar("STORAGE_PROVIDER") == "gcs" {
+		storage, err = gcsStorage.NewGCSStorage(context.Background(), envvar.GetEnvVar("BUCKET_NAME"))
+	} else {
+		mio, err := minio.New(envvar.GetEnvVar("MINIO_ENDPOINT"), &minio.Options{
+			Creds: credentials.NewStaticV4(
+				envvar.GetEnvVar("MINIO_ACCESS_KEY"),
+				envvar.GetEnvVar("MINIO_SECRET_KEY"),
+				"",
+			),
+			Secure: envvar.GetEnvVarBool("MINIO_USE_SSL"),
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		storage = minioStorage.NewMinioStorage(mio, envvar.GetEnvVar("BUCKET_NAME"), envvar.GetEnvVar("FRONTEND_URL"))
+	}
 
-	authController := InitializeAuthController(mdb, rds)
-	authController.RegisterRoutes(api)
-
-	protected := api.Group("/", authController.Authorize)
-
-	userController := InitializeUserController(mdb)
-	userController.RegisterRoutes(protected)
-
-	packController := InitializePackController(mdb)
-	packController.RegisterRoutes(protected)
-
-	roomController := InitializeRoomController(mdb, rds)
-	roomController.RegisterRoutes(protected)
-
-	wsGroup := protected.Group("/ws")
-
-	lobbyHandler := InitializeLobbyHandler(mdb, rds)
-	lobbyHandler.RegisterRoute(wsGroup)
-
-	roomHandler := InitializeRoomHandler(mdb, rds)
-	roomHandler.RegisterRoute(wsGroup)
-
-	servAddres := envvar.GetEnvVar("HOST") + ":" + envvar.GetEnvVar("PORT")
-	log.Fatal(engine.Run(servAddres))
+	app := app.InitializeApp(mdb, rds, storage)
+	app.Run()
 }

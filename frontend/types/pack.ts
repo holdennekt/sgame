@@ -1,0 +1,413 @@
+import { User } from "./user";
+
+export type PrivacyType = "public" | "private";
+export type QuestionType = "regular" | "catInBag" | "auction";
+
+export interface PackFormData {
+  name: string;
+  type: PrivacyType;
+  rounds: RoundFormData[];
+  finalRound: FinalRoundFormData;
+}
+
+export interface RoundFormData {
+  name: string;
+  categories: CategoryFormData[];
+}
+
+export interface CategoryFormData {
+  name: string;
+  questions: QuestionFormData[];
+}
+
+export interface QuestionFormData {
+  index: number;
+  value: number;
+  type: QuestionType;
+  text: string;
+  attachment: AttachmentFormData;
+  answers: string[];
+  comment: string | null;
+}
+
+export type AttachmentFormData =
+  | { type: "existing"; key: string; url: string }
+  | { type: "file"; file?: File }
+  | { type: "url"; url?: string };
+
+export interface FinalRoundFormData {
+  categories: FinalRoundCategoryFormData[];
+}
+
+export interface FinalRoundCategoryFormData {
+  name: string;
+  question: FinalRoundQuestionFormData;
+}
+
+export interface FinalRoundQuestionFormData {
+  text: string;
+  attachment: AttachmentFormData;
+  answers: string[];
+  comment: string | null;
+}
+
+export interface CreatePackRequest {
+  name: string;
+  type: PrivacyType;
+  rounds: CreateRoundRequest[];
+  finalRound: CreateFinalRoundRequest;
+}
+
+export interface CreateRoundRequest {
+  name: string;
+  categories: CreateCategoryRequest[];
+}
+
+export interface CreateCategoryRequest {
+  name: string;
+  questions: CreateQuestionRequest[];
+}
+
+export interface CreateQuestionRequest {
+  index: number;
+  value: number;
+  type: QuestionType;
+  text: string;
+  attachment: CreateAttachmentRequest | null;
+  answers: string[];
+  comment: string | null;
+}
+
+export interface CreateAttachmentRequest {
+  key?: string;
+  url?: string;
+}
+
+export interface CreateFinalRoundRequest {
+  categories: CreateFinalRoundCategoryRequest[];
+}
+
+export interface CreateFinalRoundCategoryRequest {
+  name: string;
+  question: CreateFinalRoundQuestionRequest;
+}
+
+export interface CreateFinalRoundQuestionRequest {
+  text: string;
+  attachment: CreateAttachmentRequest | null;
+  answers: string[];
+  comment: string | null;
+}
+
+export interface CreatePackResponse {
+  id: string;
+}
+
+export interface UpdatePackRequest extends CreatePackRequest {
+  id: string;
+}
+
+export interface SignURLRequest {
+  filename: string;
+  public: boolean;
+}
+
+export interface SignURLResponse {
+  url: string;
+  formData: Record<string, string>;
+}
+
+export interface Pack {
+  id: string;
+  createdBy: User;
+  name: string;
+  type: PrivacyType;
+  rounds: Round[];
+  finalRound: FinalRound;
+}
+
+export interface PackPreview {
+  id: string;
+  name: string;
+}
+
+export interface Round {
+  name: string;
+  categories: Category[];
+}
+
+export interface Category {
+  name: string;
+  questions: Question[];
+}
+
+export type FileType = "image" | "audio" | "video";
+
+export interface Attachment {
+  key: string;
+  url: string;
+  type: FileType;
+  mimeType: string;
+  size: number;
+  duration: number;
+}
+
+const dummyAttachment: Attachment = {
+  key: "",
+  url: "",
+  type: "image",
+  mimeType: "",
+  size: 0,
+  duration: 0,
+};
+
+export const isAttachment = (obj: unknown): obj is Attachment => {
+  if (typeof obj !== "object" || obj === null) return false;
+  return Object.keys(dummyAttachment).every((key) => Object.hasOwn(obj, key));
+};
+
+export interface QuestionCorrectAnswer {
+  answers: string[];
+  comment: string | null;
+}
+
+export interface Question extends HiddenQuestion {
+  type: QuestionType;
+  text: string;
+  answers: string[];
+  comment: string | null;
+}
+
+const dummyQuestion: Question = {
+  index: 0,
+  value: 0,
+  text: "",
+  attachment: null,
+  type: "regular",
+  answers: [],
+  comment: null,
+};
+
+export const isQuestion = (obj: unknown): obj is Question => {
+  if (typeof obj !== "object" || obj === null) return false;
+  if (
+    (obj as Question).attachment &&
+    !isAttachment((obj as Question).attachment)
+  )
+    return false;
+  return Object.keys(dummyQuestion).every((key) => Object.hasOwn(obj, key));
+};
+
+export interface FinalRound {
+  categories: FinalRoundCategory[];
+}
+
+export interface FinalRoundCategory extends HiddenFinalRoundCategory {
+  question: FinalRoundQuestion;
+}
+
+export interface FinalRoundQuestion extends HiddenFinalRoundQuestion {
+  answers: string[];
+  comment: string | null;
+}
+
+export interface HiddenPack {
+  id: string;
+  createdBy: User;
+  name: string;
+  type: PrivacyType;
+  rounds: HiddenRound[];
+  finalRound: HiddenFinalRound;
+}
+
+export interface HiddenRound {
+  name: string;
+  categories: HiddenCategory[];
+}
+
+export interface HiddenCategory {
+  name: string;
+}
+
+export interface HiddenQuestion {
+  index: number;
+  value: number;
+  attachment: Attachment | null;
+}
+
+export interface HiddenFinalRound {
+  categories: HiddenFinalRoundCategory[];
+}
+
+export interface HiddenFinalRoundCategory {
+  name: string;
+}
+
+export interface HiddenFinalRoundQuestion {
+  text: string;
+  attachment: Attachment | null;
+}
+
+export function convertPackToFormData(
+  pack: Omit<Pack, "id" | "createdBy">,
+): PackFormData {
+  return {
+    name: pack.name,
+    type: pack.type,
+    rounds: pack.rounds.map(convertRoundToFormData),
+    finalRound: convertFinalRoundToFormData(pack.finalRound),
+  };
+}
+
+function convertRoundToFormData(round: Round): RoundFormData {
+  return {
+    name: round.name,
+    categories: round.categories.map(convertCategoryToFormData),
+  };
+}
+
+function convertCategoryToFormData(category: Category): CategoryFormData {
+  return {
+    name: category.name,
+    questions: category.questions.map(convertQuestionToFormData),
+  };
+}
+
+function convertQuestionToFormData(question: Question): QuestionFormData {
+  return {
+    index: question.index,
+    value: question.value,
+    type: question.type,
+    text: question.text,
+    attachment: convertAttachmentToFormData(
+      isQuestion(question) ? question.attachment : null,
+    ),
+    answers: question.answers,
+    comment: question.comment,
+  };
+}
+
+function convertAttachmentToFormData(
+  attachment: Attachment | null,
+): AttachmentFormData {
+  if (!attachment) return { type: "file" };
+  return { type: "existing", key: attachment.key, url: attachment.url };
+}
+
+function convertFinalRoundToFormData(
+  finalRound: FinalRound,
+): FinalRoundFormData {
+  return {
+    categories: finalRound.categories.map(convertFinalRoundCategoryToFormData),
+  };
+}
+
+function convertFinalRoundCategoryToFormData(
+  category: FinalRoundCategory,
+): FinalRoundCategoryFormData {
+  return {
+    name: category.name,
+    question: {
+      ...category.question,
+      attachment: convertAttachmentToFormData(category.question.attachment),
+    },
+  };
+}
+
+export async function convertPackFormDataToRequest(
+  formData: PackFormData,
+  signURL: (params: { filename: string; public: boolean }) => Promise<{
+    url: string;
+    formData: Record<string, string>;
+  }>,
+): Promise<CreatePackRequest> {
+  const isPublic = formData.type === "public";
+
+  const rounds = await Promise.all(
+    formData.rounds.map(async (round) => ({
+      name: round.name,
+      categories: await Promise.all(
+        round.categories.map(async (category) => ({
+          name: category.name,
+          questions: await Promise.all(
+            category.questions.map(async (question) => ({
+              ...question,
+              attachment: await convertAttachment(
+                question.attachment,
+                isPublic,
+                signURL,
+              ),
+            })),
+          ),
+        })),
+      ),
+    })),
+  );
+
+  const finalRound = {
+    categories: await Promise.all(
+      formData.finalRound.categories.map(async ({ name, question }) => ({
+        name,
+        question: {
+          ...question,
+          attachment: await convertAttachment(
+            question.attachment,
+            isPublic,
+            signURL,
+          ),
+        },
+      })),
+    ),
+  };
+
+  return {
+    name: formData.name,
+    type: formData.type,
+    rounds,
+    finalRound,
+  };
+}
+
+async function convertAttachment(
+  attachment: AttachmentFormData,
+  isPublic: boolean,
+  signURL: (params: { filename: string; public: boolean }) => Promise<{
+    url: string;
+    formData: Record<string, string>;
+  }>,
+): Promise<CreateAttachmentRequest | null> {
+  switch (attachment.type) {
+    case "file": {
+      if (!attachment.file) return null;
+
+      const { url, formData: reqFormData } = await signURL({
+        filename: attachment.file.name,
+        public: isPublic,
+      });
+
+      const formData = new FormData();
+      Object.entries(reqFormData).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+      formData.append("file", attachment.file);
+
+      const response = await fetch(url, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to upload ${attachment.file.name} to S3`);
+      }
+
+      return { key: reqFormData.key };
+    }
+
+    case "url":
+      if (!attachment.url) return null;
+      return { url: attachment.url };
+
+    case "existing":
+      return { key: attachment.key };
+  }
+}

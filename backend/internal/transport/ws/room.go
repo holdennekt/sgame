@@ -8,38 +8,45 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/dto"
-	"github.com/holdennekt/sgame/internal/eventsprocessor"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client/outgoing"
-	"github.com/holdennekt/sgame/internal/infrastructure/realtime/ws"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/interface/repository"
-	"github.com/holdennekt/sgame/internal/message"
-	"github.com/holdennekt/sgame/internal/service"
-	"github.com/holdennekt/sgame/internal/transport/http"
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	_ "github.com/holdennekt/sgame/backend/internal/dto"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
+	"github.com/holdennekt/sgame/backend/internal/infrastructure/realtime/ws"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/service"
+	"github.com/holdennekt/sgame/backend/internal/transport/http"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
 type RoomHandler struct {
-	serverChannelGetter realtime.ServerChannelGetter
-	roomCache           cache.Room
-	roomRepository      repository.Room
-	userService         *service.UserService
-	packService         *service.PackService
-	roomService         *service.RoomService
+	roomService               *service.RoomService
+	userService               *service.UserService
+	lobbyChannelGetter        realtime.ServerChannelGetter
+	roomChannelGetter         realtime.ServerChannelGetter
+	roomInternalChannelGetter realtime.ServerChannelGetter
+	roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter
 }
 
-func NewRoomHandler(serverChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, roomRepository repository.Room, userService *service.UserService, packService *service.PackService, roomService *service.RoomService) *RoomHandler {
-	return &RoomHandler{serverChannelGetter, roomCache, roomRepository, userService, packService, roomService}
+func NewRoomHandler(roomService *service.RoomService, userService *service.UserService, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter) *RoomHandler {
+	return &RoomHandler{roomService, userService, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomEventsProcessorGetter}
 }
 
 func (h *RoomHandler) RegisterRoute(r *gin.RouterGroup) {
 	r.GET("/room/:id", h.connect)
 }
 
+// @Summary      Connect to Room WebSocket
+// @Description  Establishes a WebSocket connection to the playing room.
+// @Description  Requires a valid session cookie. Once connected, sends a chat message "{User} has connected".
+// @Tags         room
+// @Success      101  {string}  string "Switching Protocols"
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized: Session missing"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /room/{id} [get]
 func (h *RoomHandler) connect(ctx *gin.Context) {
 	userId := ctx.MustGet(http.USER_ID_CONTEXT_KEY).(string)
 	id := ctx.Param("id")
@@ -60,11 +67,6 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 		ctx.Error(err)
 		return
 	}
-	pack, err := h.packService.GetById(ctx, dto.GetPackByIdDTO{Id: room.PackId})
-	if err != nil {
-		ctx.Error(err)
-		return
-	}
 
 	conn, err := websocket.Accept(ctx.Writer, ctx.Request, &websocket.AcceptOptions{
 		InsecureSkipVerify: true,
@@ -75,7 +77,7 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 		return
 	}
 
-	newRoom, err := h.roomService.Connect(ctx, dto.ConnectRoomDTO{UserId: userId, Id: id})
+	newRoom, err := h.roomService.Connect(ctx, userId, id)
 	if err != nil {
 		log.Println(err)
 		return
@@ -90,7 +92,7 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 	}
 
 	serverRoomUpdatedMessage := outgoing.NewRoomUpdatedMessage(id)
-	roomServerChannel := h.serverChannelGetter.Get(domain.ROOM_PREFIX + id).(realtime.Channel)
+	roomServerChannel := h.roomChannelGetter.Get(domain.ROOM_PREFIX + id)
 	if err := roomServerChannel.Send(ctx, serverRoomUpdatedMessage); err != nil {
 		log.Println(err)
 		return
@@ -106,16 +108,14 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 		return
 	}
 
-	processor := eventsprocessor.NewRoomEventsProcessor(
+	processor, err := h.roomEventsProcessorGetter(
 		clientChannel,
-		h.serverChannelGetter.Get(domain.LOBBY).(realtime.Channel),
-		roomServerChannel,
-		h.serverChannelGetter.Get(domain.ROOM_PREFIX+id+domain.INTERNAL_POSTFIX).(realtime.Channel),
-		h.roomCache,
-		h.roomRepository,
 		id,
 		*user,
-		pack,
 	)
+	if err != nil {
+		log.Println("Error while creation roomEventsProcessor:", err)
+		return
+	}
 	go processor.Listen(context.Background())
 }

@@ -5,31 +5,34 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/dto"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client/outgoing"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/interface/repository"
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/dto"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/interface/repository"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
 const UPDATE_ROOM_RETRIES = 3
 
 type RoomService struct {
-	serverChannelGetter realtime.ServerChannelGetter
-	roomCache           cache.Room
-	userRepository      repository.User
-	packRepository      repository.Pack
-	roomRepository      repository.Room
+	userRepository                    repository.User
+	packRepository                    repository.Pack
+	roomCache                         cache.Room
+	lobbyChannelGetter                realtime.ServerChannelGetter
+	roomChannelGetter                 realtime.ServerChannelGetter
+	roomInternalChannelGetter         realtime.ServerChannelGetter
+	roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter
 }
 
-func NewRoomService(serverChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, userRepository repository.User, packRepository repository.Pack, roomRepository repository.Room) *RoomService {
-	return &RoomService{serverChannelGetter, roomCache, userRepository, packRepository, roomRepository}
+func NewRoomService(userRepository repository.User, packRepository repository.Pack, roomCache cache.Room, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *RoomService {
+	return &RoomService{userRepository, packRepository, roomCache, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomInternalEventsProcessorGetter}
 }
 
-func (s *RoomService) Create(ctx context.Context, dto dto.CreateRoomDTO) (string, error) {
-	pack, err := s.packRepository.GetById(ctx, dto.RoomDTO.PackId)
+func (s *RoomService) Create(ctx context.Context, userId string, crr dto.CreateRoomRequest) (string, error) {
+	pack, err := s.packRepository.GetById(ctx, crr.PackId)
 	if err != nil {
 		return "", custerr.NewInternalErr(err)
 	}
@@ -41,12 +44,13 @@ func (s *RoomService) Create(ctx context.Context, dto dto.CreateRoomDTO) (string
 
 	room := &domain.Room{
 		Id:      id.String(),
-		RoomDTO: *dto.RoomDTO,
+		Name:    crr.Name,
+		Options: crr.Options,
 		PackPreview: domain.PackPreview{
 			Id:   pack.Id,
 			Name: pack.Name,
 		},
-		CreatedBy: dto.UserId,
+		CreatedBy: userId,
 		Players:   make([]domain.Player, 0),
 		State:     domain.WaitingForStart,
 	}
@@ -55,12 +59,18 @@ func (s *RoomService) Create(ctx context.Context, dto dto.CreateRoomDTO) (string
 		return "", custerr.NewInternalErr(err)
 	}
 
-	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(room.Id)
-	roomServerChannel := s.serverChannelGetter.Get(domain.ROOM_PREFIX + room.Id).(realtime.Channel)
-	if err := roomServerChannel.Send(ctx, roomUpdatedMessage); err != nil {
+	_, err = s.roomCache.TrySetOwner(ctx, room.Id, eventsprocessor.OWNER_TTL)
+	if err != nil {
 		return "", err
 	}
-	lobbyServerChannel := s.serverChannelGetter.Get(domain.LOBBY).(realtime.Channel)
+	processor, err := s.roomInternalEventsProcessorGetter(room.Id)
+	if err != nil {
+		return "", custerr.NewInternalErr(err)
+	}
+	go processor.Listen(context.Background())
+
+	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(room.Id)
+	lobbyServerChannel := s.lobbyChannelGetter.Get(domain.LOBBY)
 	if err := lobbyServerChannel.Send(ctx, roomUpdatedMessage); err != nil {
 		return "", err
 	}
@@ -71,43 +81,43 @@ func (s *RoomService) GetById(ctx context.Context, id string) (*domain.Room, err
 	return s.roomCache.GetById(ctx, id)
 }
 
-func (s *RoomService) GetProjection(ctx context.Context, dto dto.GetRoomProjectionDTO) (any, error) {
-	room, err := s.roomCache.GetById(ctx, dto.Id)
+func (s *RoomService) GetProjection(ctx context.Context, userId, id, password string) (any, error) {
+	room, err := s.roomCache.GetById(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if room.Options.Type == domain.Private && *room.Options.Password != dto.Password {
+	if room.Options.Type == domain.Private && *room.Options.Password != password {
 		return nil, custerr.NewForbiddenErr("wrong password")
 	}
 
-	return room.GetProjection(dto.UserId), nil
+	return room.GetProjection(userId), nil
 }
 
 func (s *RoomService) Get(ctx context.Context) ([]domain.RoomLobby, error) {
 	return s.roomCache.Get(ctx)
 }
 
-func (s *RoomService) Join(ctx context.Context, dto dto.GetRoomProjectionDTO) (any, error) {
-	newRoom, err := s.roomCache.SafeSet(ctx, dto.Id, func(room *domain.Room) error {
-		if room.IsUserIn(dto.UserId) {
+func (s *RoomService) Join(ctx context.Context, userId, id, password string) (any, error) {
+	newRoom, err := s.roomCache.SafeSet(ctx, id, func(room *domain.Room) error {
+		if room.IsUserIn(userId) {
 			return nil
 		}
-		if room.IsUserBanned(dto.UserId) {
+		if room.IsUserBanned(userId) {
 			return custerr.NewForbiddenErr("you were banned from this room")
 		}
-		if room.Options.Type == domain.Private && *room.Options.Password != dto.Password {
+		if room.Options.Type == domain.Private && *room.Options.Password != password {
 			return custerr.NewForbiddenErr("wrong password")
 		}
 
 		full := len(room.Players) >= room.Options.MaxPlayers
-		canBeHost := dto.UserId == room.CreatedBy && room.Host == nil
+		canBeHost := userId == room.CreatedBy && room.Host == nil
 
 		if full && !canBeHost {
 			return custerr.NewConflictErr("the room is already full")
 		}
 
-		user, err := s.userRepository.GetById(ctx, dto.UserId)
+		user, err := s.userRepository.GetById(ctx, userId)
 		if err != nil {
 			return err
 		}
@@ -123,29 +133,29 @@ func (s *RoomService) Join(ctx context.Context, dto dto.GetRoomProjectionDTO) (a
 		return nil, err
 	}
 
-	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(dto.Id)
-	roomServerChannel := s.serverChannelGetter.Get(domain.ROOM_PREFIX + dto.Id).(realtime.Channel)
+	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(id)
+	roomServerChannel := s.roomChannelGetter.Get(domain.ROOM_PREFIX + id)
 	if err := roomServerChannel.Send(ctx, roomUpdatedMessage); err != nil {
 		return nil, err
 	}
-	lobbyServerChannel := s.serverChannelGetter.Get(domain.LOBBY).(realtime.Channel)
+	lobbyServerChannel := s.lobbyChannelGetter.Get(domain.LOBBY)
 	if err := lobbyServerChannel.Send(ctx, roomUpdatedMessage); err != nil {
 		return nil, err
 	}
-	return newRoom.GetProjection(dto.UserId), nil
+	return newRoom.GetProjection(userId), nil
 }
 
-func (s *RoomService) Connect(ctx context.Context, dto dto.ConnectRoomDTO) (*domain.Room, error) {
-	if err := s.roomCache.Persist(ctx, dto.Id); err != nil {
+func (s *RoomService) Connect(ctx context.Context, userId, id string) (*domain.Room, error) {
+	if err := s.roomCache.Persist(ctx, id); err != nil {
 		return nil, err
 	}
 
-	return s.roomCache.SafeSet(ctx, dto.Id, func(room *domain.Room) error {
-		if room.IsUserHost(dto.UserId) {
+	return s.roomCache.SafeSet(ctx, id, func(room *domain.Room) error {
+		if room.IsUserHost(userId) {
 			room.Host.IsConnected = true
 		} else {
 			i := slices.IndexFunc(room.Players, func(p domain.Player) bool {
-				return p.Id == dto.UserId
+				return p.Id == userId
 			})
 			room.Players[i].IsConnected = true
 		}
@@ -153,20 +163,20 @@ func (s *RoomService) Connect(ctx context.Context, dto dto.ConnectRoomDTO) (*dom
 	})
 }
 
-func (s *RoomService) Leave(ctx context.Context, dto dto.ConnectRoomDTO) error {
-	_, err := s.roomCache.SafeSet(ctx, dto.Id, func(room *domain.Room) error {
-		if !room.IsUserIn(dto.UserId) {
+func (s *RoomService) Leave(ctx context.Context, userId, id string) error {
+	_, err := s.roomCache.SafeSet(ctx, id, func(room *domain.Room) error {
+		if !room.IsUserIn(userId) {
 			return custerr.NewForbiddenErr("not allowed to leave room you are not in")
 		}
-		if room.State != domain.WaitingForStart {
+		if room.State != domain.WaitingForStart && room.State != domain.GameOver {
 			return custerr.NewConflictErr("cannot leave ongoing game")
 		}
 
-		if room.IsUserHost(dto.UserId) {
+		if room.IsUserHost(userId) {
 			room.Host = nil
 		} else {
 			room.Players = slices.DeleteFunc(room.Players, func(p domain.Player) bool {
-				return p.Id == dto.UserId
+				return p.Id == userId
 			})
 		}
 		return nil
@@ -175,11 +185,11 @@ func (s *RoomService) Leave(ctx context.Context, dto dto.ConnectRoomDTO) error {
 		return err
 	}
 
-	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(dto.Id)
-	roomServerChannel := s.serverChannelGetter.Get(domain.ROOM_PREFIX + dto.Id).(realtime.Channel)
+	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(id)
+	roomServerChannel := s.roomChannelGetter.Get(domain.ROOM_PREFIX + id)
 	if err := roomServerChannel.Send(ctx, roomUpdatedMessage); err != nil {
 		return err
 	}
-	lobbyServerChannel := s.serverChannelGetter.Get(domain.LOBBY).(realtime.Channel)
+	lobbyServerChannel := s.lobbyChannelGetter.Get(domain.LOBBY)
 	return lobbyServerChannel.Send(ctx, roomUpdatedMessage)
 }

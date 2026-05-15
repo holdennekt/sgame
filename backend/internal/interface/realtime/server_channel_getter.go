@@ -1,5 +1,5 @@
 package realtime
 
 type ServerChannelGetter interface {
-	Get(name string) any
+	Get(name string) Channel
 }

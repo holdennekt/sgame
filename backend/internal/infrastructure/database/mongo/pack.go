@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/dto"
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/dto"
+	"github.com/holdennekt/sgame/backend/internal/interface/repository"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,12 +16,12 @@ import (
 
 const PACKS_COLLECTION = "packs"
 
-type PackRepository struct {
+type packRepository struct {
 	db *mongo.Database
 }
 
-func NewPackRepository(db *mongo.Database) *PackRepository {
-	repo := PackRepository{db}
+func NewPackRepository(db *mongo.Database) repository.Pack {
+	repo := packRepository{db}
 	if err := repo.init(context.Background()); err != nil {
 		mongoErr := err.(mongo.CommandError)
 		const CODE_NAMESPACE_EXISTS = 48
@@ -31,7 +32,7 @@ func NewPackRepository(db *mongo.Database) *PackRepository {
 	return &repo
 }
 
-func (r *PackRepository) init(ctx context.Context) error {
+func (r *packRepository) init(ctx context.Context) error {
 	err := r.db.CreateCollection(ctx, PACKS_COLLECTION)
 	if err != nil {
 		return err
@@ -40,7 +41,7 @@ func (r *PackRepository) init(ctx context.Context) error {
 	_, err = r.db.Collection(PACKS_COLLECTION).Indexes().CreateOne(
 		ctx,
 		mongo.IndexModel{
-			Keys:    bson.D{{Key: "content", Value: "text"}},
+			Keys:    bson.M{"content": "text"},
 			Options: options.Index().SetName("content_text"),
 		},
 	)
@@ -55,7 +56,10 @@ type mongoPack struct {
 	CreatedBy      domain.User        `bson:"createdBy"`
 	RoundsChecksum []byte             `bson:"roundsChecksum"`
 	Content        string             `bson:"content"`
-	domain.PackDTO `bson:"inline"`
+	Name           string             `bson:"name"`
+	Type           domain.PrivacyType `bson:"type"`
+	Rounds         []domain.Round     `bson:"rounds"`
+	FinalRound     domain.FinalRound  `bson:"finalRound"`
 }
 
 func fromDomainPack(pack *domain.Pack) *mongoPack {
@@ -65,7 +69,10 @@ func fromDomainPack(pack *domain.Pack) *mongoPack {
 		CreatedBy:      pack.CreatedBy,
 		RoundsChecksum: pack.RoundsChecksum,
 		Content:        pack.Content,
-		PackDTO:        pack.PackDTO,
+		Name:           pack.Name,
+		Type:           pack.Type,
+		Rounds:         pack.Rounds,
+		FinalRound:     pack.FinalRound,
 	}
 }
 
@@ -75,7 +82,10 @@ func toDomainPack(mPack *mongoPack) *domain.Pack {
 		CreatedBy:      mPack.CreatedBy,
 		RoundsChecksum: mPack.RoundsChecksum,
 		Content:        mPack.Content,
-		PackDTO:        mPack.PackDTO,
+		Name:           mPack.Name,
+		Type:           mPack.Type,
+		Rounds:         mPack.Rounds,
+		FinalRound:     mPack.FinalRound,
 	}
 }
 
@@ -99,7 +109,7 @@ func toDomainPackPreview(mPackPreview mongoPackPreview) domain.PackPreview {
 	}
 }
 
-func (r *PackRepository) Create(ctx context.Context, pack *domain.Pack) (string, error) {
+func (r *packRepository) Create(ctx context.Context, pack *domain.Pack) (string, error) {
 	mPack := fromDomainPack(pack)
 	res, err := r.db.Collection(PACKS_COLLECTION).InsertOne(ctx, mPack)
 	if err != nil {
@@ -108,7 +118,7 @@ func (r *PackRepository) Create(ctx context.Context, pack *domain.Pack) (string,
 	return res.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func (r *PackRepository) GetById(ctx context.Context, id string) (*domain.Pack, error) {
+func (r *packRepository) GetById(ctx context.Context, id string) (*domain.Pack, error) {
 	objId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, custerr.NewBadRequestErr(fmt.Sprintf("\"%s\" is an invalid id", id))
@@ -117,7 +127,7 @@ func (r *PackRepository) GetById(ctx context.Context, id string) (*domain.Pack, 
 	var mPack mongoPack
 	err = r.db.Collection(PACKS_COLLECTION).FindOne(
 		ctx,
-		bson.D{{Key: "_id", Value: objId}},
+		bson.M{"_id": objId},
 	).Decode(&mPack)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -129,40 +139,58 @@ func (r *PackRepository) GetById(ctx context.Context, id string) (*domain.Pack, 
 	return toDomainPack(&mPack), nil
 }
 
-func (r *PackRepository) GetByRoundsChecksum(ctx context.Context, dto dto.GetPackByRoundsChecksumDTO) (*domain.Pack, error) {
-	ignoreObjId, _ := primitive.ObjectIDFromHex(dto.IgnoreId)
+func (r *packRepository) GetByChecksum(ctx context.Context, userId string, checksum []byte, ignoreId string) ([]*domain.Pack, error) {
+	ignoreObjId, _ := primitive.ObjectIDFromHex(ignoreId)
 
-	var mPack mongoPack
-	err := r.db.Collection(PACKS_COLLECTION).FindOne(
+	cur, err := r.db.Collection(PACKS_COLLECTION).Find(
 		ctx,
-		bson.D{
-			{Key: "roundsChecksum", Value: dto.RoundsChecksum},
-			{Key: "_id", Value: bson.D{{Key: "$ne", Value: ignoreObjId}}},
+		bson.M{
+			"roundsChecksum": checksum,
+			"_id":            bson.M{"$ne": ignoreObjId},
+			"$or": []bson.M{
+				{"type": domain.Public},
+				{"createdBy": userId},
+			},
 		},
-	).Decode(&mPack)
+	)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, custerr.NewNotFoundErr("no pack with provided checksum")
-		}
 		return nil, custerr.NewInternalErr(err)
 	}
-	return toDomainPack(&mPack), nil
+	defer cur.Close(ctx)
+
+	packs := make([]*domain.Pack, 0)
+	for cur.Next(ctx) {
+		var mPack mongoPack
+		if err := cur.Decode(&mPack); err != nil {
+			return nil, custerr.NewInternalErr(err)
+		}
+		packs = append(packs, toDomainPack(&mPack))
+	}
+	if err := cur.Err(); err != nil {
+		return nil, custerr.NewInternalErr(err)
+	}
+	return packs, nil
 }
 
-func (r *PackRepository) GetPreviews(ctx context.Context, dto dto.GetPacksDTO) ([]domain.PackPreview, error) {
+func (r *packRepository) GetPreviews(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackPreview, error) {
 	cur, err := r.db.Collection(PACKS_COLLECTION).Find(
 		ctx,
 		bson.M{
 			"name": primitive.Regex{
-				Pattern: dto.Search,
+				Pattern: search.SearchRequest,
 				Options: "i",
 			},
 			"$or": []bson.M{
-				{"type": "public"},
-				{"createdBy": dto.UserId},
+				{"type": domain.Public},
+				{"createdBy": userId},
 			},
 		},
-		options.Find().SetLimit(int64(dto.Limit)).SetProjection(bson.M{"_id": 1, "name": 1}),
+		options.
+			Find().
+			SetSort(bson.M{"_id": 1}).
+			SetSkip(int64((search.Page-1)*search.Limit)).
+			SetLimit(int64(search.Limit)).
+			SetProjection(bson.M{"_id": 1, "name": 1}),
 	)
 	if err != nil {
 		return nil, custerr.NewInternalErr(err)
@@ -183,24 +211,24 @@ func (r *PackRepository) GetPreviews(ctx context.Context, dto dto.GetPacksDTO) (
 	return packsPreviews, nil
 }
 
-func (r *PackRepository) GetHiddens(ctx context.Context, dto dto.GetPacksDTO) ([]domain.HiddenPack, error) {
+func (r *packRepository) GetHiddens(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.HiddenPack, error) {
 	cur, err := r.db.Collection(PACKS_COLLECTION).Find(
 		ctx,
 		bson.M{
 			"content": primitive.Regex{
-				Pattern: dto.Search,
+				Pattern: search.SearchRequest,
 				Options: "i",
 			},
 			"$or": []bson.M{
 				{"type": "public"},
-				{"createdBy": dto.UserId},
+				{"createdBy": userId},
 			},
 		},
 		options.
 			Find().
-			SetSort(bson.D{{Key: "_id", Value: 1}}).
-			SetSkip(int64((dto.Page-1)*dto.Limit)).
-			SetLimit(int64(dto.Limit)),
+			SetSort(bson.M{"_id": 1}).
+			SetSkip(int64((search.Page-1)*search.Limit)).
+			SetLimit(int64(search.Limit)),
 	)
 	if err != nil {
 		return nil, custerr.NewInternalErr(err)
@@ -221,17 +249,17 @@ func (r *PackRepository) GetHiddens(ctx context.Context, dto dto.GetPacksDTO) ([
 	return hiddenPacks, nil
 }
 
-func (r *PackRepository) GetCount(ctx context.Context, dto dto.GetPacksDTO) (int, error) {
+func (r *packRepository) GetCount(ctx context.Context, userId string, search dto.SearchRequest) (int, error) {
 	count, err := r.db.Collection(PACKS_COLLECTION).CountDocuments(
 		ctx,
 		bson.M{
 			"name": primitive.Regex{
-				Pattern: dto.Search,
+				Pattern: search.SearchRequest,
 				Options: "i",
 			},
 			"$or": []bson.M{
 				{"type": "public"},
-				{"createdBy": dto.UserId},
+				{"createdBy": userId},
 			},
 		},
 	)
@@ -241,11 +269,11 @@ func (r *PackRepository) GetCount(ctx context.Context, dto dto.GetPacksDTO) (int
 	return int(count), nil
 }
 
-func (r *PackRepository) Update(ctx context.Context, pack *domain.Pack) error {
+func (r *packRepository) Update(ctx context.Context, pack *domain.Pack) error {
 	mPack := fromDomainPack(pack)
 	res, err := r.db.Collection(PACKS_COLLECTION).ReplaceOne(
 		ctx,
-		bson.D{{Key: "_id", Value: mPack.Id}},
+		bson.M{"_id": mPack.Id},
 		mPack,
 	)
 	if err != nil {
@@ -257,7 +285,7 @@ func (r *PackRepository) Update(ctx context.Context, pack *domain.Pack) error {
 	return nil
 }
 
-func (r *PackRepository) Delete(ctx context.Context, id string) error {
+func (r *packRepository) Delete(ctx context.Context, id string) error {
 	objId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return custerr.NewBadRequestErr(fmt.Sprintf("\"%s\" is an invalid id", id))
@@ -265,7 +293,7 @@ func (r *PackRepository) Delete(ctx context.Context, id string) error {
 
 	res, err := r.db.Collection(PACKS_COLLECTION).DeleteOne(
 		ctx,
-		bson.D{{Key: "_id", Value: objId}},
+		bson.M{"_id": objId},
 	)
 	if err != nil {
 		return custerr.NewInternalErr(err)

@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/holdennekt/sgame/internal/message"
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/message"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -16,7 +17,7 @@ type channel struct {
 	pubSub *redis.PubSub
 }
 
-func NewChannel(client *redis.Client, name string) *channel {
+func NewChannel(client *redis.Client, name string) realtime.Channel {
 	return &channel{client: client, name: name}
 }
 

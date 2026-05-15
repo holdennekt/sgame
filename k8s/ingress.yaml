@@ -26,3 +26,13 @@ spec:
                 name: sgame-frontend-service
                 port:
                   number: 80
+    - host: minio.sgame.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sgame-minio-service
+                port:
+                  number: 9001

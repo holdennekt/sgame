@@ -22,3 +22,12 @@ func GetEnvVarInt(name string) int {
 	}
 	return num
 }
+
+func GetEnvVarBool(name string) bool {
+	variable := GetEnvVar(name)
+	boolean, err := strconv.ParseBool(variable)
+	if err != nil {
+		log.Fatalf("%s env variable is not bool", name)
+	}
+	return boolean
+}

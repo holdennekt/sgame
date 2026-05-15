@@ -4,10 +4,11 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/repository"
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/dto"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/interface/repository"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -20,14 +21,14 @@ func NewAuthService(sessionCache cache.Session, userRepository repository.User) 
 	return &AuthService{sessionCache, userRepository}
 }
 
-func (s *AuthService) Login(ctx context.Context, dto domain.DbUserDTO) (sessionId string, userId string, err error) {
-	dbUser, err := s.userRepository.GetByLogin(ctx, dto.Login)
+func (s *AuthService) Login(ctx context.Context, cur dto.CreateUserRequest) (sessionId string, userId string, err error) {
+	dbUser, err := s.userRepository.GetByLogin(ctx, cur.Login)
 	if err != nil {
 		return
 	}
 	userId = dbUser.Id
 
-	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(dto.Password))
+	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(cur.Password))
 	if err != nil {
 		if err == bcrypt.ErrMismatchedHashAndPassword {
 			err = custerr.NewUnauthorizedErr("wrong password")
@@ -55,19 +56,19 @@ func (s *AuthService) Login(ctx context.Context, dto domain.DbUserDTO) (sessionI
 	return
 }
 
-func (s *AuthService) Register(ctx context.Context, dto domain.DbUserDTO) (sessionId string, userId string, err error) {
-	hashed, err := bcrypt.GenerateFromPassword([]byte(dto.Password), bcrypt.DefaultCost)
+func (s *AuthService) Register(ctx context.Context, cur dto.CreateUserRequest) (sessionId string, userId string, err error) {
+	hashed, err := bcrypt.GenerateFromPassword([]byte(cur.Password), bcrypt.DefaultCost)
 	if err != nil {
 		err = custerr.NewInternalErr(err)
 		return
 	}
-	dto.Password = string(hashed)
 
 	dbUser := &domain.DbUser{
 		User: domain.User{
-			Name: dto.Login,
+			Name: cur.Login,
 		},
-		DbUserDTO: dto,
+		Login:    cur.Login,
+		Password: string(hashed),
 	}
 
 	userId, err = s.userRepository.Create(ctx, dbUser)

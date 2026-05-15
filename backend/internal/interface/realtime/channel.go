@@ -3,7 +3,7 @@ package realtime
 import (
 	"context"
 
-	"github.com/holdennekt/sgame/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
 type Channel interface {

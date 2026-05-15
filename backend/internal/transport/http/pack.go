@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/dto"
-	"github.com/holdennekt/sgame/internal/service"
+	_ "github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/dto"
+	"github.com/holdennekt/sgame/backend/internal/service"
 )
 
 const DEFAULT_PAGE = 1
@@ -28,31 +28,55 @@ func (c *PackController) RegisterRoutes(r *gin.RouterGroup) {
 	packs.GET("/previews", c.getPreviews)
 	packs.PUT("/:id", c.update)
 	packs.DELETE("/:id", c.delete)
+	packs.GET("/presign", c.signURL)
 }
 
+// @Summary      Create a new pack
+// @Description  Creates a game pack for the authenticated user
+// @Tags         packs
+// @Accept       json
+// @Produce      json
+// @Param        request body dto.CreatePackRequest true "Pack creation data"
+// @Success      201  {object}  dto.CreatePackResponse
+// @Failure      400  {object}  dto.ErrorResponse "Invalid input data"
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized: Session missing or expired"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs [post]
 func (c *PackController) create(ctx *gin.Context) {
 	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
 
-	var packDTO domain.PackDTO
-	if err := ctx.ShouldBindJSON(&packDTO); err != nil {
+	var cpr dto.CreatePackRequest
+	if err := ctx.ShouldBindJSON(&cpr); err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	id, err := c.packService.Create(ctx, dto.CreatePackDTO{UserId: userId, PackDTO: &packDTO})
+	id, err := c.packService.Create(ctx, userId, cpr)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"id": id})
+	ctx.JSON(http.StatusCreated, dto.CreatePackResponse{Id: id})
 }
 
+// @Summary      Get pack by ID
+// @Description  Retrieves a specific pack by its unique identifier
+// @Tags         packs
+// @Produce      json
+// @Param        id   path      string  true  "Pack ID"
+// @Success      200  {object}  domain.Pack
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized"
+// @Failure      404  {object}  dto.ErrorResponse "Pack not found"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs/{id} [get]
 func (c *PackController) getById(ctx *gin.Context) {
 	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
 	id := ctx.Param("id")
 
-	pack, err := c.packService.GetById(ctx, dto.GetPackByIdDTO{Id: id, UserId: userId})
+	pack, err := c.packService.GetById(ctx, userId, id)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -61,10 +85,20 @@ func (c *PackController) getById(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, pack)
 }
 
+// @Summary      Get pack previews
+// @Description  Retrieves a list of pack previews based on search query
+// @Tags         packs
+// @Produce      json
+// @Param        query query     dto.SearchRequest false "Search and pagination"
+// @Success      200  {array}   domain.PackPreview
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs/previews [get]
 func (c *PackController) getPreviews(ctx *gin.Context) {
 	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
 
-	var query dto.SearchDTO
+	var query dto.SearchRequest
 	if err := ctx.ShouldBindQuery(&query); err != nil {
 		ctx.Error(err)
 		return
@@ -73,7 +107,7 @@ func (c *PackController) getPreviews(ctx *gin.Context) {
 		query.Limit = DEFAULT_LIMIT
 	}
 
-	packs, err := c.packService.GetPreviews(ctx, dto.GetPacksDTO{UserId: userId, SearchDTO: query})
+	packs, err := c.packService.GetPreviews(ctx, userId, query)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -82,10 +116,20 @@ func (c *PackController) getPreviews(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, packs)
 }
 
+// @Summary      Get user's hidden packs
+// @Description  Returns paginated list of packs created by the user
+// @Tags         packs
+// @Produce      json
+// @Param        query query     dto.SearchRequest false "Pagination parameters"
+// @Success      200  {object}  dto.SearchResponse
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs [get]
 func (c *PackController) getHiddens(ctx *gin.Context) {
 	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
 
-	var query dto.SearchDTO
+	var query dto.SearchRequest
 	if err := ctx.ShouldBindQuery(&query); err != nil {
 		ctx.Error(err)
 		return
@@ -97,32 +141,48 @@ func (c *PackController) getHiddens(ctx *gin.Context) {
 		query.Limit = DEFAULT_LIMIT
 	}
 
-	packs, count, err := c.packService.GetHiddens(ctx, dto.GetPacksDTO{UserId: userId, SearchDTO: query})
+	packs, count, err := c.packService.GetHiddens(ctx, userId, query)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"items":    packs,
-		"total":    count,
-		"page":     query.Page,
-		"pageSize": query.Limit,
-		"hasNext":  query.Page*query.Limit < count,
+	ctx.JSON(http.StatusOK, dto.SearchResponse{
+		Items:    packs,
+		Total:    count,
+		Page:     query.Page,
+		PageSize: query.Limit,
+		HasNext:  query.Page*query.Limit < count,
 	})
 }
 
+// @Summary      Update pack
+// @Description  Updates pack content by ID
+// @Tags         packs
+// @Accept       json
+// @Produce      json
+// @Param        id      path    string                 true  "Pack ID"
+// @Param        request body    dto.UpdatePackRequest  true  "Update data"
+// @Success      204     "No Content"
+// @Failure      400     {object}  dto.ErrorResponse "Invalid input"
+// @Failure      401     {object}  dto.ErrorResponse "Unauthorized"
+// @Failure      403     {object}  dto.ErrorResponse "Forbidden: Not an owner"
+// @Failure      404  	 {object}  dto.ErrorResponse "Pack not found"
+// @Failure      500     {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs/{id} [put]
 func (c *PackController) update(ctx *gin.Context) {
 	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
 	id := ctx.Param("id")
 
-	var packDTO domain.PackDTO
-	if err := ctx.ShouldBindJSON(&packDTO); err != nil {
+	var upr dto.UpdatePackRequest
+	if err := ctx.ShouldBindJSON(&upr); err != nil {
 		ctx.Error(err)
 		return
 	}
+	upr.Id = id
 
-	err := c.packService.Update(ctx, dto.UpdatePackDTO{UserId: userId, Id: id, PackDTO: &packDTO})
+	err := c.packService.Update(ctx, userId, upr)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -131,15 +191,52 @@ func (c *PackController) update(ctx *gin.Context) {
 	ctx.Status(http.StatusNoContent)
 }
 
+// @Summary      Delete pack
+// @Description  Removes a pack by ID
+// @Tags         packs
+// @Param        id   path      string  true  "Pack ID"
+// @Success      204  "No Content"
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized"
+// @Failure      403  {object}  dto.ErrorResponse "Forbidden: Not an owner"
+// @Failure      404  {object}  dto.ErrorResponse "Pack not found"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs/{id} [delete]
 func (c *PackController) delete(ctx *gin.Context) {
 	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
 	id := ctx.Param("id")
 
-	err := c.packService.Delete(ctx, dto.DeletePackDTO{UserId: userId, Id: id})
+	err := c.packService.Delete(ctx, userId, id)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
 	ctx.Status(http.StatusNoContent)
+}
+
+// @Summary      Get signed upload URL
+// @Description  Generates a URL and form data for file upload
+// @Tags         packs
+// @Produce      json
+// @Param        query query     dto.SignURLRequest true "Sign parameters"
+// @Success      200  {object}  dto.SignURLResponse
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs/signURL [get]
+func (c *PackController) signURL(ctx *gin.Context) {
+	var sr dto.SignURLRequest
+	if err := ctx.ShouldBindQuery(&sr); err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	signed, err := c.packService.SignURL(ctx, sr)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.SignURLResponse{URL: signed.URL, FormData: signed.FormData})
 }

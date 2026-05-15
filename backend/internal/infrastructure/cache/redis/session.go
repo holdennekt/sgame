@@ -4,21 +4,22 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"github.com/redis/go-redis/v9"
 )
 
 const SESSIONS_KEY = "sessions"
 
-type SessionCache struct {
+type sessionCache struct {
 	client *redis.Client
 }
 
-func NewSessionCache(client *redis.Client) *SessionCache {
-	return &SessionCache{client}
+func NewSessionCache(client *redis.Client) cache.Session {
+	return &sessionCache{client}
 }
 
-func (c *SessionCache) Get(ctx context.Context, sessionId string) (string, error) {
+func (c *sessionCache) Get(ctx context.Context, sessionId string) (string, error) {
 	userId, err := c.client.HGet(ctx, SESSIONS_KEY, sessionId).Result()
 	if err != nil {
 		if err == redis.Nil {
@@ -29,7 +30,7 @@ func (c *SessionCache) Get(ctx context.Context, sessionId string) (string, error
 	return userId, nil
 }
 
-func (c *SessionCache) GetKey(ctx context.Context, userId string) (string, error) {
+func (c *sessionCache) GetKey(ctx context.Context, userId string) (string, error) {
 	sessions, err := c.client.HGetAll(ctx, SESSIONS_KEY).Result()
 	if err != nil {
 		return "", custerr.NewInternalErr(err)
@@ -42,7 +43,7 @@ func (c *SessionCache) GetKey(ctx context.Context, userId string) (string, error
 	return "", custerr.NewNotFoundErr(fmt.Sprintf("no sessionId with value \"%s\"", userId))
 }
 
-func (c *SessionCache) Set(ctx context.Context, key string, val string) error {
+func (c *sessionCache) Set(ctx context.Context, key string, val string) error {
 	if err := c.client.HSet(ctx, SESSIONS_KEY, key, val).Err(); err != nil {
 		return custerr.NewInternalErr(err)
 	}

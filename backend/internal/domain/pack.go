@@ -5,22 +5,18 @@ import (
 	"slices"
 	"time"
 
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
 type Pack struct {
-	Id             string `json:"id"`
-	CreatedBy      User   `json:"createdBy"`
-	RoundsChecksum []byte `json:"-"`
-	Content        string `json:"-"`
-	PackDTO        `bson:"inline"`
-}
-
-type PackDTO struct {
-	Name       string      `json:"name" bson:"name" binding:"min=1,max=50"`
-	Type       PrivacyType `json:"type" bson:"type" binding:"oneof=public private"`
-	Rounds     []Round     `json:"rounds" bson:"rounds" binding:"min=1,max=10,unique=Name,dive"`
-	FinalRound FinalRound  `json:"finalRound" bson:"finalRound"`
+	Id             string      `json:"id"`
+	CreatedBy      User        `json:"createdBy"`
+	RoundsChecksum []byte      `json:"-"`
+	Content        string      `json:"-"`
+	Name           string      `json:"name"`
+	Type           PrivacyType `json:"type"`
+	Rounds         []Round     `json:"rounds"`
+	FinalRound     FinalRound  `json:"finalRound"`
 }
 
 type PackPreview struct {
@@ -29,27 +25,30 @@ type PackPreview struct {
 }
 
 type Round struct {
-	Name       string     `json:"name" bson:"name" binding:"min=1,max=50"`
-	Categories []Category `json:"categories" bson:"categories" binding:"min=1,max=10,unique=Name,same_length=Questions,dive"`
+	Name       string     `json:"name" bson:"name"`
+	Categories []Category `json:"categories" bson:"categories"`
 }
 
 type Category struct {
-	Name      string     `json:"name" bson:"name" binding:"min=1,max=25"`
-	Questions []Question `json:"questions" bson:"questions" binding:"min=1,max=10,dive"`
+	Name      string     `json:"name" bson:"name"`
+	Questions []Question `json:"questions" bson:"questions"`
 }
 
-type MediaType string
+type FileType string
 
 const (
-	Image MediaType = "image"
-	Audio MediaType = "audio"
-	Video MediaType = "video"
+	Image FileType = "image"
+	Audio FileType = "audio"
+	Video FileType = "video"
 )
 
 type Attachment struct {
-	MediaType  MediaType `json:"mediaType" bson:"mediaType" binding:"oneof=image audio video"`
-	ContentUrl string    `json:"contentUrl" bson:"contentUrl" binding:"url,max=2000"`
-	Duration   int       `json:"duration" bson:"duration"`
+	Key      string   `json:"key" bson:"key"`
+	URL      string   `json:"url" bson:"url,omitempty"`
+	Type     FileType `json:"type" bson:"type"`
+	MimeType string   `json:"mimeType" bson:"mimeType"`
+	Size     int64    `json:"size" bson:"size"`
+	Duration float64  `json:"duration" bson:"duration"`
 }
 
 type QuestionType string
@@ -71,22 +70,25 @@ type QuestionCorrectAnswer struct {
 
 type Question struct {
 	HiddenQuestion `bson:"inline"`
-	Type           QuestionType `json:"type" bson:"type" binding:"oneof=regular catInBag auction"`
-	Text           string       `json:"text" bson:"text" binding:"required,max=200"`
-	Answers        []string     `json:"answers" bson:"answers" binding:"min=1,max=10,dive,min=1,max=50"`
-	Comment        *string      `json:"comment" bson:"comment" binding:"omitnil,max=200"`
+	Type           QuestionType `json:"type" bson:"type"`
+	Text           string       `json:"text" bson:"text"`
+	Answers        []string     `json:"answers" bson:"answers"`
+	Comment        *string      `json:"comment" bson:"comment"`
 }
 
-func (q Question) GetRevealingDuration() time.Duration {
-	const ReadingSymbolsPerSecond float64 = 30
-	textDuration := time.Duration(
-		float64(len(q.Text)) / ReadingSymbolsPerSecond * float64(time.Second),
-	)
+func (q Question) GetMediaRevealingDuration() time.Duration {
 	var attachmentDuration time.Duration
 	if q.Attachment != nil {
-		attachmentDuration = time.Duration(q.Attachment.Duration) * time.Second
+		attachmentDuration = time.Duration(q.Attachment.Duration * float64(time.Second))
 	}
-	return textDuration + attachmentDuration
+	return attachmentDuration
+}
+
+func (q Question) GetTextRevealingDuration() time.Duration {
+	const ReadingSymbolsPerSecond float64 = 20
+	return time.Duration(
+		float64(len(q.Text)) / ReadingSymbolsPerSecond * float64(time.Second),
+	)
 }
 
 func (q Question) ToQuestionCorrectAnswer() QuestionCorrectAnswer {
@@ -96,8 +98,14 @@ func (q Question) ToQuestionCorrectAnswer() QuestionCorrectAnswer {
 	}
 }
 
+func (q Question) IsCurrent(room *Room) bool {
+	return q.Round == room.CurrentQuestion.Round &&
+		q.Category == room.CurrentQuestion.Category &&
+		q.Index == room.CurrentQuestion.Index
+}
+
 type FinalRound struct {
-	Categories []FinalRoundCategory `json:"categories" bson:"categories" binding:"min=1,max=10"`
+	Categories []FinalRoundCategory `json:"categories" bson:"categories"`
 }
 
 type FinalRoundCategory struct {
@@ -107,8 +115,8 @@ type FinalRoundCategory struct {
 
 type FinalRoundQuestion struct {
 	HiddenFinalRoundQuestion `bson:"inline"`
-	Answers                  []string `json:"answers" bson:"answers" binding:"min=1,max=10,dive,min=1,max=50"`
-	Comment                  *string  `json:"comment" bson:"comment" binding:"omitnil,min=10,max=100"`
+	Answers                  []string `json:"answers" bson:"answers"`
+	Comment                  *string  `json:"comment" bson:"comment"`
 }
 
 func (frq FinalRoundQuestion) ToQuestionCorrectAnswer() QuestionCorrectAnswer {
@@ -123,46 +131,48 @@ type HiddenPack struct {
 	CreatedBy  User             `json:"createdBy"`
 	Name       string           `json:"name"`
 	Type       PrivacyType      `json:"type"`
-	Rounds     []hiddenRound    `json:"rounds"`
-	FinalRound hiddenFinalRound `json:"finalRound"`
+	Rounds     []HiddenRound    `json:"rounds"`
+	FinalRound HiddenFinalRound `json:"finalRound"`
 }
 
-type hiddenRound struct {
+type HiddenRound struct {
 	Name       string           `json:"name"`
-	Categories []hiddenCategory `json:"categories"`
+	Categories []HiddenCategory `json:"categories"`
 }
 
-type hiddenCategory struct {
+type HiddenCategory struct {
 	Name string `json:"name"`
 }
 
 type HiddenQuestion struct {
-	Index      int         `json:"index" bson:"index" binding:"min=0,max=9"`
-	Value      int         `json:"value" bson:"value" binding:"max=10000"`
-	Attachment *Attachment `json:"attachment" bson:"attachment" binding:"omitnil"`
+	Round      string      `json:"-" bson:"round"`
+	Category   string      `json:"-" bson:"category"`
+	Index      int         `json:"index" bson:"index"`
+	Value      int         `json:"value" bson:"value"`
+	Attachment *Attachment `json:"attachment" bson:"attachment"`
 }
 
-type hiddenFinalRound struct {
+type HiddenFinalRound struct {
 	Categories []HiddenFinalRoundCategory `json:"categories"`
 }
 
 type HiddenFinalRoundCategory struct {
-	Name string `json:"name" binding:"max=25"`
+	Name string `json:"name" bson:"name"`
 }
 
 type HiddenFinalRoundQuestion struct {
-	Text       string      `json:"text" binding:"required,max=200"`
-	Attachment *Attachment `json:"attachment" binding:"omitnil"`
+	Text       string      `json:"text" bson:"text"`
+	Attachment *Attachment `json:"attachment" bson:"attachment"`
 }
 
 func NewHiddenPack(pack Pack) HiddenPack {
-	hiddenRounds := make([]hiddenRound, len(pack.Rounds))
+	hiddenRounds := make([]HiddenRound, len(pack.Rounds))
 	for i, round := range pack.Rounds {
-		hiddenCategories := make([]hiddenCategory, len(round.Categories))
+		hiddenCategories := make([]HiddenCategory, len(round.Categories))
 		for j, category := range round.Categories {
-			hiddenCategories[j] = hiddenCategory{Name: category.Name}
+			hiddenCategories[j] = HiddenCategory{Name: category.Name}
 		}
-		hiddenRounds[i] = hiddenRound{Name: round.Name, Categories: hiddenCategories}
+		hiddenRounds[i] = HiddenRound{Name: round.Name, Categories: hiddenCategories}
 	}
 	hiddenFinalCategories := make([]HiddenFinalRoundCategory, len(pack.FinalRound.Categories))
 	for i, finalRoundCategory := range pack.FinalRound.Categories {
@@ -174,13 +184,13 @@ func NewHiddenPack(pack Pack) HiddenPack {
 		Name:      pack.Name,
 		Type:      pack.Type,
 		Rounds:    hiddenRounds,
-		FinalRound: hiddenFinalRound{
+		FinalRound: HiddenFinalRound{
 			Categories: hiddenFinalCategories,
 		},
 	}
 }
 
-func (p *Pack) getQuestion(roundName string, categoryName string, questionIndex int) (question Question, err error) {
+func (p *Pack) GetQuestion(roundName string, categoryName string, questionIndex int) (*Question, error) {
 	roundIndex := slices.IndexFunc(p.Rounds, func(r Round) bool {
 		return r.Name == roundName
 	})
@@ -189,8 +199,7 @@ func (p *Pack) getQuestion(roundName string, categoryName string, questionIndex 
 		return c.Name == categoryName
 	})
 	if categoryIndex == -1 {
-		err = custerr.NewNotFoundErr(fmt.Sprintf("no category \"%s\" in round \"%s\"", categoryName, roundName))
-		return
+		return nil, custerr.NewNotFoundErr(fmt.Sprintf("no category \"%s\" in round \"%s\"", categoryName, roundName))
 	}
 	category := round.Categories[categoryIndex]
 
@@ -198,11 +207,9 @@ func (p *Pack) getQuestion(roundName string, categoryName string, questionIndex 
 		return q.Index == questionIndex
 	})
 	if questionSliceIndex == -1 {
-		err = custerr.NewNotFoundErr(fmt.Sprintf("no question with index \"%d\" in category \"%s\" in round \"%s\"", questionIndex, categoryName, roundName))
-		return
+		return nil, custerr.NewNotFoundErr(fmt.Sprintf("no question with index \"%d\" in category \"%s\" in round \"%s\"", questionIndex, categoryName, roundName))
 	}
-	question = category.Questions[questionSliceIndex]
-	return
+	return &category.Questions[questionSliceIndex], nil
 }
 
 func (r *Round) getCurrentRoundQuestions() CurrentRoundQuestions {

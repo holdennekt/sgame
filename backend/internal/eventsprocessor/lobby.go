@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client/outgoing"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
 type LobbyEventsProcessor struct {
@@ -20,8 +20,12 @@ type LobbyEventsProcessor struct {
 	user      domain.User
 }
 
-func NewLobbyEventsProcessor(client realtime.Channel, server realtime.Channel, roomCache cache.Room, user domain.User) *LobbyEventsProcessor {
-	return &LobbyEventsProcessor{client, server, roomCache, user}
+type LobbyEventsProcessorGetter func(client realtime.Channel, user domain.User) *LobbyEventsProcessor
+
+func NewLobbyEventsProcessorGetter(lobbyChannelGetter realtime.ServerChannelGetter, roomCache cache.Room) LobbyEventsProcessorGetter {
+	return func(client realtime.Channel, user domain.User) *LobbyEventsProcessor {
+		return &LobbyEventsProcessor{client, lobbyChannelGetter.Get(domain.LOBBY), roomCache, user}
+	}
 }
 
 func (p *LobbyEventsProcessor) Listen(ctx context.Context) {

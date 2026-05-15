@@ -1,22 +1,11 @@
 "use client";
 
 import { toast, ToastContainer } from "react-toastify";
-import Navbar from "../components/Navbar";
+import Navbar from "../../components/Navbar";
 import { FormEventHandler } from "react";
-import { ErrorBody, isError } from "@/middleware";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
-const register = async (body: { login: string; password: string }) => {
-  const resp = await fetch("api/register", {
-    method: "POST",
-    credentials: "include",
-    body: JSON.stringify(body),
-  });
-  const obj: { id: string } | ErrorBody = await resp?.json();
-  if (isError(obj)) throw new Error(obj.error);
-  return obj.id;
-};
+import { register } from "../actions";
 
 export default function Page() {
   const router = useRouter();
@@ -29,7 +18,6 @@ export default function Page() {
         login: formData.get("login") as string,
         password: formData.get("password") as string,
       });
-      router.refresh();
       router.push("/");
     } catch (error) {
       if (error instanceof Error) {

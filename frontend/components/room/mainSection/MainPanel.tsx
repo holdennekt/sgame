@@ -1,0 +1,363 @@
+import { User } from "@/middleware";
+import BettingPanel from "./BettingPanel";
+import BoardPanel from "./BoardPanel";
+import FinalRoundBoardPanel from "./FinalRoundBoardPanel";
+import PlayerTable from "./PlayerTable";
+import RoundDemoPanel from "./RoundDemoPanel";
+import {
+  MutableRefObject,
+  RefObject,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { WsMessageHandler } from "../../lobby/Lobby";
+import ValidateAnswerModal from "./ValidateAnswerModal";
+import TextPanel from "./TextPanel";
+import FinalRoundAnswerPanel from "./FinalRoundAnswerPanel";
+import QuestionPanel from "./QuestionPanel";
+import { FinalRoundQuestion } from "@/types/pack";
+import {
+  Room,
+  CurrentQuestion,
+  FinalRoundState,
+  RoomPlayer,
+  RoomHost,
+} from "@/types/room";
+import {
+  RoundDemo,
+  CorrectAnswerDemo,
+  isRoundDemo,
+  isCorrectAnswerDemo,
+  QuestionDemo,
+  isQuestionDemo,
+} from "../Room";
+import RevealingQuestionPanel from "./RevealingQuestionPanel";
+
+export default function MainPanel({
+  user,
+  room,
+  wsConn,
+  handlers,
+  answerButton,
+  submitAnswer,
+}: {
+  user: User;
+  room: RoomHost | RoomPlayer;
+  wsConn: MutableRefObject<WebSocket | null>;
+  handlers: Map<string, WsMessageHandler>;
+  answerButton: RefObject<HTMLDivElement>;
+  submitAnswer: () => void;
+}) {
+  const [roundDemo, setRoundDemo] = useState<RoundDemo | null>(null);
+  const delayedRoundDemoRef = useRef<RoundDemo | null>(null);
+  const [questionDemo, setQuestionDemo] = useState<QuestionDemo | null>(null);
+  const [correctAnswerDemo, setCorrectAnswerDemo] =
+    useState<CorrectAnswerDemo | null>(null);
+
+  useEffect(() => {
+    if (!questionDemo && !correctAnswerDemo && delayedRoundDemoRef.current) {
+      setRoundDemo(delayedRoundDemoRef.current);
+      delayedRoundDemoRef.current = null;
+    }
+  }, [questionDemo, correctAnswerDemo]);
+
+  handlers.set("round_demo", (payload) => {
+    if (!isRoundDemo(payload)) return;
+    if (correctAnswerDemo) {
+      delayedRoundDemoRef.current = payload;
+      return;
+    }
+    setRoundDemo(payload);
+  });
+
+  handlers.set("question_demo", (payload) => {
+    if (!isQuestionDemo(payload)) return;
+    setQuestionDemo(payload);
+    setTimeout(() => setQuestionDemo(null), payload.duration * 1000);
+  });
+
+  handlers.set("correct_answer_demo", (payload) => {
+    if (!isCorrectAnswerDemo(payload)) return;
+    setCorrectAnswerDemo(payload);
+    setTimeout(() => setCorrectAnswerDemo(null), payload.duration * 1000);
+  });
+
+  const isHost = user.id === room.host?.id;
+  const player = room.players.find((player) => player.id === user.id);
+
+  const selectQuestion = (question: { category: string; index: number }) => {
+    wsConn.current?.send(
+      JSON.stringify({ event: "select_question", payload: question }),
+    );
+  };
+
+  const passQuestion = (passTo: string) => {
+    wsConn.current?.send(
+      JSON.stringify({ event: "pass_question", payload: { passTo } }),
+    );
+  };
+
+  const placeBet = (amount: number) => {
+    wsConn.current?.send(
+      JSON.stringify({ event: "place_bet", payload: { amount } }),
+    );
+  };
+
+  const validateAnswer = (isCorrect: boolean) => {
+    wsConn.current?.send(
+      JSON.stringify({ event: "validate_answer", payload: { isCorrect } }),
+    );
+  };
+
+  const removeFinalRoundCategory = (category: string) => {
+    wsConn.current?.send(
+      JSON.stringify({
+        event: "remove_final_round_category",
+        payload: { category },
+      }),
+    );
+  };
+
+  const placeFinalRoundBet = (amount: number) => {
+    wsConn.current?.send(
+      JSON.stringify({ event: "place_final_round_bet", payload: { amount } }),
+    );
+  };
+
+  const submitFinalRoundAnswer = (answer: string) => {
+    wsConn.current?.send(
+      JSON.stringify({
+        event: "submit_final_round_answer",
+        payload: { answer },
+      }),
+    );
+  };
+
+  const validateFinalRoundAnswer = (isCorrect: boolean) => {
+    wsConn.current?.send(
+      JSON.stringify({
+        event: "validate_final_round_answer",
+        payload: { isCorrect },
+      }),
+    );
+  };
+
+  const getMainTopSection = (room: RoomHost | RoomPlayer) => {
+    if (questionDemo)
+      return (
+        <TextPanel
+          topText={`${questionDemo.category}, ${questionDemo.value}`}
+          bottomText={
+            {
+              regular: "Regular",
+              catInBag: "Cat in bag!",
+              auction: "Auction!",
+            }[questionDemo.type]
+          }
+        />
+      );
+    if (correctAnswerDemo)
+      return (
+        <TextPanel
+          topText={correctAnswerDemo.answers.join(", ")}
+          bottomText={correctAnswerDemo.comment}
+        />
+      );
+    if (roundDemo)
+      return (
+        <RoundDemoPanel
+          roundDemo={roundDemo}
+          onFinish={() => setRoundDemo(null)}
+        />
+      );
+    switch (room.state) {
+      case "waiting_for_start":
+        return <TextPanel topText="Waiting for start" />;
+      case "selecting_question":
+        return (
+          <BoardPanel
+            currentRoundQuestions={room.currentRoundQuestions!}
+            selectQuestion={selectQuestion}
+            canSelectQuestion={isHost || user.id === room.currentPlayer}
+          />
+        );
+
+      case "revealing_question":
+        return (
+          <RevealingQuestionPanel
+            attachment={room.currentQuestion!.attachment}
+            attachmentEndsAt={
+              new Date(room.currentQuestion!.attachmentRevealEndsAt)
+            }
+            attachmentLastProgress={
+              room.currentQuestion!.attachmentRevealLastProgress
+            }
+            text={room.currentQuestion!.text}
+            textEndsAt={new Date(room.currentQuestion!.timerStartsAt)}
+            textLastProgress={room.currentQuestion!.textRevealLastProgress}
+          />
+        );
+
+      case "showing_question":
+        return (
+          <QuestionPanel
+            attachment={room.currentQuestion!.attachment}
+            text={room.currentQuestion!.text}
+            timeBar={{
+              progress: room.currentQuestion!.timerLastProgress,
+              durationMs:
+                new Date(room.currentQuestion!.timerEndsAt).getTime() -
+                Date.now(),
+            }}
+          />
+        );
+      case "answering":
+        return (
+          <QuestionPanel
+            attachment={room.currentQuestion!.attachment}
+            text={room.currentQuestion!.text}
+            timeBar={{
+              progress: 1,
+              durationMs:
+                new Date(room.answeringPlayer!.timerEndsAt).getTime() -
+                Date.now(),
+            }}
+          />
+        );
+
+      case "passing":
+        return (
+          <TextPanel
+            topText="Cat in bag!"
+            bottomText="Pass the question to another player"
+          />
+        );
+
+      case "betting":
+        return <TextPanel topText="Auction!" bottomText="Place your bet" />;
+
+      case "selecting_final_round_category":
+        return (
+          <FinalRoundBoardPanel
+            availableCategories={room.finalRoundState?.availableCategories!}
+            canRemoveCategory={user.id === room.currentPlayer || isHost}
+            removeCategory={removeFinalRoundCategory}
+          />
+        );
+
+      case "final_round_betting":
+        return <TextPanel topText="Final round!" bottomText="Place your bet" />;
+
+      case "showing_final_round_question":
+        return (
+          <QuestionPanel
+            attachment={room.finalRoundState!.question!.attachment}
+            text={room.finalRoundState!.question!.text}
+            timeBar={{
+              progress: 1,
+              durationMs:
+                new Date(room.finalRoundState!.timerEndsAt!).getTime() -
+                Date.now(),
+            }}
+          />
+        );
+
+      case "validating_final_round_answers":
+        return <TextPanel topText={room.finalRoundState?.question?.text!} />;
+
+      case "game_over":
+        return <TextPanel topText="Game over!" />;
+
+      default:
+        return <TextPanel topText={`Unexpected room state: ${room.state}`} />;
+    }
+  };
+
+  const getMainBottomSection = (room: RoomHost | RoomPlayer) => {
+    switch (room.state) {
+      case "betting":
+      case "final_round_betting":
+        return (
+          <BettingPanel
+            player={player!}
+            allowedToBet={player!.score > 0 && !player!.betAmount}
+            placeBet={room.state === "betting" ? placeBet : placeFinalRoundBet}
+          />
+        );
+      case "showing_final_round_question":
+        return (
+          <FinalRoundAnswerPanel
+            allowedToAnswer={room.allowedToAnswer.includes(user.id)}
+            submitFinalRoundAnswer={submitFinalRoundAnswer}
+          />
+        );
+
+      case "validating_final_round_answers":
+        return;
+
+      default:
+        return (
+          <div
+            className="w-full h-12 rounded primary hover:opacity-85 focus:outline-none focus:opacity-85"
+            tabIndex={-1}
+            ref={answerButton}
+            onClick={submitAnswer}
+          ></div>
+        );
+    }
+  };
+
+  return (
+    <>
+      <div className="flex-[3_0_0%] flex flex-col gap-2 min-w-0 min-h-0">
+        <div className="flex-1 w-full rounded surface p-2">
+          {getMainTopSection(room)}
+        </div>
+        {room.players.length > 0 && (
+          <div
+            className={
+              "w-full flex flex-wrap justify-around gap-3 border rounded p-3"
+            }
+          >
+            {room.players.map((p, index) => (
+              <PlayerTable
+                key={index}
+                user={user}
+                room={room}
+                player={p}
+                passQuestion={passQuestion}
+              />
+            ))}
+          </div>
+        )}
+        {player && getMainBottomSection(room)}
+      </div>
+      {isHost && (
+        <ValidateAnswerModal
+          isOpen={
+            room.state === "answering" ||
+            room.state === "validating_final_round_answers"
+          }
+          question={
+            room.state === "answering"
+              ? (room.currentQuestion as CurrentQuestion)
+              : (room.finalRoundState?.question as FinalRoundQuestion)
+          }
+          playerAnswer={
+            room.state === "validating_final_round_answers"
+              ? (room.finalRoundState as FinalRoundState)?.playersAnswers[
+                  room.currentPlayer!
+                ]
+              : undefined
+          }
+          validateAnswer={
+            room.state === "answering"
+              ? validateAnswer
+              : validateFinalRoundAnswer
+          }
+        />
+      )}
+    </>
+  );
+}

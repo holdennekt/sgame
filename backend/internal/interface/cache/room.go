@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/holdennekt/sgame/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/domain"
 )
 
 type Room interface {
@@ -15,4 +15,7 @@ type Room interface {
 	Delete(ctx context.Context, roomId string) error
 	Expire(ctx context.Context, roomId string, duration time.Duration) error
 	Persist(ctx context.Context, roomId string) error
+	TrySetOwner(ctx context.Context, roomId string, ttl time.Duration) (bool, error)
+	UpdateOwner(ctx context.Context, roomId string, ttl time.Duration) error
+	ListenForExpiredOwners(ctx context.Context, handleExpiredOwner func(roomId string))
 }

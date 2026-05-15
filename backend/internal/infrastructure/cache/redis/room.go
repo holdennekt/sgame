@@ -4,32 +4,35 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/bsm/redislock"
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/transport/http"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"github.com/redis/go-redis/v9"
 )
 
 func getKey(id string) string {
-	return domain.ROOM_PREFIX + id
+	return domain.ROOM_PREFIX + id + domain.STATE_POSTFIX
 }
 
 func getLockKey(id string) string {
-	return domain.LOCK_PREFIX + id
+	return domain.ROOM_PREFIX + id + domain.STATE_POSTFIX + domain.LOCK_POSTFIX
 }
 
-type RoomCache struct {
+type roomCache struct {
 	client *redis.Client
 	locker *redislock.Client
 }
 
-func NewRoomCache(client *redis.Client) *RoomCache {
-	return &RoomCache{client: client, locker: redislock.New(client)}
+func NewRoomCache(client *redis.Client) cache.Room {
+	return &roomCache{client: client, locker: redislock.New(client)}
 }
 
-func (c *RoomCache) getByKey(ctx context.Context, key string) (*domain.Room, error) {
+func (c *roomCache) getByKey(ctx context.Context, key string) (*domain.Room, error) {
 	var room domain.Room
 
 	res, err := c.client.JSONGet(ctx, key).Result()
@@ -47,14 +50,14 @@ func (c *RoomCache) getByKey(ctx context.Context, key string) (*domain.Room, err
 	return &room, nil
 }
 
-func (c *RoomCache) GetById(ctx context.Context, id string) (*domain.Room, error) {
+func (c *roomCache) GetById(ctx context.Context, id string) (*domain.Room, error) {
 	return c.getByKey(ctx, getKey(id))
 }
 
-func (c *RoomCache) Get(ctx context.Context) ([]domain.RoomLobby, error) {
+func (c *roomCache) Get(ctx context.Context) ([]domain.RoomLobby, error) {
 	roomLobbys := make([]domain.RoomLobby, 0)
 
-	pattern := fmt.Sprintf("%s*", domain.ROOM_PREFIX)
+	pattern := fmt.Sprintf("%s*%s", domain.ROOM_PREFIX, domain.STATE_POSTFIX)
 	iter := c.client.Scan(ctx, uint64(c.client.Options().DB), pattern, 10).Iterator()
 	for iter.Next(ctx) {
 		room, err := c.getByKey(ctx, iter.Val())
@@ -67,14 +70,14 @@ func (c *RoomCache) Get(ctx context.Context) ([]domain.RoomLobby, error) {
 	return roomLobbys, nil
 }
 
-func (c *RoomCache) Set(ctx context.Context, room *domain.Room) error {
+func (c *roomCache) Set(ctx context.Context, room *domain.Room) error {
 	if err := c.client.JSONSet(ctx, getKey(room.Id), "$", room).Err(); err != nil {
 		return custerr.NewInternalErr(err)
 	}
 	return nil
 }
 
-func (c *RoomCache) SafeSet(ctx context.Context, roomId string, updateFunc func(room *domain.Room) error) (*domain.Room, error) {
+func (c *roomCache) SafeSet(ctx context.Context, roomId string, updateFunc func(room *domain.Room) error) (*domain.Room, error) {
 	lock, err := c.waitAndLock(ctx, roomId)
 	if err != nil {
 		return nil, custerr.NewInternalErr(err)
@@ -96,28 +99,67 @@ func (c *RoomCache) SafeSet(ctx context.Context, roomId string, updateFunc func(
 	return room, nil
 }
 
-func (c *RoomCache) Delete(ctx context.Context, roomId string) error {
-	if err := c.client.Del(ctx, getKey(roomId)).Err(); err != nil {
+func (c *roomCache) Delete(ctx context.Context, roomId string) error {
+	iter := c.client.Scan(ctx, 0, domain.ROOM_PREFIX+roomId+":*", 0).Iterator()
+
+	for iter.Next(ctx) {
+		err := c.client.Del(ctx, iter.Val()).Err()
+		if err != nil {
+			return custerr.NewInternalErr(err)
+		}
+	}
+
+	if err := iter.Err(); err != nil {
 		return custerr.NewInternalErr(err)
 	}
+
 	return nil
 }
 
-func (c *RoomCache) Expire(ctx context.Context, roomId string, duration time.Duration) error {
+func (c *roomCache) Expire(ctx context.Context, roomId string, duration time.Duration) error {
 	if err := c.client.Expire(ctx, getKey(roomId), duration).Err(); err != nil {
 		return custerr.NewInternalErr(err)
 	}
 	return nil
 }
 
-func (c *RoomCache) Persist(ctx context.Context, roomId string) error {
+func (c *roomCache) Persist(ctx context.Context, roomId string) error {
 	if err := c.client.Persist(ctx, getKey(roomId)).Err(); err != nil {
 		return custerr.NewInternalErr(err)
 	}
 	return nil
 }
 
-func (c *RoomCache) waitAndLock(ctx context.Context, roomId string) (*redislock.Lock, error) {
+func (c *roomCache) TrySetOwner(ctx context.Context, roomId string, ttl time.Duration) (bool, error) {
+	ip := http.GetServerIP()
+	key := domain.ROOM_PREFIX + roomId + domain.INTERNAL_POSTFIX + domain.OWNER_POSTFIX
+	return c.client.SetNX(ctx, key, ip, ttl).Result()
+}
+
+func (c *roomCache) UpdateOwner(ctx context.Context, roomId string, ttl time.Duration) error {
+	key := domain.ROOM_PREFIX + roomId + domain.INTERNAL_POSTFIX + domain.OWNER_POSTFIX
+	return c.client.Expire(ctx, key, ttl).Err()
+}
+
+func (c *roomCache) ListenForExpiredOwners(ctx context.Context, handleExpiredOwner func(roomId string)) {
+	pubsubExp := c.client.PSubscribe(context.Background(), "__keyevent@0__:expired")
+	defer pubsubExp.Close()
+
+	re := regexp.MustCompile(fmt.Sprintf("^%s(.+)%s%s$", domain.ROOM_PREFIX, domain.INTERNAL_POSTFIX, domain.OWNER_POSTFIX))
+	for msg := range pubsubExp.Channel() {
+		matches := re.FindStringSubmatch(msg.Payload)
+		if len(matches) != 2 {
+			continue
+		}
+
+		id := matches[1]
+		fmt.Printf("Expired internal key for room ID: %s\n", id)
+
+		handleExpiredOwner(id)
+	}
+}
+
+func (c *roomCache) waitAndLock(ctx context.Context, roomId string) (*redislock.Lock, error) {
 	for {
 		lock, err := c.locker.Obtain(ctx, getLockKey(roomId), time.Second, nil)
 		if err == nil {

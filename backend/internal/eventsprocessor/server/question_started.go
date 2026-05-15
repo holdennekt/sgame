@@ -2,43 +2,49 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"log"
-	"reflect"
 	"time"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
-func NewQuestionStartedMessage() message.Message {
-	return message.Message{Event: domain.QuestionStarted}
+type QuestionStartedPayload struct {
+	domain.Question
 }
 
-func HandleQuestionStartedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string) error {
+func NewQuestionStartedMessage(question domain.Question) message.Message {
+	payload, _ := json.Marshal(QuestionStartedPayload{Question: question})
+	return message.Message{Event: domain.QuestionStarted, Payload: payload}
+}
+
+func HandleQuestionStartedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string, msg message.Message) error {
+	var qsp QuestionStartedPayload
+	if err := json.Unmarshal(msg.Payload, &qsp); err != nil {
+		return err
+	}
 	room, err := roomCache.GetById(ctx, roomId)
 	if err != nil {
 		return err
 	}
 
 	time.AfterFunc(time.Until(room.CurrentQuestion.TimerEndsAt), func() {
-		var question domain.Question
-
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		_, err := roomCache.SafeSet(ctx, roomId, func(newRoom *domain.Room) error {
 			questionEnded :=
 				newRoom.State != domain.ShowingQuestion ||
-					!reflect.DeepEqual(newRoom.CurrentRoundQuestions, room.CurrentRoundQuestions)
+					!qsp.Question.IsCurrent(newRoom)
 			deadlineChanged := newRoom.CurrentQuestion != nil &&
 				!room.CurrentQuestion.TimerEndsAt.Equal(newRoom.CurrentQuestion.TimerEndsAt)
 			if questionEnded || deadlineChanged {
 				return ErrDeferredFunctionCancelled
 			}
 
-			question = newRoom.CurrentQuestion.Question
 			newRoom.EndQuestion()
 			return nil
 		})
@@ -49,7 +55,7 @@ func HandleQuestionStartedMessage(ctx context.Context, server realtime.Channel, 
 			return
 		}
 
-		questionEndedMessage := NewQuestionEndedMessage(question)
+		questionEndedMessage := NewQuestionEndedMessage(qsp.Question)
 		if err := internalServer.Send(ctx, questionEndedMessage); err != nil {
 			log.Println(err)
 			return

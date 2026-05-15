@@ -6,11 +6,11 @@
   },
   "roundsChecksum": {
     "$binary": {
-      "base64": "c2hhAYDoQ5Fxxjjz9xk8XQt4w0csZWgPbWVudCI6bnVsbCwiYW5zd2VycyI6WyJhbnkiXSwiY29tbWVudCI6IkNvbmdyYXRzISJ9fV19fQAAAAAAAAAAAAAAAAAAAAM3",
+      "base64": "c2hhA3fK4l3hmskm0wXzEFFgKjpumbIi7zH+d5gYTpiYnBfHYWNobWVudCI6bnVsbCwiYW5zd2VycyI6WyJhbnkiXSwiY29tbWVudCI6IkNvbmdyYXRzISJ9fV19fQAAAAAAAAAAAAAAAAM6",
       "subType": "00"
     }
   },
-  "content": "Test Pack, Category 1, Round 1",
+  "content": "Test Pack, Round 1, Category 1",
   "name": "Test Pack",
   "type": "public",
   "rounds": [
@@ -21,6 +21,8 @@
           "name": "Category 1",
           "questions": [
             {
+              "round": "Round 1",
+              "category": "Category 1",
               "index": 0,
               "value": 100,
               "attachment": null,
@@ -32,6 +34,8 @@
               "comment": null
             },
             {
+              "round": "Round 1",
+              "category": "Category 1",
               "index": 1,
               "value": 200,
               "attachment": null,
@@ -43,6 +47,8 @@
               "comment": null
             },
             {
+              "round": "Round 1",
+              "category": "Category 1",
               "index": 2,
               "value": 300,
               "attachment": null,
@@ -54,6 +60,8 @@
               "comment": null
             },
             {
+              "round": "Round 1",
+              "category": "Category 1",
               "index": 3,
               "value": 400,
               "attachment": null,
@@ -65,6 +73,8 @@
               "comment": null
             },
             {
+              "round": "Round 1",
+              "category": "Category 1",
               "index": 4,
               "value": 500,
               "attachment": null,
@@ -85,7 +95,7 @@
       {
         "name": "One and only",
         "question": {
-          "text": "Fortune favors the brave, u doubled the points",
+          "text": "Fortune favors the brave, u've doubled the points",
           "attachment": null,
           "answers": [
             "any"

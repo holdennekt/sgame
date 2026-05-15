@@ -3,19 +3,15 @@ package domain
 const SYSTEM = "SYSTEM"
 
 type User struct {
-	Id     string  `json:"id" bson:"id" binding:"required"`
-	Name   string  `json:"name" bson:"name" binding:"min=1,max=20"`
-	Avatar *string `json:"avatar" bson:"avatar" binding:"omitnil,url"`
-}
-
-type DbUserDTO struct {
-	Login    string `json:"login" bson:"login" binding:"min=4,max=20"`
-	Password string `json:"password" bson:"password" binding:"min=8,max=40"`
+	Id     string  `json:"id"`
+	Name   string  `json:"name"`
+	Avatar *string `json:"avatar"`
 }
 
 type DbUser struct {
-	User      `bson:"inline"`
-	DbUserDTO `bson:"inline"`
+	User
+	Login    string `json:"login"`
+	Password string `json:"password"`
 }
 
 type Host struct {

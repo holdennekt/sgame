@@ -1,6 +1,6 @@
-import Navbar from "./components/Navbar";
+import Navbar from "../components/Navbar";
 import { headers } from "next/headers";
-import Lobby from "./components/lobby/Lobby";
+import Lobby from "../components/lobby/Lobby";
 import { USER_HEADER_NAME, User } from "../middleware";
 import { getRooms } from "./actions";
 

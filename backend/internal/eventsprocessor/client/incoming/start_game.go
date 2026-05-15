@@ -6,12 +6,12 @@ import (
 	"log"
 	"slices"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client/outgoing"
-	serverevent "github.com/holdennekt/sgame/internal/eventsprocessor/server"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
+	serverevent "github.com/holdennekt/sgame/backend/internal/eventsprocessor/server"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
 func HandleStartGameMessage(ctx context.Context, lobbyServer realtime.Channel, roomServer realtime.Channel, roomInternalServer realtime.Channel, roomCache cache.Room, roomId string, user domain.User, pack *domain.Pack, msg message.Message) error {
@@ -29,15 +29,15 @@ func HandleStartGameMessage(ctx context.Context, lobbyServer realtime.Channel, r
 		return err
 	}
 
-	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
-	if err := roomServer.Send(ctx, roomUpdatedMessage); err != nil {
+	roundStartedMessage := serverevent.NewRoundStartedMessage()
+	if err := roomInternalServer.Send(ctx, roundStartedMessage); err != nil {
 		return err
 	}
 
+	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
 	if err := lobbyServer.Send(ctx, roomUpdatedMessage); err != nil {
 		log.Println(err)
 	}
 
-	roundStartedMessage := serverevent.NewRoundStartedMessage()
-	return roomInternalServer.Send(ctx, roundStartedMessage)
+	return roomServer.Send(ctx, roomUpdatedMessage)
 }

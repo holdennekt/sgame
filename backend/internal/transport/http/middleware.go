@@ -13,7 +13,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/holdennekt/sgame/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/internal/dto"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
 func messageForTag(fe validator.FieldError) string {
@@ -63,19 +64,19 @@ func ErrorMiddleware(ctx *gin.Context) {
 		for i, fieldErr := range err {
 			errs[i] = messageForTag(fieldErr)
 		}
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": strings.Join(errs, ", ")})
+		ctx.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: strings.Join(errs, ", ")})
 	case custerr.BadRequestErr:
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 	case custerr.UnauthorizedErr:
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: err.Error()})
 	case custerr.ForbiddenErr:
-		ctx.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusForbidden, dto.ErrorResponse{Error: err.Error()})
 	case custerr.NotFoundErr:
-		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
 	case custerr.ConflictErr:
-		ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusConflict, dto.ErrorResponse{Error: err.Error()})
 	default:
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 	}
 }
 
@@ -83,7 +84,7 @@ func LoggingMiddleware(ctx *gin.Context) {
 	start := time.Now()
 
 	clientIP := ctx.ClientIP()
-	serverIP := getServerIP()
+	serverIP := GetServerIP()
 
 	var requestBody []byte
 	if ctx.Request.Body != nil {
@@ -125,14 +126,12 @@ func (w *bodyWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
-// --- функція для отримання IP сервера ---
-func getServerIP() string {
+func GetServerIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		return "unknown"
 	}
 	for _, addr := range addrs {
-		// пропускаємо loopback
 		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
 				return ipnet.IP.String()

@@ -2,24 +2,33 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"log"
-	"reflect"
 	"time"
 
-	"github.com/holdennekt/sgame/internal/domain"
-	"github.com/holdennekt/sgame/internal/eventsprocessor/client/outgoing"
-	"github.com/holdennekt/sgame/internal/interface/cache"
-	"github.com/holdennekt/sgame/internal/interface/realtime"
-	"github.com/holdennekt/sgame/internal/message"
+	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
 const TimeToBet = 30 * time.Second
 
-func NewBettingStartedMessage() message.Message {
-	return message.Message{Event: domain.BettingStarted}
+type BettingStartedPayload struct {
+	domain.Question
 }
 
-func HandleBettingStartedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string) error {
+func NewBettingStartedMessage(question domain.Question) message.Message {
+	payload, _ := json.Marshal(BettingStartedPayload{Question: question})
+	return message.Message{Event: domain.BettingStarted, Payload: payload}
+}
+
+func HandleBettingStartedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string, msg message.Message) error {
+	var bsp BettingStartedPayload
+	if err := json.Unmarshal(msg.Payload, &bsp); err != nil {
+		return err
+	}
 	room, err := roomCache.GetById(ctx, roomId)
 	if err != nil {
 		return err
@@ -29,9 +38,7 @@ func HandleBettingStartedMessage(ctx context.Context, server realtime.Channel, i
 		defer cancel()
 
 		newerRoom, err := roomCache.SafeSet(ctx, roomId, func(newRoom *domain.Room) error {
-			questionEnded :=
-				!reflect.DeepEqual(newRoom.CurrentRoundQuestions, room.CurrentRoundQuestions)
-			if newRoom.State != domain.Betting || questionEnded {
+			if newRoom.State != domain.Betting || !bsp.Question.IsCurrent(newRoom) {
 				return ErrDeferredFunctionCancelled
 			}
 
@@ -59,7 +66,7 @@ func HandleBettingStartedMessage(ctx context.Context, server realtime.Channel, i
 				return
 			}
 		case domain.ShowingQuestion:
-			answerStartedMessage := NewAnswerStartedMessage()
+			answerStartedMessage := NewAnswerStartedMessage(bsp.Question, newerRoom.AnsweringPlayer.Id)
 			if err := internalServer.Send(ctx, answerStartedMessage); err != nil {
 				log.Println(err)
 				return
