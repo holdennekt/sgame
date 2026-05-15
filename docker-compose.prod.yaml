@@ -36,12 +36,12 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_DB: 0
       STORAGE_PROVIDER: gcs
-      GOOGLE_APPLICATION_CREDENTIALS: /app/gcp-sa-key.json
+      GOOGLE_APPLICATION_CREDENTIALS: /app/smart-altar-496311-p4-5cf9bc5fd4e7.json
       BUCKET_NAME: sgame-bucket
       FRONTEND_URL: https://sgame.sgame.dedyn.io
       USER_AGENT: "SGame/1.0"
     volumes:
-      - ./gcp-sa-key.json:/app/gcp-sa-key.json
+      - ./smart-altar-496311-p4-5cf9bc5fd4e7.json:/app/smart-altar-496311-p4-5cf9bc5fd4e7.json
   
   mongodb:
     image: mongodb/mongodb-community-server:6.0-ubi8
