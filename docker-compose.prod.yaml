@@ -3,16 +3,16 @@ services:
     image: nginx:alpine3.23
     ports:
       - 80:80
+      - 443:443
     volumes:
-      - ./nginx/default.prod.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/default.prod.conf:/etc/nginx/conf.d/default.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend
       - backend
 
   frontend:
-    image: sgame-frontend
-    build: frontend
+    image: europe-central2-docker.pkg.dev/smart-altar-496311-p4/sgame-images/sgame-frontend:latest
     depends_on:
       - backend
     environment:
@@ -20,8 +20,7 @@ services:
       BACKEND_HOST: backend
   
   backend:
-    image: sgame-backend
-    build: backend
+    image: europe-central2-docker.pkg.dev/smart-altar-496311-p4/sgame-images/sgame-backend:latest
     depends_on:
       - redis
       - mongodb
