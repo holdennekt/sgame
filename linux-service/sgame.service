@@ -1,0 +1,23 @@
+# Needs to be copied to /etc/systemd/system/sgame.service
+
+[Unit]
+Description=Docker Compose SGame Application Service
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+User=sgame
+Group=sgame
+
+Type=oneshot
+RemainAfterExit=yes
+
+WorkingDirectory=/opt/sgame
+
+ExecStart=/bin/bash /opt/sgame/linux-service/start-app.sh
+ExecStop=/bin/bash /opt/sgame/linux-service/stop-app.sh
+
+TimeoutStartSec=5min
+
+[Install]
+WantedBy=multi-user.target
