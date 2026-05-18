@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Build And Deploy To VM
 
 on:
   push:
@@ -90,4 +90,4 @@ jobs:
       run: |
         gcloud compute ssh ${{ env.VM_NAME }} \
           --zone=${{ env.VM_ZONE }} \
-          --command="bash /opt/sgame/linux-service/start-app.sh"
+          --command="bash /opt/sgame/linux-service/stop-app.sh && bash /opt/sgame/linux-service/start-app.sh"
