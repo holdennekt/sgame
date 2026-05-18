@@ -8,6 +8,7 @@ Requires=docker.service
 [Service]
 User=sgame
 Group=sgame
+Environment=HOME=/opt/sgame
 
 Type=oneshot
 RemainAfterExit=yes
