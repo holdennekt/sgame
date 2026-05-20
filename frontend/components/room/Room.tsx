@@ -110,8 +110,9 @@ export default function RoomPage({
     mainContainer.current?.focus();
 
     const connectWebsocket = () => {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       wsConn.current = new WebSocket(
-        `ws://${window.location.host}/api/ws/room/${room.id}`
+        `${protocol}//${window.location.host}/api/ws/room/${room.id}`
       );
 
       wsConn.current.onmessage = (ev: MessageEvent<string>) => {

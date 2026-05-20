@@ -79,8 +79,9 @@ export default function Lobby({
     let isMounted = true;
 
     const connectWebsocket = () => {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       wsConn.current = new WebSocket(
-        `ws://${window.location.host}/api/ws/lobby`
+        `${protocol}//${window.location.host}/api/ws/lobby`
       );
 
       wsConn.current.onmessage = (ev: MessageEvent<string>) => {
