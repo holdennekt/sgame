@@ -748,8 +748,6 @@ definitions:
         type: string
     required:
     - answers
-    - attachment
-    - comment
     - text
     type: object
   github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundRequest:
@@ -817,7 +815,7 @@ definitions:
         minimum: 0
         type: integer
       text:
-        maxLength: 200
+        maxLength: 300
         type: string
       type:
         allOf:
@@ -831,8 +829,6 @@ definitions:
         type: integer
     required:
     - answers
-    - attachment
-    - comment
     - index
     - text
     - type

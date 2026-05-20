@@ -2137,8 +2137,6 @@
             "type": "object",
             "required": [
                 "answers",
-                "attachment",
-                "comment",
                 "text"
             ],
             "properties": {
@@ -2235,8 +2233,6 @@
             "type": "object",
             "required": [
                 "answers",
-                "attachment",
-                "comment",
                 "index",
                 "text",
                 "type",
@@ -2265,7 +2261,7 @@
                 },
                 "text": {
                     "type": "string",
-                    "maxLength": 200
+                    "maxLength": 300
                 },
                 "type": {
                     "enum": [

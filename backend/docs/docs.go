@@ -2143,8 +2143,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "answers",
-                "attachment",
-                "comment",
                 "text"
             ],
             "properties": {
@@ -2241,8 +2239,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "answers",
-                "attachment",
-                "comment",
                 "index",
                 "text",
                 "type",
@@ -2271,7 +2267,7 @@ const docTemplate = `{
                 },
                 "text": {
                     "type": "string",
-                    "maxLength": 200
+                    "maxLength": 300
                 },
                 "type": {
                     "enum": [

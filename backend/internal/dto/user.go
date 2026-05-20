@@ -10,9 +10,9 @@ type CreateUserResponse struct {
 }
 
 type UpdateUserRequest struct {
-	Password string  `json:"password" binding:"min=8,max=40"`
-	Name     string  `json:"name" binding:"min=1,max=20"`
-	Avatar   *string `json:"avatar"`
+	Password string  `json:"password,omitempty" binding:"min=8,max=40"`
+	Name     string  `json:"name,omitempty" binding:"min=1,max=20"`
+	Avatar   *string `json:"avatar,omitempty"`
 }
 
 type AuthResponse struct {
