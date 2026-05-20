@@ -43,11 +43,11 @@ services:
       - ./smart-altar-496311-p4-5cf9bc5fd4e7.json:/app/smart-altar-496311-p4-5cf9bc5fd4e7.json
   
   mongodb:
-    image: mongodb/mongodb-community-server:6.0-ubi8
+    image: mongo:6.0
     init: true
     environment:
-      MONGODB_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
-      MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_DB_NAME}
     ports:
       - 27017:27017

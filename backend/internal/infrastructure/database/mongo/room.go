@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
@@ -22,11 +23,15 @@ type roomRepository struct {
 func NewRoomRepository(db *mongo.Database) repository.Room {
 	repo := roomRepository{db}
 	if err := repo.init(context.Background()); err != nil {
-		mongoErr := err.(mongo.CommandError)
-		const CODE_NAMESPACE_EXISTS = 48
-		if mongoErr.Code != CODE_NAMESPACE_EXISTS {
-			panic(err)
+		var mongoErr mongo.CommandError
+		if errors.As(err, &mongoErr) {
+			const CODE_NAMESPACE_EXISTS = 48
+			if mongoErr.Code == CODE_NAMESPACE_EXISTS {
+				return &repo
+			}
 		}
+
+		panic(fmt.Errorf("failed to initialize room repository: %w", err))
 	}
 	return &repo
 }
