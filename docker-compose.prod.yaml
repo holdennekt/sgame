@@ -22,8 +22,10 @@ services:
   backend:
     image: europe-central2-docker.pkg.dev/smart-altar-496311-p4/sgame-images/sgame-backend:latest
     depends_on:
-      - redis
-      - mongodb
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
     environment:
       HOST: 0.0.0.0
       PORT: 80
@@ -53,6 +55,12 @@ services:
       - 27017:27017
     volumes:
       - mongodb_data_container:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis/redis-stack-server:7.4.0-v8
@@ -61,7 +69,11 @@ services:
     environment:
       REDIS_ARGS: "--user ${REDIS_USERNAME} allcommands allkeys allchannels on >${REDIS_PASSWORD} --notify-keyspace-events Ex"
     healthcheck:
-      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     volumes:
       - redis_data:/data
 

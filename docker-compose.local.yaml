@@ -8,15 +8,18 @@ services:
       - ./nginx/default.local.conf:/etc/nginx/conf.d/default.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
-      - frontend
-      - backend
-      - minio
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_started
+      minio:
+        condition: service_healthy
 
   frontend:
     image: sgame-frontend
     build: frontend
     depends_on:
-      - backend
+      - backend:
     environment:
       PORT: 80
       BACKEND_HOST: backend
@@ -25,8 +28,10 @@ services:
     image: sgame-backend
     build: backend
     depends_on:
-      - redis
-      - mongodb
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
     environment:
       HOST: 0.0.0.0
       PORT: 80
@@ -46,16 +51,22 @@ services:
       USER_AGENT: "SGame/1.0"
   
   mongodb:
-    image: mongodb/mongodb-community-server:6.0-ubi8
+    image: mongo:6.0
     init: true
     environment:
-      MONGODB_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
-      MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_DB_NAME}
     ports:
       - 27017:27017
     volumes:
       - mongodb_data_container:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis/redis-stack-server:7.4.0-v8
@@ -64,7 +75,11 @@ services:
     environment:
       REDIS_ARGS: "--user ${REDIS_USERNAME} allcommands allkeys allchannels on >${REDIS_PASSWORD} --notify-keyspace-events Ex"
     healthcheck:
-      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     volumes:
       - redis_data:/data
   
