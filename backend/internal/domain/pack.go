@@ -194,7 +194,11 @@ func (p *Pack) GetQuestion(roundName string, categoryName string, questionIndex 
 	roundIndex := slices.IndexFunc(p.Rounds, func(r Round) bool {
 		return r.Name == roundName
 	})
+	if roundIndex == -1 {
+		return nil, custerr.NewNotFoundErr(fmt.Sprintf("no round \"%s\" in pack \"%s\"", roundName, p.Name))
+	}
 	round := p.Rounds[roundIndex]
+
 	categoryIndex := slices.IndexFunc(round.Categories, func(c Category) bool {
 		return c.Name == categoryName
 	})
