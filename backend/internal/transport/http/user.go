@@ -134,12 +134,7 @@ func (c *UserController) update(ctx *gin.Context) {
 		return
 	}
 
-	updated, err := c.userService.GetById(ctx, id)
-	if err != nil {
-		ctx.Error(err)
-		return
-	}
-	ctx.JSON(http.StatusOK, updated)
+	ctx.Status(http.StatusNoContent)
 }
 
 // @Summary      Delete user

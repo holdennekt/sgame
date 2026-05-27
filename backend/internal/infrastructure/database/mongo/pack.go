@@ -282,8 +282,8 @@ func (r *packRepository) GetHiddens(ctx context.Context, userId string, search d
 
 func (r *packRepository) GetCreatedBy(ctx context.Context, userId, createdBy string, search dto.SearchRequest) ([]domain.HiddenPack, int, error) {
 	filter := bson.M{
-		"content":   primitive.Regex{Pattern: search.SearchRequest, Options: "i"},
-		"createdBy": createdBy,
+		"content":      primitive.Regex{Pattern: search.SearchRequest, Options: "i"},
+		"createdBy.id": createdBy,
 	}
 	if userId != createdBy {
 		filter["type"] = domain.Public
