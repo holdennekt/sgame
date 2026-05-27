@@ -61,7 +61,7 @@ type UpdatePackRequest struct {
 
 type SignURLRequest struct {
 	Filename string `form:"filename" binding:"required"`
-	Public   bool   `form:"public" binding:"required"`
+	Public   *bool  `form:"public" binding:"required"`
 }
 
 type SignURLResponse struct {

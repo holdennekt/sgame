@@ -218,13 +218,13 @@ func (s *PackService) Delete(ctx context.Context, userId, id string) error {
 }
 
 func (s *PackService) SignURL(ctx context.Context, req dto.SignURLRequest) (*storage.SignUploadPolicyResult, string, error) {
-	key := s.generateKey(req.Filename, req.Public)
+	key := s.generateKey(req.Filename, *req.Public)
 	result, err := s.storage.SignUploadPolicy(ctx, storage.SignUploadPolicyInput{Key: key, TTL: POST_URL_TTL})
 	if err != nil {
 		return nil, "", err
 	}
 	getUrl := ""
-	if req.Public {
+	if *req.Public {
 		getUrl, err = s.storage.URL(ctx, key, GET_URL_TTL)
 		if err != nil {
 			return nil, "", err
