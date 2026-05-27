@@ -3,6 +3,10 @@ import { Inter } from "next/font/google";
 import { ReactNode } from "react";
 import "./globals.css";
 import "react-toastify/dist/ReactToastify.css";
+import { headers } from "next/headers";
+import { USER_HEADER_NAME, User } from "@/middleware";
+import { UserProvider } from "@/contexts/UserContext";
+import QueryProvider from "@/components/QueryProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,10 +20,17 @@ export default function RootLayout({
 }: Readonly<{
   children: ReactNode;
 }>) {
+  const userHeader = headers().get(USER_HEADER_NAME);
+  const user: User | null = userHeader ? JSON.parse(userHeader) : null;
+
   return (
     <html lang="en">
       <body className={`${inter.className} background h-svh flex flex-col`}>
-        {children}
+        <QueryProvider>
+          <UserProvider user={user}>
+            {children}
+          </UserProvider>
+        </QueryProvider>
       </body>
     </html>
   );

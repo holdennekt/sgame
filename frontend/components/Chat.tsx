@@ -2,18 +2,18 @@
 
 import { KeyboardEventHandler, useEffect, useRef, useState } from "react";
 import Message, { ChatMessage } from "./Message";
-import { User } from "../middleware";
 import SystemMessage from "./SystemMessage";
+import { RiSendPlaneFill } from "react-icons/ri";
+import { useRequiredUser } from "@/contexts/UserContext";
 
 export default function Chat({
-  user,
   messages,
   sendMessage,
 }: {
-  user: User;
   messages: ChatMessage[];
   sendMessage: (text: string) => void;
 }) {
+  const user = useRequiredUser();
   const [input, setInput] = useState("");
   const scrollableRef = useRef<HTMLDivElement | null>(null);
 
@@ -25,28 +25,32 @@ export default function Chat({
   }, [messages]);
 
   const handleSend = () => {
-    if (!input) return;
-    sendMessage(input);
+    if (!input.trim()) return;
+    sendMessage(input.trim());
     setInput("");
   };
 
   const onInputKeyDown: KeyboardEventHandler = ev => {
+    ev.stopPropagation();
     if (ev.key !== "Enter") return;
     handleSend();
   };
 
   return (
-    <div className="w-full h-full flex flex-col rounded surface">
+    <div className="w-full h-full flex flex-col rounded-md overflow-hidden border border-border bg-surface">
       <div
-        className="flex flex-col flex-1 gap-1.5 overflow-x-auto p-2"
+        className="flex-1 flex flex-col overflow-y-auto px-3 py-2 min-h-0"
         ref={scrollableRef}
       >
+        {messages.length === 0 && (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-sm text-on-surface-muted">No messages yet</p>
+          </div>
+        )}
         {messages.map((message, index) => {
           const isOwn = user.id === message.from.id;
-          const isPrevUserSame =
-            message.from.id === messages[index - 1]?.from.id;
-          const isNextUserSame =
-            message.from.id === messages[index + 1]?.from.id;
+          const isPrevUserSame = message.from.id === messages[index - 1]?.from.id;
+          const isNextUserSame = message.from.id === messages[index + 1]?.from.id;
           const isSystem = message.from.id === "";
           return isSystem ? (
             <SystemMessage key={index} text={message.text} />
@@ -61,19 +65,21 @@ export default function Chat({
           );
         })}
       </div>
-      <div className="flex flex-row gap-2 h-12 border rounded p-2">
+
+      <div className="flex gap-2 p-2 border-t border-border">
         <input
-          className="flex-1 rounded-lg p-1 text-black"
-          placeholder="Say something to others"
+          className="flex-1 min-w-0 h-9 px-2.5 rounded-lg border border-border bg-background text-on-background text-sm outline-none placeholder:text-on-surface-muted focus-ring transition-[border-color] duration-150"
+          placeholder="Say something..."
           value={input}
           onChange={ev => setInput(ev.target.value)}
           onKeyDown={onInputKeyDown}
+          onKeyUp={ev => ev.stopPropagation()}
         />
         <button
-          className="w-20 primary rounded-lg font-medium"
+          className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150 shrink-0"
           onClick={handleSend}
         >
-          Send
+          <RiSendPlaneFill size={16} />
         </button>
       </div>
     </div>

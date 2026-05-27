@@ -1,53 +1,52 @@
+"use client";
+
 import Link from "next/link";
-import { User } from "../middleware";
+import { useUser } from "@/contexts/UserContext";
 
-export default function Navbar({
-  user,
-  openNewTab = false,
-}: {
-  user?: User;
-  openNewTab?: boolean;
-}) {
-  const links = [
-    {
-      text: user?.name,
-      path: `/user/${user?.id}`,
-    },
-    {
-      text: "Packs",
-      path: "/packs",
-    },
-    {
-      text: "About",
-      path: "/about",
-    },
-  ];
-
-  const linksTarget = openNewTab ? "_blank" : "_self";
+export default function Navbar({ openNewTab = false }: { openNewTab?: boolean }) {
+  const user = useUser();
+  const target = openNewTab ? "_blank" : "_self";
 
   return (
-    <nav className="nav flex justify-between items-center px-10 py-2">
-      <div>
-        <h1 className="text-4xl font-medium">
-          <Link href="/" target={linksTarget}>
-            SGame
-          </Link>
-        </h1>
-      </div>
+    <nav className="bg-surface border-b border-border shadow-sm flex items-center justify-between px-6 py-3 min-h-14">
+      <Link
+        href="/lobby"
+        target={target}
+        className="text-xl font-bold tracking-tight text-on-background"
+      >
+        SGame
+      </Link>
 
-      <ul className="flex">
-        {links.map(({ text, path }, i) =>
-          text && (
-            <li
-              key={i}
-              className="nav-links px-2 cursor-pointer font-medium hover:text-white duration-200"
+      <ul className="flex items-center gap-1">
+        {user?.name && (
+          <li>
+            <Link
+              href={`/user/${user.id}`}
+              target={target}
+              className="text-primary font-semibold text-sm px-2.5 py-1 rounded-md hover:text-on-surface hover:bg-surface-raised transition-[color,background] duration-150"
             >
-              <Link href={path} target={linksTarget}>
-                {text}
-              </Link>
-            </li>
-          )
+              {user.name}
+            </Link>
+          </li>
         )}
+        <li>
+          <Link
+            href="/packs"
+            target={target}
+            className="text-on-surface-muted text-sm font-medium px-2.5 py-1 rounded-md hover:text-on-surface hover:bg-surface-raised transition-[color,background] duration-150"
+          >
+            Packs
+          </Link>
+        </li>
+        <li>
+          <Link
+            href="/about"
+            target={target}
+            className="text-on-surface-muted text-sm font-medium px-2.5 py-1 rounded-md hover:text-on-surface hover:bg-surface-raised transition-[color,background] duration-150"
+          >
+            About
+          </Link>
+        </li>
       </ul>
     </nav>
   );
