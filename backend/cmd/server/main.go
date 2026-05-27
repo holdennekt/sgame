@@ -61,6 +61,9 @@ func main() {
 
 	if envvar.GetEnvVar("STORAGE_PROVIDER") == "gcs" {
 		storage, err = gcsStorage.NewGCSStorage(context.Background(), envvar.GetEnvVar("BUCKET_NAME"))
+		if err != nil {
+			log.Fatal(err)
+		}
 	} else {
 		mio, err := minio.New(envvar.GetEnvVar("MINIO_ENDPOINT"), &minio.Options{
 			Creds: credentials.NewStaticV4(
