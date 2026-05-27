@@ -6,15 +6,12 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
-	iampb "cloud.google.com/go/iam/apiv1/iampb"
 	gcsstorage "cloud.google.com/go/storage"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
-	"google.golang.org/genproto/googleapis/type/expr"
 )
 
 type GCSStorage struct {
@@ -30,8 +27,9 @@ func NewGCSStorage(ctx context.Context, bucketName string) (storage.Storage, err
 		return nil, fmt.Errorf("failed to create GCS client: %w", err)
 	}
 
-	if err := ensurePublicPrefixPolicy(ctx, client.Bucket(bucketName), bucketName); err != nil {
-		return nil, err
+	_, err = client.Bucket(bucketName).Attrs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to access bucket %q: %w", bucketName, err)
 	}
 
 	return &GCSStorage{
@@ -42,59 +40,6 @@ func NewGCSStorage(ctx context.Context, bucketName string) (storage.Storage, err
 			Timeout: 60 * time.Minute,
 		},
 	}, nil
-}
-
-func ensureUniformAccess(ctx context.Context, bucket *gcsstorage.BucketHandle) error {
-	attrs, err := bucket.Attrs(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get bucket attrs: %w", err)
-	}
-	if attrs.UniformBucketLevelAccess.Enabled {
-		return nil
-	}
-	_, err = bucket.Update(ctx, gcsstorage.BucketAttrsToUpdate{
-		UniformBucketLevelAccess: &gcsstorage.UniformBucketLevelAccess{Enabled: true},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to enable uniform bucket-level access: %w", err)
-	}
-	log.Printf("Enabled uniform bucket-level access on bucket")
-	return nil
-}
-
-func ensurePublicPrefixPolicy(ctx context.Context, bucket *gcsstorage.BucketHandle, bucketName string) error {
-	if err := ensureUniformAccess(ctx, bucket); err != nil {
-		return err
-	}
-
-	policy, err := bucket.IAM().V3().Policy(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get bucket IAM policy: %w", err)
-	}
-
-	conditionExpr := fmt.Sprintf(`resource.name.startsWith("projects/_/buckets/%s/objects/public/")`, bucketName)
-
-	for _, b := range policy.Bindings {
-		if b.Role == "roles/storage.objectViewer" && b.Condition != nil && b.Condition.Expression == conditionExpr && slices.Contains(b.Members, "allUsers") {
-			return nil
-		}
-	}
-
-	policy.Bindings = append(policy.Bindings, &iampb.Binding{
-		Role:    "roles/storage.objectViewer",
-		Members: []string{"allUsers"},
-		Condition: &expr.Expr{
-			Expression: conditionExpr,
-			Title:      "public-prefix-read",
-		},
-	})
-
-	if err := bucket.IAM().V3().SetPolicy(ctx, policy); err != nil {
-		return fmt.Errorf("failed to set bucket IAM policy: %w", err)
-	}
-
-	log.Printf("Granted public read on gs://%s/public/*", bucketName)
-	return nil
 }
 
 func (s *GCSStorage) Upload(ctx context.Context, ui storage.UploadInput) error {
@@ -217,10 +162,15 @@ func (s *GCSStorage) SignUploadPolicy(ctx context.Context, in storage.SignUpload
 		gcsstorage.ConditionContentLengthRange(0, uint64(in.MaxBytes)),
 	}
 
-	policy, err := s.client.Bucket(s.bucketName).GenerateSignedPostPolicyV4(in.Key, &gcsstorage.PostPolicyV4Options{
+	opts := &gcsstorage.PostPolicyV4Options{
 		Expires:    time.Now().Add(in.TTL),
 		Conditions: conditions,
-	})
+	}
+	if strings.HasPrefix(in.Key, "public/") {
+		opts.Fields = &gcsstorage.PolicyV4Fields{ACL: "public-read"}
+	}
+
+	policy, err := s.client.Bucket(s.bucketName).GenerateSignedPostPolicyV4(in.Key, opts)
 	if err != nil {
 		return nil, custerr.NewInternalErr(fmt.Errorf("failed to generate upload policy: %w", err))
 	}
