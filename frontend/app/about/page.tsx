@@ -1,24 +1,52 @@
-import { headers } from "next/headers";
 import Navbar from "../../components/Navbar";
-import { User, USER_HEADER_NAME } from "../../middleware";
 
 export default function About() {
-  const user: User = JSON.parse(headers().get(USER_HEADER_NAME)!);
   return (
     <>
-      <Navbar user={user} />
-      <div className="About flex justify-center items-center w-full px-10 py-2">
-        <div className="mx-2">
-          <h1 className="text-2xl font-medium">Contact me:</h1>
+      <Navbar />
+      <main className="flex-1 flex items-center justify-center p-4">
+        <div className="bg-surface border border-border rounded-md shadow p-8 max-w-md w-full flex flex-col gap-6">
+          <div>
+            <h1 className="text-2xl font-bold text-on-surface">
+              SGame
+            </h1>
+            <p className="mt-1 text-sm text-on-surface-muted">
+              A real-time multiplayer quiz game inspired by Jeopardy. Create rooms, pick question packs, and compete with friends.
+            </p>
+          </div>
+
+          <div className="border-t border-border pt-6">
+            <p className="text-xs font-semibold uppercase tracking-widest mb-3 text-on-surface-muted">
+              Contact
+            </p>
+            <ul className="flex flex-col gap-2">
+              <li>
+                <a
+                  className="flex items-center gap-2 text-sm text-primary underline underline-offset-2 hover:text-primary-hover"
+                  href="mailto:holdennekt@gmail.com"
+                >
+                  Email
+                </a>
+              </li>
+              <li>
+                <a
+                  className="flex items-center gap-2 text-sm text-primary underline underline-offset-2 hover:text-primary-hover"
+                  href="https://t.me/holdennekt"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Telegram
+                </a>
+              </li>
+              <li>
+                <span className="flex items-center gap-2 text-sm text-on-surface-muted">
+                  Discord
+                </span>
+              </li>
+            </ul>
+          </div>
         </div>
-        <div className="mx-2 text-xs">
-          <ul>
-            <li>Email</li>
-            <li>Telegram</li>
-            <li>Discord</li>
-          </ul>
-        </div>
-      </div>
+      </main>
     </>
   );
 }
