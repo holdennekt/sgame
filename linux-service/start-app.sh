@@ -14,7 +14,8 @@ curl -sf --user "$DESEC_DOMAIN:$DESEC_TOKEN" https://update.dedyn.io/
 
 echo $GCP_TOKEN | docker login -u oauth2accesstoken --password-stdin europe-central2-docker.pkg.dev
 
-git -C /opt/sgame pull
+git -C /opt/sgame fetch origin
+git -C /opt/sgame reset --hard origin/main
 
 docker compose -f /opt/sgame/docker-compose.prod.yaml pull
 docker compose -f /opt/sgame/docker-compose.prod.yaml up -d --remove-orphans
