@@ -12,11 +12,13 @@ export interface PackFormData {
 
 export interface RoundFormData {
   name: string;
+  expanded: boolean;
   categories: CategoryFormData[];
 }
 
 export interface CategoryFormData {
   name: string;
+  selected: boolean;
   questions: QuestionFormData[];
 }
 
@@ -36,6 +38,7 @@ export type AttachmentFormData =
   | { type: "url"; url?: string };
 
 export interface FinalRoundFormData {
+  expanded: boolean;
   categories: FinalRoundCategoryFormData[];
 }
 
@@ -115,6 +118,7 @@ export interface SignURLRequest {
 export interface SignURLResponse {
   url: string;
   formData: Record<string, string>;
+  getUrl?: string;
 }
 
 export interface Pack {
@@ -251,10 +255,12 @@ export interface HiddenFinalRoundQuestion {
 export function convertPackToFormData(
   pack: Omit<Pack, "id" | "createdBy">,
 ): PackFormData {
+  const rounds = pack.rounds.map(convertRoundToFormData);
+  if (rounds[0].categories.length) rounds[0].categories[0].selected = true;
   return {
     name: pack.name,
     type: pack.type,
-    rounds: pack.rounds.map(convertRoundToFormData),
+    rounds,
     finalRound: convertFinalRoundToFormData(pack.finalRound),
   };
 }
@@ -262,6 +268,7 @@ export function convertPackToFormData(
 function convertRoundToFormData(round: Round): RoundFormData {
   return {
     name: round.name,
+    expanded: true,
     categories: round.categories.map(convertCategoryToFormData),
   };
 }
@@ -269,6 +276,7 @@ function convertRoundToFormData(round: Round): RoundFormData {
 function convertCategoryToFormData(category: Category): CategoryFormData {
   return {
     name: category.name,
+    selected: false,
     questions: category.questions.map(convertQuestionToFormData),
   };
 }
@@ -298,6 +306,7 @@ function convertFinalRoundToFormData(
   finalRound: FinalRound,
 ): FinalRoundFormData {
   return {
+    expanded: true,
     categories: finalRound.categories.map(convertFinalRoundCategoryToFormData),
   };
 }

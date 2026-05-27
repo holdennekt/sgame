@@ -27,7 +27,7 @@ export async function middleware(request: NextRequest) {
       sessionId &&
       (path.startsWith("/login") || path.startsWith("/register"))
     )
-      return Response.redirect(new URL("/", request.url));
+      return Response.redirect(new URL("/lobby", request.url));
     return NextResponse.next();
   }
 

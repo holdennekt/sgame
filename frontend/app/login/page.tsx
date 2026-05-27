@@ -7,11 +7,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { login } from "../actions";
 
+const inputClass = "h-9 w-full px-2.5 rounded-lg border border-border bg-background text-on-background text-sm outline-none placeholder:text-on-surface-muted focus-ring transition-[border-color] duration-150";
+const btnPrimary = "inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150";
+const btnSecondary = "inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-surface-raised text-on-surface border border-border hover:bg-border transition-colors duration-150";
+
 export default function Page() {
   const router = useRouter();
+
   const onSubmit: FormEventHandler<HTMLFormElement> = async e => {
     e.preventDefault();
-
     const formData = new FormData(e.currentTarget);
     try {
       await login({
@@ -29,52 +33,57 @@ export default function Page() {
   return (
     <>
       <Navbar />
-      <main className="flex-1 flex justify-center items-center">
-        <div className="rounded-xl p-5 surface">
-          <form action="" onSubmit={onSubmit}>
-            <label className="block">
-              <p className="text-sm font-medium">Login</p>
+      <main className="flex-1 flex justify-center items-center px-4">
+        <div className="bg-surface border border-border rounded-md shadow p-8 w-full max-w-sm">
+          <h2 className="text-2xl font-bold mb-1 text-on-background">
+            Welcome back
+          </h2>
+          <p className="text-sm mb-6 text-on-surface-muted">Sign in to your account</p>
+
+          <form onSubmit={onSubmit} className="flex flex-col gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-on-surface">
+                Login
+              </span>
               <input
-                className="w-full h-8 rounded-lg mt-1 p-1 text-black"
+                className={inputClass}
                 type="text"
-                placeholder="Login"
+                placeholder="Your login"
                 name="login"
                 minLength={1}
                 maxLength={50}
                 required
               />
             </label>
-            <label className="block mt-2">
-              <p className="text-sm font-medium">Password</p>
+
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-on-surface">
+                Password
+              </span>
               <input
-                className="w-full h-8 rounded-lg mt-1 p-1 text-black"
+                className={inputClass}
                 type="password"
-                placeholder="Password"
+                placeholder="Your password"
                 name="password"
                 minLength={1}
                 maxLength={50}
                 required
               />
             </label>
-            <div className="flex justify-between mt-3">
-              <Link
-                className="rounded px-3 py-1 font-medium secondary"
-                href={"/register"}
-              >
-                Sign up
+
+            <div className="flex justify-between items-center mt-2">
+              <Link className={btnSecondary} href="/register">
+                Create account
               </Link>
-              <button className="rounded px-3 py-1 font-medium primary">
+              <button type="submit" className={btnPrimary}>
                 Sign in
               </button>
             </div>
           </form>
         </div>
       </main>
-      <ToastContainer
-        containerId="login"
-        position="bottom-left"
-        theme="colored"
-      />
+
+      <ToastContainer containerId="login" position="bottom-left" theme="colored" />
     </>
   );
 }

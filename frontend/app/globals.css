@@ -3,64 +3,58 @@
 @tailwind utilities;
 
 :root {
-  --background-rgb: rgb(255, 255, 255);
-  --on-background-rgb: rgb(18, 18, 18);
-  --surface-rgb: rgb(248, 248, 248);
-  --on-surface-rgb: rgb(40, 40, 40);
-  --primary-rgb: rgb(56, 43, 240);
-  --on-primary-rgb: rgb(255, 255, 255);
-  --secondary-rgb: rgb(123, 218, 198);
-  --on-secondary-rgb: rgb(0, 0, 0);
+  --background: #ffffff;
+  --on-background: #0f0f0f;
+  --surface: #f4f4f5;
+  --surface-raised: #e4e4e7;
+  --on-surface: #27272a;
+  --on-surface-muted: #71717a;
+  --border: #d4d4d8;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --on-primary: #ffffff;
+  --secondary: #14b8a6;
+  --on-secondary: #ffffff;
+  --danger: #ef4444;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background-rgb: rgb(18, 18, 18);
-    --on-background-rgb: rgb(255, 255, 255);
-    --surface-rgb: rgb(40, 40, 40);
-    --on-surface-rgb: rgb(224, 224, 224);
-    --primary-rgb: rgb(56, 43, 240);
-    --on-primary-rgb: rgb(255, 255, 255);
-    --secondary-rgb: rgb(123, 218, 198);
-    --on-secondary-rgb: rgb(0, 0, 0);
+    --background: #09090b;
+    --on-background: #fafafa;
+    --surface: #18181b;
+    --surface-raised: #27272a;
+    --on-surface: #e4e4e7;
+    --on-surface-muted: #a1a1aa;
+    --border: #3f3f46;
+    --primary: #6366f1;
+    --primary-hover: #818cf8;
+    --on-primary: #ffffff;
+    --secondary: #2dd4bf;
+    --on-secondary: #0f0f0f;
+    --danger: #f87171;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
   }
 }
 
-.background {
-  color: var(--on-background-rgb);
-  background: var(--background-rgb);
+body {
+  color: var(--on-background);
+  background: var(--background);
 }
 
-.surface {
-  color: var(--on-surface-rgb);
-  background: var(--surface-rgb);
-}
-
-.primary {
-  color: var(--on-primary-rgb);
-  background: var(--primary-rgb);
-}
-
-.secondary {
-  color: var(--on-secondary-rgb);
-  background: var(--secondary-rgb);
-}
-
-.nav {
-  min-height: 7%;
-  background: var(--surface-rgb);
-}
-
-.nav-links {
-  color: var(--on-surface-rgb);
-}
-
-.username {
-  color: var(--primary-rgb);
-}
-
-.pack-link {
-  color: rgb(94, 67, 243);
+/* focus ring uses color-mix() which can't be expressed in Tailwind */
+.focus-ring:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
 @layer utilities {

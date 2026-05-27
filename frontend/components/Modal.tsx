@@ -18,22 +18,14 @@ export default function Modal({
     dialog.current?.close();
   }
   const onClick: MouseEventHandler<HTMLDialogElement> = ev => {
-    const rect = ev.currentTarget.getBoundingClientRect();
-    if (!rect) return;
-    if (
-      ev.clientX < rect.left ||
-      ev.clientX > rect.right ||
-      ev.clientY < rect.top ||
-      ev.clientY > rect.bottom
-    ) {
-      dialog.current?.close();
-    }
+    if (ev.target === ev.currentTarget) dialog.current?.close();
   };
 
   return (
     <dialog
-      className="w-fit rounded-lg p-6 surface border backdrop:bg-transparent"
+      className="w-fit max-w-[95vw] rounded-lg p-6 bg-surface text-on-surface border border-border shadow-lg backdrop:bg-black/50 backdrop:backdrop-blur-sm outline-none"
       ref={dialog}
+      tabIndex={-1}
       onClick={closeByClickingOutside ? onClick : undefined}
       onClose={onClose}
     >

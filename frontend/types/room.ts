@@ -1,6 +1,14 @@
 import { PackPreview, HiddenQuestion, HiddenFinalRoundQuestion, FinalRoundQuestion, Question, QuestionType, PrivacyType } from "./pack";
 import { Host, Player } from "./user";
 
+export interface GameHistoryEntry {
+  id: string;
+  name: string;
+  packPreview: PackPreview;
+  players: Player[];
+  finishedAt: string;
+}
+
 export interface CreateRoomRequest {
   name: string;
   packId: string;
@@ -60,6 +68,7 @@ const dummyRoom: Room = {
     question: null,
     players: [],
     playersAnswers: {},
+    bettingEndsAt: null,
     timerEndsAt: null,
   },
   pausedState: {
@@ -103,7 +112,11 @@ export interface BoardQuestion {
   hasBeenPlayed: boolean;
 }
 
-export type CurrentRoundQuestions = Record<string, BoardQuestion[]>;
+export interface CategoryQuestions {
+  category: string;
+  questions: BoardQuestion[];
+}
+export type CurrentRoundQuestions = CategoryQuestions[];
 
 export interface CurrentQuestion extends Question {
   attachmentRevealEndsAt: string;
@@ -112,6 +125,8 @@ export interface CurrentQuestion extends Question {
   timerStartsAt: string;
   timerEndsAt: string;
   timerLastProgress: number;
+  bettingEndsAt: string;
+  passingEndsAt: string;
 }
 
 export interface AnsweringPlayer {
@@ -125,6 +140,7 @@ export interface FinalRoundState {
   question: FinalRoundQuestion | null;
   players: string[];
   playersAnswers: Record<string, string>;
+  bettingEndsAt: string | null;
   timerEndsAt: string | null;
 }
 
@@ -195,6 +211,7 @@ const dummyRoomHost: RoomHost = {
     question: null,
     players: [],
     playersAnswers: {},
+    bettingEndsAt: null,
     timerEndsAt: null,
   },
   pausedState: {
@@ -243,6 +260,7 @@ const dummyRoomPlayer: RoomPlayer = {
     question: null,
     players: [],
     playersAnswers: {},
+    bettingEndsAt: null,
     timerEndsAt: null,
   },
   pausedState: {
@@ -262,9 +280,11 @@ export interface HiddenCurrentQuestion extends HiddenQuestion {
   attachmentRevealEndsAt: string;
 	attachmentRevealLastProgress: number;
 	textRevealLastProgress: number;
-  timerStartsAt: Date;
-  timerEndsAt: Date;
+  timerStartsAt: string;
+  timerEndsAt: string;
   timerLastProgress: number;
+  bettingEndsAt: string;
+  passingEndsAt: string;
 }
 
 export interface HiddenFinalRoundState {
@@ -272,5 +292,45 @@ export interface HiddenFinalRoundState {
   question: HiddenFinalRoundQuestion | null;
   players: string[];
   playersAnswers: Record<string, boolean>;
-  timerEndsAt: Date | null;
+  bettingEndsAt: string | null;
+  timerEndsAt: string | null;
 }
+
+export type RoundDemo = {
+  name: string;
+  categories: string[];
+};
+
+const dummyRoundDemo: RoundDemo = { name: "round 1", categories: ["1", "2", "3"] };
+
+export const isRoundDemo = (obj: unknown): obj is RoundDemo => {
+  if (typeof obj !== "object" || obj === null) return false;
+  return Object.keys(dummyRoundDemo).every(key => Object.hasOwn(obj, key));
+};
+
+export type QuestionDemo = {
+  category: string;
+  value: number;
+  type: QuestionType;
+  duration: number;
+};
+
+const dummyQuestionDemo: QuestionDemo = { category: "", value: 0, type: "regular", duration: 0 };
+
+export const isQuestionDemo = (obj: unknown): obj is QuestionDemo => {
+  if (typeof obj !== "object" || obj === null) return false;
+  return Object.keys(dummyQuestionDemo).every(key => Object.hasOwn(obj, key));
+};
+
+export type CorrectAnswerDemo = {
+  answers: string[];
+  comment: string | null;
+  duration: number;
+};
+
+const dummyCorrectAnswerDemo: CorrectAnswerDemo = { answers: [], comment: null, duration: 0 };
+
+export const isCorrectAnswerDemo = (obj: unknown): obj is CorrectAnswerDemo => {
+  if (typeof obj !== "object" || obj === null) return false;
+  return Object.keys(dummyCorrectAnswerDemo).every(key => Object.hasOwn(obj, key));
+};

@@ -11,8 +11,9 @@ import {
   SignURLRequest,
   SignURLResponse,
 } from "@/types/pack";
-import { CreateRoomRequest, Room, RoomLobby } from "@/types/room";
+import { CreateRoomRequest, GameHistoryEntry, Room, RoomLobby } from "@/types/room";
 import { SearchResponse } from "@/types/search";
+import { User } from "@/middleware";
 
 const PAGE_QUERY_PARAM = "page";
 const PASSWORD_QUERY_PARAM = "password";
@@ -128,6 +129,19 @@ export const getPacks = async (packFilter: string, page?: number) => {
   return packs;
 };
 
+export const getPacksCreatedBy = async (createdBy: string, packFilter: string, page?: number) => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/by/${createdBy}`);
+  url.searchParams.set(SEARCH_QUERY_PARAM, packFilter);
+  if (page) url.searchParams.set(PAGE_QUERY_PARAM, page.toString());
+  const resp = await fetch(url, {
+    cache: "no-store",
+    headers: { cookie: cookies().toString() },
+  });
+  const packs: SearchResponse<HiddenPack> | ErrorBody = await resp?.json();
+  if (isError(packs)) throw new Error(packs.error);
+  return packs;
+};
+
 export const getPacksPreviews = async (packFilter: string) => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/previews`);
   url.searchParams.set(SEARCH_QUERY_PARAM, packFilter);
@@ -188,6 +202,44 @@ export const deletePack = async (id: string) => {
     if (isError(obj)) throw new Error(obj.error);
   }
   return { id };
+};
+
+export const getGameHistory = async (page?: number) => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/rooms/history`);
+  if (page) url.searchParams.set(PAGE_QUERY_PARAM, page.toString());
+  const resp = await fetch(url, {
+    cache: "no-store",
+    headers: { cookie: cookies().toString() },
+  });
+  const result: SearchResponse<GameHistoryEntry> | ErrorBody = await resp?.json();
+  if (isError(result)) throw new Error(result.error);
+  return result;
+};
+
+export const getUser = async (id: string) => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/users/${id}`);
+  const resp = await fetch(url, {
+    cache: "no-store",
+    headers: { cookie: cookies().toString() },
+  });
+  const user: User | ErrorBody = await resp?.json();
+  if (isError(user)) throw new Error(user.error);
+  return user;
+};
+
+export const updateUser = async (
+  id: string,
+  body: { name: string; avatar: string; password?: string },
+) => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/users/${id}`);
+  const resp = await fetch(url, {
+    method: "PUT",
+    headers: { cookie: cookies().toString() },
+    body: JSON.stringify(body),
+  });
+  const user: User | ErrorBody = await resp?.json();
+  if (isError(user)) throw new Error(user.error);
+  return user;
 };
 
 export const signURL = async (dto: SignURLRequest) => {
