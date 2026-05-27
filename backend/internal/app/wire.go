@@ -60,8 +60,8 @@ func provideRoomInternalEventsProcessorGetter(roomCache cache.Room, roomRepo rep
 	return eventsprocessor.NewRoomInternalEventsProcessorGetter(pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, roomCache, roomRepo, packRepo, storage)
 }
 
-func provideRoomService(userRepository repository.User, packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *service.RoomService {
-	return service.NewRoomService(userRepository, packRepository, roomRepository, roomCache, pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, roomInternalEventsProcessorGetter)
+func provideRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *service.RoomService {
+	return service.NewRoomService(packRepository, roomRepository, roomCache, pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, roomInternalEventsProcessorGetter)
 }
 
 var ServiceSet = wire.NewSet(
@@ -78,12 +78,12 @@ var ControllerSet = wire.NewSet(
 	http.NewRoomController,
 )
 
-func provideLobbyHandler(userService *service.UserService, pubsubGetter PubSubChannelGetter, lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter) *ws.LobbyHandler {
-	return ws.NewLobbyHandler(userService, pubsubGetter.ServerChannelGetter, lobbyEventsProcessorGetter)
+func provideLobbyHandler(pubsubGetter PubSubChannelGetter, lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter) *ws.LobbyHandler {
+	return ws.NewLobbyHandler(pubsubGetter.ServerChannelGetter, lobbyEventsProcessorGetter)
 }
 
-func provideRoomHandler(roomService *service.RoomService, userService *service.UserService, roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter) *ws.RoomHandler {
-	return ws.NewRoomHandler(roomService, userService, pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, roomEventsProcessorGetter)
+func provideRoomHandler(roomService *service.RoomService, roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter) *ws.RoomHandler {
+	return ws.NewRoomHandler(roomService, pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, roomEventsProcessorGetter)
 }
 
 var HandlerSet = wire.NewSet(

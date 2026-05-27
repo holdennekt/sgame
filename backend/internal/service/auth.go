@@ -52,7 +52,7 @@ func (s *AuthService) Login(ctx context.Context, cur dto.CreateUserRequest) (ses
 		return
 	}
 	sessionId = id.String()
-	err = s.sessionCache.Set(ctx, sessionId, dbUser.Id)
+	err = s.sessionCache.Set(ctx, sessionId, &dbUser.User)
 	return
 }
 
@@ -75,6 +75,7 @@ func (s *AuthService) Register(ctx context.Context, cur dto.CreateUserRequest) (
 	if err != nil {
 		return
 	}
+	dbUser.User.Id = userId
 
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -82,12 +83,40 @@ func (s *AuthService) Register(ctx context.Context, cur dto.CreateUserRequest) (
 		return
 	}
 	sessionId = id.String()
-	err = s.sessionCache.Set(ctx, sessionId, userId)
+	err = s.sessionCache.Set(ctx, sessionId, &dbUser.User)
 	return
 }
 
-func (s *AuthService) GetUserID(ctx context.Context, sessionId string) (string, error) {
-	return s.sessionCache.Get(ctx, sessionId)
+func (s *AuthService) GuestLogin(ctx context.Context, name string) (sessionId string, userId string, err error) {
+	userUUID, err := uuid.NewRandom()
+	if err != nil {
+		err = custerr.NewInternalErr(err)
+		return
+	}
+	userId = userUUID.String()
+
+	guest := &domain.User{
+		Id:      userId,
+		Name:    name,
+		IsGuest: true,
+	}
+
+	id, err := uuid.NewRandom()
+	if err != nil {
+		err = custerr.NewInternalErr(err)
+		return
+	}
+	sessionId = id.String()
+	err = s.sessionCache.Set(ctx, sessionId, guest)
+	return
+}
+
+func (s *AuthService) GetUser(ctx context.Context, sessionId string) (*domain.User, error) {
+	user, err := s.sessionCache.Get(ctx, sessionId)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 func (s *AuthService) Logout(ctx context.Context, sessionId string) error {

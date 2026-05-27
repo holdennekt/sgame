@@ -1,10 +1,14 @@
 package cache
 
-import "context"
+import (
+	"context"
+
+	"github.com/holdennekt/sgame/backend/internal/domain"
+)
 
 type Session interface {
-	Get(ctx context.Context, key string) (string, error)
-	GetKey(ctx context.Context, val string) (string, error)
-	Set(ctx context.Context, key string, val string) error
-	Delete(ctx context.Context, key string) error
+	Get(ctx context.Context, sessionId string) (*domain.User, error)
+	GetKey(ctx context.Context, userId string) (string, error)
+	Set(ctx context.Context, sessionId string, user *domain.User) error
+	Delete(ctx context.Context, sessionId string) error
 }

@@ -28,12 +28,18 @@ export function HistoryCard({ entry }: { entry: GameHistoryEntry }) {
             <span className={`font-bold ${i === 0 ? "text-primary" : "text-on-surface-muted"}`}>
               #{i + 1}
             </span>
-            <Link
-              href={`/user/${p.id}`}
-              className={`hover:text-primary transition-colors duration-150 ${i === 0 ? "text-on-surface font-medium" : "text-on-surface-muted"}`}
-            >
-              {p.name}
-            </Link>
+            {p.isGuest ? (
+              <span className={i === 0 ? "text-on-surface font-medium" : "text-on-surface-muted"}>
+                {p.name}
+              </span>
+            ) : (
+              <Link
+                href={`/user/${p.id}`}
+                className={`hover:text-primary transition-colors duration-150 ${i === 0 ? "text-on-surface font-medium" : "text-on-surface-muted"}`}
+              >
+                {p.name}
+              </Link>
+            )}
             <span className={i === 0 ? "text-primary font-semibold" : "text-on-surface-muted"}>
               {p.score}
             </span>

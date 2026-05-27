@@ -46,12 +46,16 @@ function PackCard({ pack, onPlay, onDelete }: { pack: HiddenPack; onPlay: () => 
           </div>
           <p className="text-xs text-on-surface-muted mt-0.5">
             by{" "}
-            <Link
-              className="text-on-surface hover:text-primary transition-colors duration-150"
-              href={`/user/${pack.createdBy.id}`}
-            >
-              {pack.createdBy.name}
-            </Link>
+            {pack.createdBy.isGuest ? (
+              <span className="text-on-surface">{pack.createdBy.name}</span>
+            ) : (
+              <Link
+                className="text-on-surface hover:text-primary transition-colors duration-150"
+                href={`/user/${pack.createdBy.id}`}
+              >
+                {pack.createdBy.name}
+              </Link>
+            )}
           </p>
         </div>
 
@@ -112,6 +116,7 @@ function PackCard({ pack, onPlay, onDelete }: { pack: HiddenPack; onPlay: () => 
 
 export default function PacksList() {
   const router = useRouter();
+  const user = useRequiredUser();
   const [filter, setFilter] = useState("");
   const [debouncedFilter, setDebouncedFilter] = useState("");
   const [newRoomModal, setNewRoomModal] = useState<{ isOpen: boolean; pack?: PackPreview }>({
@@ -182,13 +187,15 @@ export default function PacksList() {
                 }}
               />
             </div>
-            <button
-              className="ml-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150 shrink-0"
-              onClick={() => router.push("/packs/new")}
-            >
-              <IoIosAdd size={16} />
-              New pack
-            </button>
+            {!user.isGuest && (
+              <button
+                className="ml-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150 shrink-0"
+                onClick={() => router.push("/packs/new")}
+              >
+                <IoIosAdd size={16} />
+                New pack
+              </button>
+            )}
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto">

@@ -4,24 +4,20 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/dto"
-	"github.com/holdennekt/sgame/backend/internal/interface/cache"
-	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/internal/service"
 )
 
 const PASSWORD_QUERY_PARAM = "password"
 
 type RoomController struct {
-	roomCache      cache.Room
-	roomRepository repository.Room
-	packService    *service.PackService
-	roomService    *service.RoomService
+	packService *service.PackService
+	roomService *service.RoomService
 }
 
-func NewRoomController(roomCache cache.Room, roomRepository repository.Room, packService *service.PackService, roomService *service.RoomService) *RoomController {
-	return &RoomController{roomCache, roomRepository, packService, roomService}
+func NewRoomController(packService *service.PackService, roomService *service.RoomService) *RoomController {
+	return &RoomController{packService, roomService}
 }
 
 func (c *RoomController) RegisterRoutes(r *gin.RouterGroup) {
@@ -47,7 +43,7 @@ func (c *RoomController) RegisterRoutes(r *gin.RouterGroup) {
 // @Security     CookieAuth
 // @Router       /rooms [post]
 func (c *RoomController) create(ctx *gin.Context) {
-	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 
 	var crr dto.CreateRoomRequest
 	if err := ctx.ShouldBindJSON(&crr); err != nil {
@@ -99,7 +95,7 @@ func (c *RoomController) get(ctx *gin.Context) {
 // @Security     CookieAuth
 // @Router       /rooms/{id} [get]
 func (c *RoomController) getProjection(ctx *gin.Context) {
-	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 	id := ctx.Param("id")
 	password := ctx.Query(PASSWORD_QUERY_PARAM)
 
@@ -127,11 +123,11 @@ func (c *RoomController) getProjection(ctx *gin.Context) {
 // @Security     CookieAuth
 // @Router       /rooms/{id}/join [patch]
 func (c *RoomController) join(ctx *gin.Context) {
-	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	user := ctx.MustGet(USER_CONTEXT_KEY).(domain.User)
 	id := ctx.Param("id")
 	password := ctx.Query(PASSWORD_QUERY_PARAM)
 
-	room, err := c.roomService.Join(ctx, userId, id, password)
+	room, err := c.roomService.Join(ctx, user, id, password)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -152,7 +148,7 @@ func (c *RoomController) join(ctx *gin.Context) {
 // @Security     CookieAuth
 // @Router       /rooms/{id}/leave [patch]
 func (c *RoomController) leave(ctx *gin.Context) {
-	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 	id := ctx.Param("id")
 
 	err := c.roomService.Leave(ctx, userId, id)
@@ -165,7 +161,7 @@ func (c *RoomController) leave(ctx *gin.Context) {
 }
 
 func (c *RoomController) getHistory(ctx *gin.Context) {
-	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 
 	var query dto.SearchRequest
 	if err := ctx.ShouldBindQuery(&query); err != nil {

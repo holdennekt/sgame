@@ -23,15 +23,14 @@ import (
 
 type RoomHandler struct {
 	roomService               *service.RoomService
-	userService               *service.UserService
 	lobbyChannelGetter        realtime.ServerChannelGetter
 	roomChannelGetter         realtime.ServerChannelGetter
 	roomInternalChannelGetter realtime.ServerChannelGetter
 	roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter
 }
 
-func NewRoomHandler(roomService *service.RoomService, userService *service.UserService, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter) *RoomHandler {
-	return &RoomHandler{roomService, userService, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomEventsProcessorGetter}
+func NewRoomHandler(roomService *service.RoomService, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter) *RoomHandler {
+	return &RoomHandler{roomService, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomEventsProcessorGetter}
 }
 
 func (h *RoomHandler) RegisterRoute(r *gin.RouterGroup) {
@@ -48,7 +47,7 @@ func (h *RoomHandler) RegisterRoute(r *gin.RouterGroup) {
 // @Security     CookieAuth
 // @Router       /room/{id} [get]
 func (h *RoomHandler) connect(ctx *gin.Context) {
-	userId := ctx.MustGet(http.USER_ID_CONTEXT_KEY).(string)
+	user := ctx.MustGet(http.USER_CONTEXT_KEY).(domain.User)
 	id := ctx.Param("id")
 
 	room, err := h.roomService.GetById(ctx, id)
@@ -57,14 +56,8 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 		return
 	}
 
-	if !room.IsUserIn(userId) {
+	if !room.IsUserIn(user.Id) {
 		ctx.Error(custerr.NewForbiddenErr("cannot connect to room you are not in"))
-		return
-	}
-
-	user, err := h.userService.GetById(ctx, userId)
-	if err != nil {
-		ctx.Error(err)
 		return
 	}
 
@@ -77,7 +70,7 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 		return
 	}
 
-	newRoom, err := h.roomService.Connect(ctx, userId, id)
+	newRoom, err := h.roomService.Connect(ctx, user.Id, id)
 	if err != nil {
 		log.Println(err)
 		return
@@ -111,7 +104,7 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 	processor, err := h.roomEventsProcessorGetter(
 		clientChannel,
 		id,
-		*user,
+		user,
 	)
 	if err != nil {
 		log.Println("Error while creation roomEventsProcessor:", err)

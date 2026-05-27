@@ -62,13 +62,19 @@ export default function Message({
           }`}
         >
           {!isOwn && !isPrevUserSame && (
-            <Link
-              href={`/user/${message.from.id}`}
-              target="_blank"
-              className="block text-xs font-semibold text-primary mb-0.5 hover:underline"
-            >
-              {message.from.name}
-            </Link>
+            message.from.isGuest ? (
+              <span className="block text-xs font-semibold text-primary mb-0.5">
+                {message.from.name}
+              </span>
+            ) : (
+              <Link
+                href={`/user/${message.from.id}`}
+                target="_blank"
+                className="block text-xs font-semibold text-primary mb-0.5 hover:underline"
+              >
+                {message.from.name}
+              </Link>
+            )
           )}
           {message.text}
         </div>

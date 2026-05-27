@@ -13,19 +13,17 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client"
 	"github.com/holdennekt/sgame/backend/internal/infrastructure/realtime/ws"
 	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
-	"github.com/holdennekt/sgame/backend/internal/service"
 	"github.com/holdennekt/sgame/backend/internal/transport/http"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
 type LobbyHandler struct {
-	userService                *service.UserService
 	lobbyChannelGetter         realtime.ServerChannelGetter
 	lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter
 }
 
-func NewLobbyHandler(userService *service.UserService, lobbyChannelGetter realtime.ServerChannelGetter, lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter) *LobbyHandler {
-	return &LobbyHandler{userService, lobbyChannelGetter, lobbyEventsProcessorGetter}
+func NewLobbyHandler(lobbyChannelGetter realtime.ServerChannelGetter, lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter) *LobbyHandler {
+	return &LobbyHandler{lobbyChannelGetter, lobbyEventsProcessorGetter}
 }
 
 // @Summary      Connect to Lobby WebSocket
@@ -42,13 +40,7 @@ func (h *LobbyHandler) RegisterRoute(r *gin.RouterGroup) {
 }
 
 func (h *LobbyHandler) connect(ctx *gin.Context) {
-	userId := ctx.MustGet(http.USER_ID_CONTEXT_KEY).(string)
-
-	user, err := h.userService.GetById(ctx, userId)
-	if err != nil {
-		ctx.Error(err)
-		return
-	}
+	user := ctx.MustGet(http.USER_CONTEXT_KEY).(domain.User)
 
 	conn, err := websocket.Accept(ctx.Writer, ctx.Request, &websocket.AcceptOptions{
 		InsecureSkipVerify: true,
@@ -74,7 +66,7 @@ func (h *LobbyHandler) connect(ctx *gin.Context) {
 
 	processor := h.lobbyEventsProcessorGetter(
 		clientChannel,
-		*user,
+		user,
 	)
 	go processor.Listen(context.Background())
 }

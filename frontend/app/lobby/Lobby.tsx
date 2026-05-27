@@ -9,14 +9,17 @@ import Chat from "@/components/Chat";
 import { RoomLobby } from "@/types/room";
 import { IoIosSearch, IoIosAdd } from "react-icons/io";
 import { useLobby } from "@/hooks/useLobby";
-import { useRequiredUser } from "@/contexts/UserContext";
+
+type Tab = "rooms" | "chat";
 
 export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
   const { rooms, chatMessages, lastError, sendChatMessage } = useLobby(initialRooms);
 
   const [searchInput, setSearchInput] = useState("");
   const [isNewRoomModalOpen, setIsNewRoomModalOpen] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"rooms" | "chat">("rooms");
+  const [mobileTab, setMobileTab] = useState<Tab>("rooms");
+
+  const tabs: Tab[] = ["rooms", "chat"];
 
   const [passwordModal, setPasswordModal] = useState<{
     roomId: string | undefined;
@@ -40,7 +43,7 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
     <>
       {/* Mobile tab bar */}
       <div className="sm:hidden flex shrink-0 border-b border-border bg-surface">
-        {(["rooms", "chat"] as const).map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab}
             className={`flex-1 py-2.5 text-sm font-medium capitalize transition-colors duration-150 ${

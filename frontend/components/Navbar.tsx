@@ -20,13 +20,19 @@ export default function Navbar({ openNewTab = false }: { openNewTab?: boolean })
       <ul className="flex items-center gap-1">
         {user?.name && (
           <li>
-            <Link
-              href={`/user/${user.id}`}
-              target={target}
-              className="text-primary font-semibold text-sm px-2.5 py-1 rounded-md hover:text-on-surface hover:bg-surface-raised transition-[color,background] duration-150"
-            >
-              {user.name}
-            </Link>
+            {user.isGuest ? (
+              <span className="text-on-surface-muted font-semibold text-sm px-2.5 py-1">
+                {user.name}
+              </span>
+            ) : (
+              <Link
+                href={`/user/${user.id}`}
+                target={target}
+                className="text-primary font-semibold text-sm px-2.5 py-1 rounded-md hover:text-on-surface hover:bg-surface-raised transition-[color,background] duration-150"
+              >
+                {user.name}
+              </Link>
+            )}
           </li>
         )}
         <li>

@@ -18,3 +18,7 @@ type UpdateUserRequest struct {
 type AuthResponse struct {
 	UserId string `json:"userId" example:"507f1f77bcf86cd799439011"`
 }
+
+type GuestLoginRequest struct {
+	Name string `json:"name" binding:"required,min=1,max=50"`
+}

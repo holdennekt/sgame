@@ -18,7 +18,6 @@ import (
 const UPDATE_ROOM_RETRIES = 3
 
 type RoomService struct {
-	userRepository                    repository.User
 	packRepository                    repository.Pack
 	roomRepository                    repository.Room
 	roomCache                         cache.Room
@@ -28,8 +27,8 @@ type RoomService struct {
 	roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter
 }
 
-func NewRoomService(userRepository repository.User, packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *RoomService {
-	return &RoomService{userRepository, packRepository, roomRepository, roomCache, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomInternalEventsProcessorGetter}
+func NewRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *RoomService {
+	return &RoomService{packRepository, roomRepository, roomCache, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomInternalEventsProcessorGetter}
 }
 
 func (s *RoomService) Create(ctx context.Context, userId string, crr dto.CreateRoomRequest) (string, error) {
@@ -99,12 +98,12 @@ func (s *RoomService) Get(ctx context.Context) ([]domain.RoomLobby, error) {
 	return s.roomCache.Get(ctx)
 }
 
-func (s *RoomService) Join(ctx context.Context, userId, id, password string) (any, error) {
+func (s *RoomService) Join(ctx context.Context, user domain.User, id, password string) (any, error) {
 	newRoom, err := s.roomCache.SafeSet(ctx, id, func(room *domain.Room) error {
-		if room.IsUserIn(userId) {
+		if room.IsUserIn(user.Id) {
 			return nil
 		}
-		if room.IsUserBanned(userId) {
+		if room.IsUserBanned(user.Id) {
 			return custerr.NewForbiddenErr("you were banned from this room")
 		}
 		if room.Options.Type == domain.Private && *room.Options.Password != password {
@@ -112,21 +111,16 @@ func (s *RoomService) Join(ctx context.Context, userId, id, password string) (an
 		}
 
 		full := len(room.Players) >= room.Options.MaxPlayers
-		canBeHost := userId == room.CreatedBy && room.Host == nil
+		canBeHost := user.Id == room.CreatedBy && room.Host == nil
 
 		if full && !canBeHost {
 			return custerr.NewConflictErr("the room is already full")
 		}
 
-		user, err := s.userRepository.GetById(ctx, userId)
-		if err != nil {
-			return err
-		}
-
 		if canBeHost {
-			room.Host = &domain.Host{User: user.User}
+			room.Host = &domain.Host{User: user}
 		} else {
-			room.Players = append(room.Players, domain.Player{User: user.User})
+			room.Players = append(room.Players, domain.Player{User: user})
 		}
 		return nil
 	})
@@ -143,7 +137,7 @@ func (s *RoomService) Join(ctx context.Context, userId, id, password string) (an
 	if err := lobbyServerChannel.Send(ctx, roomUpdatedMessage); err != nil {
 		return nil, err
 	}
-	return newRoom.GetProjection(userId), nil
+	return newRoom.GetProjection(user.Id), nil
 }
 
 func (s *RoomService) Connect(ctx context.Context, userId, id string) (*domain.Room, error) {

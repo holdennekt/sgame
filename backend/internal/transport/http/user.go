@@ -38,14 +38,7 @@ func (c *UserController) RegisterRoutes(r *gin.RouterGroup) {
 // @Security     CookieAuth
 // @Router       /user [get]
 func (c *UserController) getFromSession(ctx *gin.Context) {
-	id := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
-
-	user, err := c.userService.GetById(ctx, id)
-	if err != nil {
-		ctx.Error(err)
-		return
-	}
-
+	user := ctx.MustGet(USER_CONTEXT_KEY).(domain.User)
 	ctx.JSON(http.StatusOK, user)
 }
 
@@ -112,7 +105,7 @@ func (c *UserController) getById(ctx *gin.Context) {
 // @Security     CookieAuth
 // @Router       /users/{id} [put]
 func (c *UserController) update(ctx *gin.Context) {
-	requesterId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	requesterId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 	id := ctx.Param("id")
 	if requesterId != id {
 		ctx.Error(custerr.NewForbiddenErr("not allowed to update other users"))

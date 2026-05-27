@@ -30,19 +30,17 @@ const (
 )
 
 type PackService struct {
-	userRepository repository.User
 	packRepository repository.Pack
 	storage        storage.Storage
 }
 
-func NewPackService(userRepository repository.User, packRepository repository.Pack, storage storage.Storage) *PackService {
-	return &PackService{userRepository, packRepository, storage}
+func NewPackService(packRepository repository.Pack, storage storage.Storage) *PackService {
+	return &PackService{packRepository, storage}
 }
 
-func (s *PackService) Create(ctx context.Context, userId string, cpr dto.CreatePackRequest) (string, error) {
-	user, err := s.userRepository.GetById(ctx, userId)
-	if err != nil {
-		return "", err
+func (s *PackService) Create(ctx context.Context, user domain.User, cpr dto.CreatePackRequest) (string, error) {
+	if user.IsGuest {
+		return "", custerr.NewForbiddenErr("guest users aren't allowed to create packs")
 	}
 
 	roundsCheckSum, err := s.validateRoundsCheckSum(ctx, user.Id, cpr, "")
@@ -50,7 +48,7 @@ func (s *PackService) Create(ctx context.Context, userId string, cpr dto.CreateP
 		return "", err
 	}
 
-	pack, err := s.createDomain(ctx, cpr, user.User, roundsCheckSum)
+	pack, err := s.createDomain(ctx, cpr, user, roundsCheckSum)
 	if err != nil {
 		return "", err
 	}
@@ -109,27 +107,22 @@ func (s *PackService) GetCreatedBy(ctx context.Context, userId, createdBy string
 	return s.packRepository.GetCreatedBy(ctx, userId, createdBy, search)
 }
 
-func (s *PackService) Update(ctx context.Context, userId string, dto dto.UpdatePackRequest) error {
-	user, err := s.userRepository.GetById(ctx, userId)
-	if err != nil {
-		return err
-	}
-
+func (s *PackService) Update(ctx context.Context, user domain.User, dto dto.UpdatePackRequest) error {
 	pack, err := s.packRepository.GetById(ctx, dto.Id)
 	if err != nil {
 		return err
 	}
 
-	if pack.CreatedBy.Id != userId {
+	if pack.CreatedBy.Id != user.Id {
 		return custerr.NewForbiddenErr("can only edit your own packs")
 	}
 
-	newRoundsCheckSum, err := s.validateRoundsCheckSum(ctx, userId, dto.CreatePackRequest, dto.Id)
+	newRoundsCheckSum, err := s.validateRoundsCheckSum(ctx, user.Id, dto.CreatePackRequest, dto.Id)
 	if err != nil {
 		return err
 	}
 
-	newPack, err := s.createDomain(ctx, dto.CreatePackRequest, user.User, newRoundsCheckSum)
+	newPack, err := s.createDomain(ctx, dto.CreatePackRequest, user, newRoundsCheckSum)
 	if err != nil {
 		return err
 	}

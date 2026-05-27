@@ -3,9 +3,10 @@ package domain
 const SYSTEM = "SYSTEM"
 
 type User struct {
-	Id     string  `json:"id"`
-	Name   string  `json:"name"`
-	Avatar *string `json:"avatar"`
+	Id      string  `json:"id"`
+	Name    string  `json:"name"`
+	Avatar  *string `json:"avatar"`
+	IsGuest bool    `json:"isGuest"`
 }
 
 type DbUser struct {

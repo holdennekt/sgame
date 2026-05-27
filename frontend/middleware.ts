@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const SESSION_ID_COOKIE_NAME = "sessionId";
 export const USER_HEADER_NAME = "user";
 
-export type User = { id: string; name: string; avatar: string | null };
+export type User = { id: string; name: string; avatar: string | null; isGuest?: boolean };
 
 export type ErrorBody = { error: string };
 export const isError = (obj: unknown): obj is ErrorBody =>

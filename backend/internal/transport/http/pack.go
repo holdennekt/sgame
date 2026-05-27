@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/dto"
 	"github.com/holdennekt/sgame/backend/internal/service"
 )
@@ -45,7 +45,7 @@ func (c *PackController) RegisterRoutes(r *gin.RouterGroup) {
 // @Security     CookieAuth
 // @Router       /packs [post]
 func (c *PackController) create(ctx *gin.Context) {
-	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	user := ctx.MustGet(USER_CONTEXT_KEY).(domain.User)
 
 	var cpr dto.CreatePackRequest
 	if err := ctx.ShouldBindJSON(&cpr); err != nil {
@@ -53,7 +53,7 @@ func (c *PackController) create(ctx *gin.Context) {
 		return
 	}
 
-	id, err := c.packService.Create(ctx, userId, cpr)
+	id, err := c.packService.Create(ctx, user, cpr)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -74,7 +74,7 @@ func (c *PackController) create(ctx *gin.Context) {
 // @Security     CookieAuth
 // @Router       /packs/{id} [get]
 func (c *PackController) getById(ctx *gin.Context) {
-	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 	id := ctx.Param("id")
 
 	pack, err := c.packService.GetById(ctx, userId, id)
@@ -97,7 +97,7 @@ func (c *PackController) getById(ctx *gin.Context) {
 // @Security     CookieAuth
 // @Router       /packs/previews [get]
 func (c *PackController) getPreviews(ctx *gin.Context) {
-	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 
 	var query dto.SearchRequest
 	if err := ctx.ShouldBindQuery(&query); err != nil {
@@ -134,7 +134,7 @@ func (c *PackController) getPreviews(ctx *gin.Context) {
 // @Security     CookieAuth
 // @Router       /packs [get]
 func (c *PackController) getHiddens(ctx *gin.Context) {
-	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 
 	var query dto.SearchRequest
 	if err := ctx.ShouldBindQuery(&query); err != nil {
@@ -179,7 +179,7 @@ func (c *PackController) getHiddens(ctx *gin.Context) {
 // @Security     CookieAuth
 // @Router       /packs/{id} [put]
 func (c *PackController) update(ctx *gin.Context) {
-	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	user := ctx.MustGet(USER_CONTEXT_KEY).(domain.User)
 	id := ctx.Param("id")
 
 	var upr dto.UpdatePackRequest
@@ -189,7 +189,7 @@ func (c *PackController) update(ctx *gin.Context) {
 	}
 	upr.Id = id
 
-	err := c.packService.Update(ctx, userId, upr)
+	err := c.packService.Update(ctx, user, upr)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -210,7 +210,7 @@ func (c *PackController) update(ctx *gin.Context) {
 // @Security     CookieAuth
 // @Router       /packs/{id} [delete]
 func (c *PackController) delete(ctx *gin.Context) {
-	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 	id := ctx.Param("id")
 
 	err := c.packService.Delete(ctx, userId, id)
@@ -249,7 +249,7 @@ func (c *PackController) signURL(ctx *gin.Context) {
 }
 
 func (c *PackController) getCreatedBy(ctx *gin.Context) {
-	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 	createdBy := ctx.Param("id")
 
 	var query dto.SearchRequest

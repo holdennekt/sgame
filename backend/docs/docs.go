@@ -132,6 +132,22 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "type": "string",
+                        "name": "orderBy",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "name": "orderDir",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
                         "minimum": 1,
                         "type": "integer",
                         "name": "page",
@@ -244,6 +260,22 @@ const docTemplate = `{
                         "minimum": 1,
                         "type": "integer",
                         "name": "limit",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "orderBy",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "name": "orderDir",
                         "in": "query",
                         "required": true
                     },
@@ -1204,6 +1236,24 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions": {
+            "type": "object",
+            "required": [
+                "category",
+                "questions"
+            ],
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.BoardQuestion"
+                    }
+                }
+            }
+        },
         "github_com_holdennekt_sgame_backend_internal_domain.CurrentQuestion": {
             "type": "object",
             "required": [
@@ -1211,8 +1261,10 @@ const docTemplate = `{
                 "attachment",
                 "attachmentRevealEndsAt",
                 "attachmentRevealLastProgress",
+                "bettingEndsAt",
                 "comment",
                 "index",
+                "passingEndsAt",
                 "text",
                 "textRevealLastProgress",
                 "timerEndsAt",
@@ -1237,11 +1289,17 @@ const docTemplate = `{
                 "attachmentRevealLastProgress": {
                     "type": "number"
                 },
+                "bettingEndsAt": {
+                    "type": "string"
+                },
                 "comment": {
                     "type": "string"
                 },
                 "index": {
                     "type": "integer"
+                },
+                "passingEndsAt": {
+                    "type": "string"
                 },
                 "text": {
                     "type": "string"
@@ -1266,20 +1324,12 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.CurrentRoundQuestions": {
-            "type": "object",
-            "additionalProperties": {
-                "type": "array",
-                "items": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.BoardQuestion"
-                }
-            }
-        },
         "github_com_holdennekt_sgame_backend_internal_domain.DbUser": {
             "type": "object",
             "required": [
                 "avatar",
                 "id",
+                "isGuest",
                 "login",
                 "name",
                 "password"
@@ -1290,6 +1340,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "isGuest": {
+                    "type": "boolean"
                 },
                 "login": {
                     "type": "string"
@@ -1374,6 +1427,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "availableCategories",
+                "bettingEndsAt",
                 "players",
                 "playersAnswers",
                 "question",
@@ -1385,6 +1439,9 @@ const docTemplate = `{
                     "additionalProperties": {
                         "type": "boolean"
                     }
+                },
+                "bettingEndsAt": {
+                    "type": "string"
                 },
                 "players": {
                     "type": "array",
@@ -1412,7 +1469,9 @@ const docTemplate = `{
                 "attachment",
                 "attachmentRevealEndsAt",
                 "attachmentRevealLastProgress",
+                "bettingEndsAt",
                 "index",
+                "passingEndsAt",
                 "text",
                 "textRevealLastProgress",
                 "timerEndsAt",
@@ -1431,8 +1490,14 @@ const docTemplate = `{
                 "attachmentRevealLastProgress": {
                     "type": "number"
                 },
+                "bettingEndsAt": {
+                    "type": "string"
+                },
                 "index": {
                     "type": "integer"
+                },
+                "passingEndsAt": {
+                    "type": "string"
                 },
                 "text": {
                     "type": "string"
@@ -1476,6 +1541,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "availableCategories",
+                "bettingEndsAt",
                 "players",
                 "playersAnswers",
                 "question",
@@ -1487,6 +1553,9 @@ const docTemplate = `{
                     "additionalProperties": {
                         "type": "boolean"
                     }
+                },
+                "bettingEndsAt": {
+                    "type": "string"
                 },
                 "players": {
                     "type": "array",
@@ -1514,6 +1583,7 @@ const docTemplate = `{
                 "avatar",
                 "id",
                 "isConnected",
+                "isGuest",
                 "name"
             ],
             "properties": {
@@ -1524,6 +1594,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "isConnected": {
+                    "type": "boolean"
+                },
+                "isGuest": {
                     "type": "boolean"
                 },
                 "name": {
@@ -1602,6 +1675,7 @@ const docTemplate = `{
                 "betAmount",
                 "id",
                 "isConnected",
+                "isGuest",
                 "name",
                 "score"
             ],
@@ -1616,6 +1690,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "isConnected": {
+                    "type": "boolean"
+                },
+                "isGuest": {
                     "type": "boolean"
                 },
                 "name": {
@@ -1700,6 +1777,7 @@ const docTemplate = `{
                 "currentRoundName",
                 "currentRoundQuestions",
                 "finalRoundState",
+                "finishedAt",
                 "host",
                 "id",
                 "name",
@@ -1738,10 +1816,16 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "currentRoundQuestions": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentRoundQuestions"
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions"
+                    }
                 },
                 "finalRoundState": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState"
+                },
+                "finishedAt": {
+                    "type": "string"
                 },
                 "host": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host"
@@ -1810,7 +1894,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "currentRoundQuestions": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentRoundQuestions"
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions"
+                    }
                 },
                 "finalRoundState": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState"
@@ -1974,7 +2061,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "currentRoundQuestions": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentRoundQuestions"
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions"
+                    }
                 },
                 "finalRoundState": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundState"
@@ -2059,6 +2149,7 @@ const docTemplate = `{
             "required": [
                 "avatar",
                 "id",
+                "isGuest",
                 "name"
             ],
             "properties": {
@@ -2067,6 +2158,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "isGuest": {
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "string"
@@ -2423,6 +2517,9 @@ const docTemplate = `{
                     "additionalProperties": {
                         "type": "string"
                     }
+                },
+                "getUrl": {
+                    "type": "string"
                 },
                 "url": {
                     "type": "string"

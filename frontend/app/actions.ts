@@ -57,6 +57,16 @@ export const login = async (body: {
   return await resp?.json();
 };
 
+export const loginAsGuest = async (name: string): Promise<ActionResult<string>> => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/guest`);
+  const resp = await fetch(url, {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+  passCookies(resp);
+  return await resp?.json();
+};
+
 export const register = async (body: {
   login: string;
   password: string;

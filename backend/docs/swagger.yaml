@@ -60,6 +60,18 @@ definitions:
     - name
     - questions
     type: object
+  github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions:
+    properties:
+      category:
+        type: string
+      questions:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.BoardQuestion'
+        type: array
+    required:
+    - category
+    - questions
+    type: object
   github_com_holdennekt_sgame_backend_internal_domain.CurrentQuestion:
     properties:
       answers:
@@ -72,10 +84,14 @@ definitions:
         type: string
       attachmentRevealLastProgress:
         type: number
+      bettingEndsAt:
+        type: string
       comment:
         type: string
       index:
         type: integer
+      passingEndsAt:
+        type: string
       text:
         type: string
       textRevealLastProgress:
@@ -95,8 +111,10 @@ definitions:
     - attachment
     - attachmentRevealEndsAt
     - attachmentRevealLastProgress
+    - bettingEndsAt
     - comment
     - index
+    - passingEndsAt
     - text
     - textRevealLastProgress
     - timerEndsAt
@@ -105,18 +123,14 @@ definitions:
     - type
     - value
     type: object
-  github_com_holdennekt_sgame_backend_internal_domain.CurrentRoundQuestions:
-    additionalProperties:
-      items:
-        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.BoardQuestion'
-      type: array
-    type: object
   github_com_holdennekt_sgame_backend_internal_domain.DbUser:
     properties:
       avatar:
         type: string
       id:
         type: string
+      isGuest:
+        type: boolean
       login:
         type: string
       name:
@@ -126,6 +140,7 @@ definitions:
     required:
     - avatar
     - id
+    - isGuest
     - login
     - name
     - password
@@ -183,6 +198,8 @@ definitions:
         additionalProperties:
           type: boolean
         type: object
+      bettingEndsAt:
+        type: string
       players:
         items:
           type: string
@@ -197,6 +214,7 @@ definitions:
         type: string
     required:
     - availableCategories
+    - bettingEndsAt
     - players
     - playersAnswers
     - question
@@ -210,8 +228,12 @@ definitions:
         type: string
       attachmentRevealLastProgress:
         type: number
+      bettingEndsAt:
+        type: string
       index:
         type: integer
+      passingEndsAt:
+        type: string
       text:
         type: string
       textRevealLastProgress:
@@ -230,7 +252,9 @@ definitions:
     - attachment
     - attachmentRevealEndsAt
     - attachmentRevealLastProgress
+    - bettingEndsAt
     - index
+    - passingEndsAt
     - text
     - textRevealLastProgress
     - timerEndsAt
@@ -255,6 +279,8 @@ definitions:
         additionalProperties:
           type: boolean
         type: object
+      bettingEndsAt:
+        type: string
       players:
         items:
           type: string
@@ -269,6 +295,7 @@ definitions:
         type: string
     required:
     - availableCategories
+    - bettingEndsAt
     - players
     - playersAnswers
     - question
@@ -282,12 +309,15 @@ definitions:
         type: string
       isConnected:
         type: boolean
+      isGuest:
+        type: boolean
       name:
         type: string
     required:
     - avatar
     - id
     - isConnected
+    - isGuest
     - name
     type: object
   github_com_holdennekt_sgame_backend_internal_domain.Pack:
@@ -344,6 +374,8 @@ definitions:
         type: string
       isConnected:
         type: boolean
+      isGuest:
+        type: boolean
       name:
         type: string
       score:
@@ -353,6 +385,7 @@ definitions:
     - betAmount
     - id
     - isConnected
+    - isGuest
     - name
     - score
     type: object
@@ -422,9 +455,13 @@ definitions:
       currentRoundName:
         type: string
       currentRoundQuestions:
-        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentRoundQuestions'
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions'
+        type: array
       finalRoundState:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState'
+      finishedAt:
+        type: string
       host:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host'
       id:
@@ -453,6 +490,7 @@ definitions:
     - currentRoundName
     - currentRoundQuestions
     - finalRoundState
+    - finishedAt
     - host
     - id
     - name
@@ -477,7 +515,9 @@ definitions:
       currentRoundName:
         type: string
       currentRoundQuestions:
-        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentRoundQuestions'
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions'
+        type: array
       finalRoundState:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState'
       host:
@@ -596,7 +636,9 @@ definitions:
       currentRoundName:
         type: string
       currentRoundQuestions:
-        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentRoundQuestions'
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions'
+        type: array
       finalRoundState:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundState'
       host:
@@ -677,11 +719,14 @@ definitions:
         type: string
       id:
         type: string
+      isGuest:
+        type: boolean
       name:
         type: string
     required:
     - avatar
     - id
+    - isGuest
     - name
     type: object
   github_com_holdennekt_sgame_backend_internal_dto.AuthResponse:
@@ -928,6 +973,8 @@ definitions:
         additionalProperties:
           type: string
         type: object
+      getUrl:
+        type: string
       url:
         type: string
     required:
@@ -1042,6 +1089,17 @@ paths:
         name: limit
         required: true
         type: integer
+      - in: query
+        name: orderBy
+        required: true
+        type: string
+      - enum:
+        - ASC
+        - DESC
+        in: query
+        name: orderDir
+        required: true
+        type: string
       - in: query
         minimum: 1
         name: page
@@ -1228,6 +1286,17 @@ paths:
         name: limit
         required: true
         type: integer
+      - in: query
+        name: orderBy
+        required: true
+        type: string
+      - enum:
+        - ASC
+        - DESC
+        in: query
+        name: orderDir
+        required: true
+        type: string
       - in: query
         minimum: 1
         name: page

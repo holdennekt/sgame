@@ -10,7 +10,7 @@ import (
 )
 
 const SESSION_ID_COOKIE_NAME = "sessionId"
-const USER_ID_CONTEXT_KEY = "userId"
+const USER_CONTEXT_KEY = "user"
 
 type AuthController struct {
 	authService *service.AuthService
@@ -24,6 +24,7 @@ func (c *AuthController) RegisterRoutes(r *gin.RouterGroup) {
 	r.POST("/login", c.login)
 	r.POST("/register", c.register)
 	r.DELETE("/logout", c.logout)
+	r.POST("/guest", c.guest)
 }
 
 // @Summary      User Login
@@ -94,6 +95,23 @@ func (c *AuthController) logout(ctx *gin.Context) {
 	ctx.Status(http.StatusNoContent)
 }
 
+func (c *AuthController) guest(ctx *gin.Context) {
+	var req dto.GuestLoginRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	sessionId, userId, err := c.authService.GuestLogin(ctx, req.Name)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.SetCookie(SESSION_ID_COOKIE_NAME, sessionId, 0, "", "", false, true)
+	ctx.JSON(http.StatusOK, dto.AuthResponse{UserId: userId})
+}
+
 func (c *AuthController) Authorize(ctx *gin.Context) {
 	sessionId, err := ctx.Cookie(SESSION_ID_COOKIE_NAME)
 	if err != nil {
@@ -104,7 +122,7 @@ func (c *AuthController) Authorize(ctx *gin.Context) {
 		return
 	}
 
-	userId, err := c.authService.GetUserID(ctx, sessionId)
+	user, err := c.authService.GetUser(ctx, sessionId)
 	if err != nil {
 		switch err := err.(type) {
 		case custerr.NotFoundErr:
@@ -122,5 +140,5 @@ func (c *AuthController) Authorize(ctx *gin.Context) {
 		}
 	}
 
-	ctx.Set(USER_ID_CONTEXT_KEY, userId)
+	ctx.Set(USER_CONTEXT_KEY, *user)
 }
