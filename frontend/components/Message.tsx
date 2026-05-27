@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Link from "next/link";
 import { User } from "../middleware";
 
 export type ChatMessage = {
@@ -27,45 +27,51 @@ export default function Message({
   isPrevUserSame: boolean;
   isNextUserSame: boolean;
 }) {
-  const emptyAvatar = <div className="h-8 aspect-square"></div>;
-  const imgAvatar = (
-    <Image
-      className="h-8 aspect-square rounded-full"
-      src={message.from.avatar!}
+  const initials = message.from.name
+    .split(" ")
+    .map(word => word[0].toUpperCase())
+    .join("");
+
+  const avatar = message.from.avatar ? (
+    <img
+      className="h-7 w-7 aspect-square rounded-full object-cover shrink-0"
+      src={message.from.avatar}
       alt="avatar"
     />
-  );
-  const divAvatar = (
-    <div className="flex justify-center items-center h-8 aspect-square rounded-full bg-indigo-500">
-      {message.from.name
-        .split(" ")
-        .map(word => word[0].toUpperCase())
-        .join("")}
+  ) : (
+    <div className="flex justify-center items-center h-7 w-7 rounded-full bg-primary text-on-primary text-xs font-bold shrink-0">
+      {initials}
     </div>
   );
 
+  const spacer = <div className="h-7 w-7 shrink-0" />;
+
   return (
     <div
-      className={
-        `flex items-center gap-2 ${isPrevUserSame ? "-mt-1" : ""}` +
-        (isOwn ? " flex-row-reverse" : "")
-      }
+      className={`flex items-end gap-2 ${isPrevUserSame ? "mt-0.5" : "mt-2"}${
+        isOwn ? " flex-row-reverse" : ""
+      }`}
     >
-      {!isOwn &&
-        (isNextUserSame ?
-          emptyAvatar :
-          message.from.avatar ?
-            imgAvatar :
-            divAvatar)}
-      <div
-        className={`relative text-sm break-words rounded-xl py-2 px-4 ${
-          isOwn ? "secondary" : "background"
-        }`}
-      >
-        {!(isOwn || isPrevUserSame) && (
-          <p className="username">{message.from.name}</p>
-        )}
-        <p>{message.text}</p>
+      {!isOwn && (isNextUserSame ? spacer : avatar)}
+      <div className={`flex flex-col max-w-[72%]${isOwn ? " items-end" : " items-start"}`}>
+        <div
+          className={`text-sm break-words px-3 py-1.5 ${
+            isOwn
+              ? "bg-primary text-on-primary rounded-t-2xl rounded-bl-2xl rounded-br-md"
+              : "bg-surface-raised text-on-surface rounded-t-2xl rounded-br-2xl rounded-bl-md"
+          }`}
+        >
+          {!isOwn && !isPrevUserSame && (
+            <Link
+              href={`/user/${message.from.id}`}
+              target="_blank"
+              className="block text-xs font-semibold text-primary mb-0.5 hover:underline"
+            >
+              {message.from.name}
+            </Link>
+          )}
+          {message.text}
+        </div>
       </div>
     </div>
   );
