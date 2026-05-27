@@ -89,3 +89,7 @@ func (s *AuthService) Register(ctx context.Context, cur dto.CreateUserRequest) (
 func (s *AuthService) GetUserID(ctx context.Context, sessionId string) (string, error) {
 	return s.sessionCache.Get(ctx, sessionId)
 }
+
+func (s *AuthService) Logout(ctx context.Context, sessionId string) error {
+	return s.sessionCache.Delete(ctx, sessionId)
+}

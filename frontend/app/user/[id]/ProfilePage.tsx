@@ -3,8 +3,11 @@
 import { User } from "@/middleware";
 import { PackPreview } from "@/types/pack";
 import { useState } from "react";
-import { ToastContainer } from "react-toastify";
-import { FiEdit2 } from "react-icons/fi";
+import { toast, ToastContainer } from "react-toastify";
+import { FiEdit2, FiLogOut, FiTrash2 } from "react-icons/fi";
+import { useRouter } from "next/navigation";
+import { logout, deleteUser } from "@/app/actions";
+import { isError } from "@/middleware";
 import { EditForm } from "./EditForm";
 import PacksTab from "./PacksTab";
 import HistoryTab from "./HistoryTab";
@@ -19,8 +22,25 @@ export default function ProfilePage({
   user: User;
   isOwn: boolean;
 }) {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<Tab>("packs");
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!confirm("Delete your account? This cannot be undone.")) return;
+    await logout();
+    const result = await deleteUser(user.id);
+    if (isError(result)) {
+      toast.error(result.error, { containerId: "profile" });
+      return;
+    }
+    router.push("/login");
+  };
   const [newRoomModal, setNewRoomModal] = useState<{
     isOpen: boolean;
     pack?: PackPreview;
@@ -59,13 +79,31 @@ export default function ProfilePage({
           </div>
 
           {isOwn && (
-            <button
-              onClick={() => setEditing(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150 shrink-0"
-            >
-              <FiEdit2 size={13} />
-              Edit
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setEditing(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
+              >
+                <FiEdit2 size={13} />
+                Edit
+              </button>
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
+                title="Log out"
+              >
+                <FiLogOut size={13} />
+                Log out
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-border text-danger hover:bg-danger/10 transition-colors duration-150"
+                title="Delete account"
+              >
+                <FiTrash2 size={13} />
+                Delete account
+              </button>
+            </div>
           )}
         </div>
       )}

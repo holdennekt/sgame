@@ -5,7 +5,9 @@ import { useDebouncedCallback } from "use-debounce";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ToastContainer } from "react-toastify";
-import { getPacks } from "@/app/actions";
+import { getPacks, deletePack } from "@/app/actions";
+import { isError } from "@/middleware";
+import { toast } from "react-toastify";
 import NewRoomModal from "@/components/NewRoomModal";
 import { useRouter } from "next/navigation";
 import { useRequiredUser } from "@/contexts/UserContext";
@@ -13,9 +15,10 @@ import Link from "next/link";
 import { SearchResponse } from "@/types/search";
 import { HiddenPack, PackPreview } from "@/types/pack";
 import { FaLock, FaGlobe } from "react-icons/fa6";
+import { FiTrash2 } from "react-icons/fi";
 import { IoIosSearch, IoIosAdd } from "react-icons/io";
 
-function PackCard({ pack, onPlay }: { pack: HiddenPack; onPlay: () => void }) {
+function PackCard({ pack, onPlay, onDelete }: { pack: HiddenPack; onPlay: () => void; onDelete: () => Promise<void> }) {
   const user = useRequiredUser();
   const isOwn = user.id === pack.createdBy.id;
 
@@ -86,12 +89,21 @@ function PackCard({ pack, onPlay }: { pack: HiddenPack; onPlay: () => void }) {
           Play
         </button>
         {isOwn && (
-          <Link
-            className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
-            href={`/packs/${pack.id}?edit=true`}
-          >
-            Edit
-          </Link>
+          <div className="flex items-center gap-1.5">
+            <Link
+              className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
+              href={`/packs/${pack.id}?edit=true`}
+            >
+              Edit
+            </Link>
+            <button
+              onClick={onDelete}
+              className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border text-on-surface-muted hover:text-danger hover:border-danger transition-colors duration-150"
+              title="Delete pack"
+            >
+              <FiTrash2 size={13} />
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -107,10 +119,14 @@ export default function PacksList() {
   });
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending } =
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending, refetch } =
     useInfiniteQuery<SearchResponse<HiddenPack>>({
       queryKey: ["packs", debouncedFilter],
-      queryFn: ({ pageParam }) => getPacks(debouncedFilter, pageParam as number),
+      queryFn: async ({ pageParam }) => {
+        const result = await getPacks(debouncedFilter, pageParam as number);
+        if (isError(result)) throw new Error(result.error);
+        return result;
+      },
       initialPageParam: 1,
       getNextPageParam: (lastPage) => lastPage.hasNext ? lastPage.page + 1 : undefined,
     });
@@ -120,6 +136,13 @@ export default function PacksList() {
   }, 400);
 
   const packs = data?.pages.flatMap((p) => p.items) ?? [];
+
+  const handleDelete = async (packId: string) => {
+    if (!confirm("Delete this pack?")) return;
+    const result = await deletePack(packId);
+    if (isError(result)) { toast.error(result.error, { containerId: "packs" }); return; }
+    refetch();
+  };
 
   const virtualizer = useVirtualizer({
     count: packs.length,
@@ -195,6 +218,7 @@ export default function PacksList() {
                         isOpen: true,
                         pack: { id: packs[virtualItem.index].id, name: packs[virtualItem.index].name },
                       })}
+                      onDelete={() => handleDelete(packs[virtualItem.index].id)}
                     />
                   </div>
                 ))}

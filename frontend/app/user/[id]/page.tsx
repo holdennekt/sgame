@@ -1,6 +1,6 @@
 import { getUser } from "@/app/actions";
 import Navbar from "@/components/Navbar";
-import { USER_HEADER_NAME, User } from "@/middleware";
+import { USER_HEADER_NAME, User, isError } from "@/middleware";
 import { headers } from "next/headers";
 import ProfilePage from "./ProfilePage";
 
@@ -8,6 +8,7 @@ export default async function Page({ params }: { params: { id: string } }) {
   const user: User = JSON.parse(headers().get(USER_HEADER_NAME)!);
   const isOwn = user.id === params.id;
   const profileUser = await getUser(params.id);
+  if (isError(profileUser)) throw new Error(profileUser.error);
 
   return (
     <>

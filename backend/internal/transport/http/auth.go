@@ -23,6 +23,7 @@ func NewAuthController(authService *service.AuthService) *AuthController {
 func (c *AuthController) RegisterRoutes(r *gin.RouterGroup) {
 	r.POST("/login", c.login)
 	r.POST("/register", c.register)
+	r.DELETE("/logout", c.logout)
 }
 
 // @Summary      User Login
@@ -80,6 +81,17 @@ func (c *AuthController) register(ctx *gin.Context) {
 
 	ctx.SetCookie(SESSION_ID_COOKIE_NAME, sessionId, 0, "", "", false, true)
 	ctx.JSON(http.StatusOK, dto.AuthResponse{UserId: userId})
+}
+
+func (c *AuthController) logout(ctx *gin.Context) {
+	sessionId, err := ctx.Cookie(SESSION_ID_COOKIE_NAME)
+	if err != nil {
+		ctx.Status(http.StatusNoContent)
+		return
+	}
+	c.authService.Logout(ctx, sessionId)
+	ctx.SetCookie(SESSION_ID_COOKIE_NAME, "", -1, "", "", false, true)
+	ctx.Status(http.StatusNoContent)
 }
 
 func (c *AuthController) Authorize(ctx *gin.Context) {

@@ -6,6 +6,7 @@ import { FormEventHandler } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { login } from "../actions";
+import { isError } from "@/middleware";
 
 const inputClass = "h-9 w-full px-2.5 rounded-lg border border-border bg-background text-on-background text-sm outline-none placeholder:text-on-surface-muted focus-ring transition-[border-color] duration-150";
 const btnPrimary = "inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150";
@@ -17,17 +18,15 @@ export default function Page() {
   const onSubmit: FormEventHandler<HTMLFormElement> = async e => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    try {
-      await login({
-        login: formData.get("login") as string,
-        password: formData.get("password") as string,
-      });
-      router.push("/");
-    } catch (error) {
-      if (error instanceof Error) {
-        toast.error(error.message, { containerId: "login" });
-      }
+    const result = await login({
+      login: formData.get("login") as string,
+      password: formData.get("password") as string,
+    });
+    if (isError(result)) {
+      toast.error(result.error, { containerId: "login" });
+      return;
     }
+    router.push("/");
   };
 
   return (

@@ -2,6 +2,7 @@ import { getPack, updatePack } from "@/app/actions";
 import Navbar from "@/components/Navbar";
 import PackEditor from "../PackEditor";
 import { CreatePackRequest } from "@/types/pack";
+import { isError } from "@/middleware";
 
 export default async function Page({
   params,
@@ -11,11 +12,7 @@ export default async function Page({
   searchParams: { [key: string]: string | undefined };
 }) {
   const pack = await getPack(params.id);
-
-  const handleUpdatePack = async (pack: CreatePackRequest) => {
-    "use server";
-    return await updatePack(params.id, pack);
-  };
+  if (isError(pack)) throw new Error(pack.error);
 
   return (
     <>
@@ -23,7 +20,7 @@ export default async function Page({
       <main className="flex-1 min-w-0 min-h-0 p-2">
         <div className="flex flex-col h-full rounded-md bg-surface text-on-surface p-4 border border-border">
           <PackEditor
-            savePack={handleUpdatePack}
+            savePack={updatePack.bind(null, params.id)}
             initialPack={pack}
             readOnly={!searchParams.edit}
           />

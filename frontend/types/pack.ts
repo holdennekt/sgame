@@ -325,10 +325,9 @@ function convertFinalRoundCategoryToFormData(
 
 export async function convertPackFormDataToRequest(
   formData: PackFormData,
-  signURL: (params: { filename: string; public: boolean }) => Promise<{
-    url: string;
-    formData: Record<string, string>;
-  }>,
+  signURL: (params: { filename: string; public: boolean }) => Promise<
+    { url: string; formData: Record<string, string>; getUrl?: string } | { error: string }
+  >,
 ): Promise<CreatePackRequest> {
   const isPublic = formData.type === "public";
 
@@ -380,19 +379,20 @@ export async function convertPackFormDataToRequest(
 async function convertAttachment(
   attachment: AttachmentFormData,
   isPublic: boolean,
-  signURL: (params: { filename: string; public: boolean }) => Promise<{
-    url: string;
-    formData: Record<string, string>;
-  }>,
+  signURL: (params: { filename: string; public: boolean }) => Promise<
+    { url: string; formData: Record<string, string>; getUrl?: string } | { error: string }
+  >,
 ): Promise<CreateAttachmentRequest | null> {
   switch (attachment.type) {
     case "file": {
       if (!attachment.file) return null;
 
-      const { url, formData: reqFormData } = await signURL({
+      const signResult = await signURL({
         filename: attachment.file.name,
         public: isPublic,
       });
+      if ("error" in signResult) throw new Error(signResult.error);
+      const { url, formData: reqFormData } = signResult;
 
       const formData = new FormData();
       Object.entries(reqFormData).forEach(([key, value]) => {

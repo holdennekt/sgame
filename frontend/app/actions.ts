@@ -11,9 +11,16 @@ import {
   SignURLRequest,
   SignURLResponse,
 } from "@/types/pack";
-import { CreateRoomRequest, GameHistoryEntry, Room, RoomLobby } from "@/types/room";
+import {
+  CreateRoomRequest,
+  GameHistoryEntry,
+  Room,
+  RoomLobby,
+} from "@/types/room";
 import { SearchResponse } from "@/types/search";
 import { User } from "@/middleware";
+
+export type ActionResult<T> = T | { error: string };
 
 const PAGE_QUERY_PARAM = "page";
 const PASSWORD_QUERY_PARAM = "password";
@@ -24,7 +31,7 @@ const PUBLIC_QUERY_PARAM = "public";
 const passCookies = (resp: Response) => {
   const setCookie = resp.headers.get("set-cookie");
   if (setCookie) {
-    parse(splitCookiesString(setCookie)).forEach(cookie => {
+    parse(splitCookiesString(setCookie)).forEach((cookie) => {
       cookies().set(cookie.name, cookie.value, {
         maxAge: cookie.maxAge,
         path: cookie.path,
@@ -36,7 +43,10 @@ const passCookies = (resp: Response) => {
   }
 };
 
-export const login = async (body: { login: string; password: string }) => {
+export const login = async (body: {
+  login: string;
+  password: string;
+}): Promise<ActionResult<string>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/login`);
   const resp = await fetch(url, {
     method: "POST",
@@ -44,13 +54,13 @@ export const login = async (body: { login: string; password: string }) => {
     body: JSON.stringify(body),
   });
   passCookies(resp);
-
-  const obj: { id: string } | ErrorBody = await resp?.json();
-  if (isError(obj)) throw new Error(obj.error);
-  return obj.id;
+  return await resp?.json();
 };
 
-export const register = async (body: { login: string; password: string }) => {
+export const register = async (body: {
+  login: string;
+  password: string;
+}): Promise<ActionResult<string>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/register`);
   const resp = await fetch(url, {
     method: "POST",
@@ -58,36 +68,34 @@ export const register = async (body: { login: string; password: string }) => {
     body: JSON.stringify(body),
   });
   passCookies(resp);
-
-  const obj: { id: string } | ErrorBody = await resp?.json();
-  if (isError(obj)) throw new Error(obj.error);
-  return obj.id;
+  return await resp?.json();
 };
 
-export const getRooms = async () => {
+export const getRooms = async (): Promise<ActionResult<RoomLobby[]>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/rooms`);
   const resp = await fetch(url, {
     cache: "no-store",
     headers: { cookie: cookies().toString() },
   });
-  const rooms: RoomLobby[] | ErrorBody = await resp?.json();
-  if (isError(rooms)) throw new Error(rooms.error);
-  return rooms;
+  return await resp?.json();
 };
 
-export const createRoom = async (body: CreateRoomRequest) => {
+export const createRoom = async (
+  body: CreateRoomRequest,
+): Promise<ActionResult<{ id: string }>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/rooms`);
   const resp = await fetch(url, {
     method: "POST",
     body: JSON.stringify(body),
     headers: { cookie: cookies().toString() },
   });
-  const obj: { id: string } | ErrorBody = await resp?.json();
-  if (isError(obj)) throw new Error(obj.error);
-  return obj.id;
+  return await resp?.json();
 };
 
-export const joinRoom = async (id: string, password: string | undefined) => {
+export const joinRoom = async (
+  id: string,
+  password: string | undefined,
+): Promise<ActionResult<Room>> => {
   const url = new URL(
     `http://${process.env.BACKEND_HOST}/api/rooms/${id}/join`,
   );
@@ -97,12 +105,10 @@ export const joinRoom = async (id: string, password: string | undefined) => {
     cache: "no-store",
     headers: { cookie: cookies().toString() },
   }).catch(console.log);
-  const room: Room | ErrorBody = await resp?.json();
-  if (isError(room)) throw new Error(room.error);
-  return room;
+  return await resp?.json();
 };
 
-export const leaveRoom = async (id: string) => {
+export const leaveRoom = async (id: string): Promise<ActionResult<void>> => {
   const url = new URL(
     `http://${process.env.BACKEND_HOST}/api/rooms/${id}/leave`,
   );
@@ -110,13 +116,13 @@ export const leaveRoom = async (id: string) => {
     method: "PATCH",
     headers: { cookie: cookies().toString() },
   });
-  if (!resp.ok) {
-    const obj = await resp?.json();
-    if (isError(obj)) throw new Error(obj.error);
-  }
+  if (!resp.ok) return await resp?.json();
 };
 
-export const getPacks = async (packFilter: string, page?: number) => {
+export const getPacks = async (
+  packFilter: string,
+  page?: number,
+): Promise<ActionResult<SearchResponse<HiddenPack>>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs`);
   url.searchParams.set(SEARCH_QUERY_PARAM, packFilter);
   if (page) url.searchParams.set(PAGE_QUERY_PARAM, page.toString());
@@ -124,125 +130,140 @@ export const getPacks = async (packFilter: string, page?: number) => {
     cache: "no-store",
     headers: { cookie: cookies().toString() },
   });
-  const packs: SearchResponse<HiddenPack> | ErrorBody = await resp?.json();
-  if (isError(packs)) throw new Error(packs.error);
-  return packs;
+  return await resp?.json();
 };
 
-export const getPacksCreatedBy = async (createdBy: string, packFilter: string, page?: number) => {
-  const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/by/${createdBy}`);
+export const getPacksCreatedBy = async (
+  createdBy: string,
+  packFilter: string,
+  page?: number,
+): Promise<ActionResult<SearchResponse<HiddenPack>>> => {
+  const url = new URL(
+    `http://${process.env.BACKEND_HOST}/api/packs/by/${createdBy}`,
+  );
   url.searchParams.set(SEARCH_QUERY_PARAM, packFilter);
   if (page) url.searchParams.set(PAGE_QUERY_PARAM, page.toString());
   const resp = await fetch(url, {
     cache: "no-store",
     headers: { cookie: cookies().toString() },
   });
-  const packs: SearchResponse<HiddenPack> | ErrorBody = await resp?.json();
-  if (isError(packs)) throw new Error(packs.error);
-  return packs;
+  return await resp?.json();
 };
 
-export const getPacksPreviews = async (packFilter: string) => {
+export const getPacksPreviews = async (
+  packFilter: string,
+): Promise<ActionResult<SearchResponse<PackPreview>>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/previews`);
   url.searchParams.set(SEARCH_QUERY_PARAM, packFilter);
   const resp = await fetch(url, {
     cache: "no-store",
     headers: { cookie: cookies().toString() },
   });
-  const packs: PackPreview[] | ErrorBody = await resp?.json();
-  if (isError(packs)) throw new Error(packs.error);
-  return packs;
+  return await resp?.json();
 };
 
-export const getPack = async (id: string) => {
+export const getPack = async (id: string): Promise<ActionResult<Pack>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/${id}`);
   const resp = await fetch(url, {
     cache: "no-store",
     headers: { cookie: cookies().toString() },
   });
-  const pack: Pack | ErrorBody = await resp?.json();
-  if (isError(pack)) throw new Error(pack.error);
-  return pack;
+  return await resp?.json();
 };
 
-export const createPack = async (pack: CreatePackRequest) => {
+export const createPack = async (
+  pack: CreatePackRequest,
+): Promise<ActionResult<{ id: string }>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs`);
   const resp = await fetch(url, {
     method: "POST",
     headers: { cookie: cookies().toString() },
     body: JSON.stringify(pack),
   });
-  const obj: { id: string } | ErrorBody = await resp?.json();
-  if (isError(obj)) throw new Error(obj.error);
-  return obj;
+  return await resp?.json();
 };
 
-export const updatePack = async (id: string, pack: CreatePackRequest) => {
+export const updatePack = async (
+  id: string,
+  pack: CreatePackRequest,
+): Promise<ActionResult<{ id: string }>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/${id}`);
   const resp = await fetch(url, {
     method: "PUT",
     headers: { cookie: cookies().toString() },
     body: JSON.stringify({ ...pack, id }),
   });
-  if (!resp.ok) {
-    const obj: Record<string, never> | ErrorBody = await resp?.json();
-    if (isError(obj)) throw new Error(obj.error);
-  }
+  if (!resp.ok) return await resp?.json();
   return { id };
 };
 
-export const deletePack = async (id: string) => {
+export const deletePack = async (
+  id: string,
+): Promise<ActionResult<{ id: string }>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/${id}`);
   const resp = await fetch(url, {
     method: "DELETE",
     headers: { cookie: cookies().toString() },
   });
-  if (!resp.ok) {
-    const obj: Record<string, never> | ErrorBody = await resp?.json();
-    if (isError(obj)) throw new Error(obj.error);
-  }
+  if (!resp.ok) return await resp?.json();
   return { id };
 };
 
-export const getGameHistory = async (page?: number) => {
+export const getGameHistory = async (
+  page?: number,
+): Promise<ActionResult<SearchResponse<GameHistoryEntry>>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/rooms/history`);
   if (page) url.searchParams.set(PAGE_QUERY_PARAM, page.toString());
   const resp = await fetch(url, {
     cache: "no-store",
     headers: { cookie: cookies().toString() },
   });
-  const result: SearchResponse<GameHistoryEntry> | ErrorBody = await resp?.json();
-  if (isError(result)) throw new Error(result.error);
-  return result;
+  return await resp?.json();
 };
 
-export const getUser = async (id: string) => {
+export const getUser = async (id: string): Promise<ActionResult<User>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/users/${id}`);
   const resp = await fetch(url, {
     cache: "no-store",
     headers: { cookie: cookies().toString() },
   });
-  const user: User | ErrorBody = await resp?.json();
-  if (isError(user)) throw new Error(user.error);
-  return user;
+  return await resp?.json();
 };
 
 export const updateUser = async (
   id: string,
   body: { name: string; avatar: string; password?: string },
-) => {
+): Promise<ActionResult<User>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/users/${id}`);
   const resp = await fetch(url, {
     method: "PUT",
     headers: { cookie: cookies().toString() },
     body: JSON.stringify(body),
   });
-  const user: User | ErrorBody = await resp?.json();
-  if (isError(user)) throw new Error(user.error);
-  return user;
+  return await resp?.json();
 };
 
-export const signURL = async (dto: SignURLRequest) => {
+export const logout = async (): Promise<void> => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/logout`);
+  await fetch(url, {
+    method: "DELETE",
+    headers: { cookie: cookies().toString() },
+  });
+  cookies().delete("sessionId");
+};
+
+export const deleteUser = async (id: string): Promise<ActionResult<void>> => {
+  const url = new URL(`http://${process.env.BACKEND_HOST}/api/users/${id}`);
+  const resp = await fetch(url, {
+    method: "DELETE",
+    headers: { cookie: cookies().toString() },
+  });
+  if (!resp.ok) return await resp?.json();
+};
+
+export const signURL = async (
+  dto: SignURLRequest,
+): Promise<ActionResult<SignURLResponse>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/signURL`);
   url.searchParams.set(FILENAME_QUERY_PARAM, dto.filename);
   url.searchParams.set(PUBLIC_QUERY_PARAM, dto.public.toString());
@@ -250,7 +271,5 @@ export const signURL = async (dto: SignURLRequest) => {
     method: "GET",
     headers: { cookie: cookies().toString() },
   });
-  const obj: SignURLResponse | ErrorBody = await resp?.json();
-  if (isError(obj)) throw new Error(obj.error);
-  return obj;
+  return await resp?.json();
 };

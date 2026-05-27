@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useDebouncedCallback } from "use-debounce";
 import { IoIosSearch, IoIosAdd } from "react-icons/io";
-import { getPacksCreatedBy } from "@/app/actions";
+import { getPacksCreatedBy, deletePack } from "@/app/actions";
+import { isError } from "@/middleware";
+import { toast } from "react-toastify";
 import { HiddenPack, PackPreview } from "@/types/pack";
 import { SearchResponse } from "@/types/search";
 import { PackCard } from "./PackCard";
@@ -24,26 +26,43 @@ export default function PacksTab({
   const [debouncedFilter, setDebouncedFilter] = useState("");
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending } =
-    useInfiniteQuery<SearchResponse<HiddenPack>>({
-      queryKey: ["packs", userId, debouncedFilter],
-      queryFn: ({ pageParam }) =>
-        getPacksCreatedBy(userId, debouncedFilter, pageParam as number),
-      initialPageParam: 1,
-      getNextPageParam: (lastPage) =>
-        lastPage.hasNext ? lastPage.page + 1 : undefined,
-    });
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isPending,
+    refetch,
+  } = useInfiniteQuery<SearchResponse<HiddenPack>>({
+    queryKey: ["packs", userId, debouncedFilter],
+    queryFn: async ({ pageParam }) => {
+      const result = await getPacksCreatedBy(
+        userId,
+        debouncedFilter,
+        pageParam as number,
+      );
+      if (isError(result)) throw new Error(result.error);
+      return result;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasNext ? lastPage.page + 1 : undefined,
+  });
 
   const debounceFilter = useDebouncedCallback((value: string) => {
     setDebouncedFilter(value);
   }, 400);
 
   const onIntersect = useRef<() => void>(() => {});
-  onIntersect.current = () => { if (hasNextPage) fetchNextPage(); };
+  onIntersect.current = () => {
+    if (hasNextPage) fetchNextPage();
+  };
 
   useEffect(() => {
     const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) onIntersect.current(); },
+      ([entry]) => {
+        if (entry.isIntersecting) onIntersect.current();
+      },
       { rootMargin: "100px" },
     );
     if (sentinelRef.current) obs.observe(sentinelRef.current);
@@ -51,6 +70,16 @@ export default function PacksTab({
   }, []);
 
   const packs = data?.pages.flatMap((p) => p.items) ?? [];
+
+  const handleDelete = async (packId: string) => {
+    if (!confirm("Delete this pack?")) return;
+    const result = await deletePack(packId);
+    if (isError(result)) {
+      toast.error(result.error, { containerId: "profile" });
+      return;
+    }
+    refetch();
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -93,6 +122,7 @@ export default function PacksTab({
                 pack={pack}
                 isOwn={isOwn}
                 onPlay={() => onPlay({ id: pack.id, name: pack.name })}
+                onDelete={isOwn ? () => handleDelete(pack.id) : undefined}
               />
             ))}
             <div ref={sentinelRef} className="h-1" />

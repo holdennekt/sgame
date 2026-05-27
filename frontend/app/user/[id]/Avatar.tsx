@@ -2,6 +2,7 @@
 
 import { User } from "@/middleware";
 import { signURL } from "@/app/actions";
+import { isError } from "@/middleware";
 import { useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { FiUploadCloud, FiX, FiUser } from "react-icons/fi";
@@ -40,10 +41,9 @@ export function AvatarPicker({
   const handleFile = async (file: File) => {
     setUploading(true);
     try {
-      const { url, formData: fields, getUrl } = await signURL({
-        filename: file.name,
-        public: true,
-      });
+      const signResult = await signURL({ filename: file.name, public: true });
+      if (isError(signResult)) throw new Error(signResult.error);
+      const { url, formData: fields, getUrl } = signResult;
       const body = new FormData();
       Object.entries(fields).forEach(([k, v]) => body.append(k, v));
       body.append("file", file);

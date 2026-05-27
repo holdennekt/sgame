@@ -26,6 +26,7 @@ import {
   QuestionFormData,
 } from "@/types/pack";
 import { signURL } from "@/app/actions";
+import { isError } from "@/middleware";
 import { usePack } from "@/hooks/usePack";
 
 const inputCls =
@@ -42,7 +43,7 @@ export default function PackEditor({
   initialPack,
   readOnly = false,
 }: {
-  savePack: (pack: CreatePackRequest) => Promise<{ id: string }>;
+  savePack: (pack: CreatePackRequest) => Promise<{ id: string } | { error: string }>;
   initialPack: Omit<Pack, "id" | "createdBy">;
   readOnly?: boolean;
 }) {
@@ -110,10 +111,14 @@ export default function PackEditor({
   const onSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
     try {
-      const obj = await savePack(
+      const result = await savePack(
         await convertPackFormDataToRequest(pack, signURL),
       );
-      router.push(`/packs/${obj.id}`);
+      if (isError(result)) {
+        toast.error(result.error, { containerId: "editor" });
+        return;
+      }
+      router.push(`/packs/${result.id}`);
       toast.success("Pack successfully saved!", { containerId: "editor" });
     } catch (error) {
       if (error instanceof Error)

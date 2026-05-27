@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { FiCheck } from "react-icons/fi";
 import { updateUser } from "@/app/actions";
+import { isError } from "@/middleware";
 
 const inputCls =
   "h-9 w-full px-2.5 rounded-lg border border-border bg-background text-on-background text-sm outline-none placeholder:text-on-surface-muted focus-ring transition-[border-color] duration-150";
@@ -36,13 +37,14 @@ export function EditForm({ user, onDone }: { user: User; onDone: () => void }) {
         avatar: avatarUrl,
       };
       if (password) body.password = password;
-      await updateUser(user.id, body);
+      const result = await updateUser(user.id, body);
+      if (isError(result)) {
+        toast.error(result.error, { containerId: "profile" });
+        return;
+      }
       toast.success("Saved", { containerId: "profile" });
       router.refresh();
       onDone();
-    } catch (err) {
-      if (err instanceof Error)
-        toast.error(err.message, { containerId: "profile" });
     } finally {
       setSaving(false);
     }

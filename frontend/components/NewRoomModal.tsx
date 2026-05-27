@@ -6,6 +6,8 @@ import { useDebounce } from "use-debounce";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { createRoom, getPacksPreviews } from "@/app/actions";
+import { toast } from "react-toastify";
+import { isError } from "@/middleware";
 import { PackPreview, PrivacyType } from "@/types/pack";
 import { CreateRoomRequest } from "@/types/room";
 import { IoIosArrowDown } from "react-icons/io";
@@ -44,9 +46,13 @@ export default function NewRoomModal({
     400,
   );
 
-  const { data: packs = [] } = useQuery({
+  const { data: packs = [] } = useQuery<PackPreview[]>({
     queryKey: ["packPreviews", debouncedPackSearch],
-    queryFn: () => getPacksPreviews(debouncedPackSearch),
+    queryFn: async () => {
+      const result = await getPacksPreviews(debouncedPackSearch);
+      if (isError(result)) throw new Error(result.error);
+      return result.items;
+    },
     enabled: debouncedPackSearch.length > 0,
   });
 
@@ -73,10 +79,13 @@ export default function NewRoomModal({
     };
 
     close();
-    const id = await createRoom(params);
-
+    const result = await createRoom(params);
+    if (isError(result)) {
+      toast.error(result.error, { containerId: "lobby" });
+      return;
+    }
     const pwd = params.options.password;
-    const url = `/rooms/${id}${pwd ? `?password=${pwd}` : ""}`;
+    const url = `/rooms/${result.id}${pwd ? `?password=${pwd}` : ""}`;
     router.push(url);
   };
 

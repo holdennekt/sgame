@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getGameHistory } from "@/app/actions";
+import { isError } from "@/middleware";
 import { GameHistoryEntry } from "@/types/room";
 import { SearchResponse } from "@/types/search";
 import { HistoryCard } from "./HistoryCard";
@@ -13,7 +14,11 @@ export default function HistoryTab() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending } =
     useInfiniteQuery<SearchResponse<GameHistoryEntry>>({
       queryKey: ["gameHistory"],
-      queryFn: ({ pageParam }) => getGameHistory(pageParam as number),
+      queryFn: async ({ pageParam }) => {
+        const result = await getGameHistory(pageParam as number);
+        if (isError(result)) throw new Error(result.error);
+        return result;
+      },
       initialPageParam: 1,
       getNextPageParam: (lastPage) =>
         lastPage.hasNext ? lastPage.page + 1 : undefined,

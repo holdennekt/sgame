@@ -49,3 +49,10 @@ func (c *sessionCache) Set(ctx context.Context, key string, val string) error {
 	}
 	return nil
 }
+
+func (c *sessionCache) Delete(ctx context.Context, key string) error {
+	if err := c.client.HDel(ctx, SESSIONS_KEY, key).Err(); err != nil {
+		return custerr.NewInternalErr(err)
+	}
+	return nil
+}
