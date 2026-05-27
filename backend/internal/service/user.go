@@ -35,11 +35,23 @@ func (s *UserService) GetById(ctx context.Context, id string) (*domain.User, err
 }
 
 func (s *UserService) Update(ctx context.Context, user *domain.DbUser) error {
-	hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	existing, err := s.userRepository.GetById(ctx, user.Id)
 	if err != nil {
-		return custerr.NewInternalErr(err)
+		return err
 	}
-	user.Password = string(hashed)
+	user.Login = existing.Login
+	if user.Password != "" {
+		hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return custerr.NewInternalErr(err)
+		}
+		user.Password = string(hashed)
+	} else {
+		user.Password = existing.Password
+	}
+	if user.Avatar != nil && *user.Avatar == "" {
+		user.Avatar = nil
+	}
 	return s.userRepository.Update(ctx, user)
 }
 

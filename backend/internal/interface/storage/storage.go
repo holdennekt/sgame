@@ -12,6 +12,7 @@ type Storage interface {
 	Upload(ctx context.Context, ui UploadInput) error
 	UploadFromURL(ctx context.Context, uui URLUploadInput) error
 	Delete(ctx context.Context, key string) error
+	Move(ctx context.Context, oldKey, newKey string) error
 	GetStats(ctx context.Context, key string) (*Stats, error)
 	URL(ctx context.Context, key string, ttl time.Duration) (string, error)
 	DirectURL(ctx context.Context, key string, ttl time.Duration) (string, error)

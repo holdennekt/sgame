@@ -111,9 +111,16 @@ func LoggingMiddleware(ctx *gin.Context) {
 		ctx.Request.URL.Path,
 		clientIP,
 		serverIP,
-		string(requestBody),
-		responseBody,
+		truncate(string(requestBody), 512),
+		truncate(responseBody, 512),
 	)
+}
+
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + fmt.Sprintf("... [%d bytes truncated]", len(s)-max)
 }
 
 type bodyWriter struct {

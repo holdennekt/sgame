@@ -36,14 +36,19 @@ func HandleValidateAnswerMessage(ctx context.Context, server realtime.Channel, i
 	}
 
 	switch newRoom.State {
-	case domain.SelectingQuestion:
-		questionEndedMessage := serverevent.NewQuestionEndedMessage(question)
-		if err := internalServer.Send(ctx, questionEndedMessage); err != nil {
+	case domain.RevealingQuestion:
+		revealingStartedMessage := serverevent.NewRevealingStartedMessage(question)
+		if err := internalServer.Send(ctx, revealingStartedMessage); err != nil {
 			return err
 		}
 	case domain.ShowingQuestion:
 		questionStartedMessage := serverevent.NewQuestionStartedMessage(question)
 		if err := internalServer.Send(ctx, questionStartedMessage); err != nil {
+			return err
+		}
+	case domain.SelectingQuestion:
+		questionEndedMessage := serverevent.NewQuestionEndedMessage(question)
+		if err := internalServer.Send(ctx, questionEndedMessage); err != nil {
 			return err
 		}
 	}

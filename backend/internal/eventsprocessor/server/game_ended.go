@@ -22,6 +22,8 @@ func HandleGameEndedMessage(ctx context.Context, server realtime.Channel, lobbyS
 	if err != nil {
 		return err
 	}
+	now := time.Now()
+	room.FinishedAt = &now
 	if err := roomRepository.Create(ctx, room); err != nil {
 		return err
 	}

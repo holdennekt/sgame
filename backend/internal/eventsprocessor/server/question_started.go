@@ -41,7 +41,7 @@ func HandleQuestionStartedMessage(ctx context.Context, server realtime.Channel, 
 					!qsp.Question.IsCurrent(newRoom)
 			deadlineChanged := newRoom.CurrentQuestion != nil &&
 				!room.CurrentQuestion.TimerEndsAt.Equal(newRoom.CurrentQuestion.TimerEndsAt)
-			if questionEnded || deadlineChanged {
+			if questionEnded || deadlineChanged || newRoom.PausedState.Paused {
 				return ErrDeferredFunctionCancelled
 			}
 

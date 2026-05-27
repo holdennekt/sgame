@@ -67,4 +67,5 @@ type SignURLRequest struct {
 type SignURLResponse struct {
 	URL      string            `json:"url"`
 	FormData map[string]string `json:"formData"`
+	GetUrl   string            `json:"getUrl,omitempty"`
 }

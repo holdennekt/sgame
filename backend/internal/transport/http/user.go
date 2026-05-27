@@ -7,6 +7,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/dto"
 	"github.com/holdennekt/sgame/backend/internal/service"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
 type UserController struct {
@@ -111,21 +112,34 @@ func (c *UserController) getById(ctx *gin.Context) {
 // @Security     CookieAuth
 // @Router       /users/{id} [put]
 func (c *UserController) update(ctx *gin.Context) {
+	requesterId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
 	id := ctx.Param("id")
-
-	var user domain.DbUser
-	if err := ctx.ShouldBindJSON(&user); err != nil {
-		ctx.Error(err)
-		return
-	}
-	user.Id = id
-
-	if err := c.userService.Update(ctx, &user); err != nil {
-		ctx.Error(err)
+	if requesterId != id {
+		ctx.Error(custerr.NewForbiddenErr("not allowed to update other users"))
 		return
 	}
 
-	ctx.Status(http.StatusNoContent)
+	var req dto.UpdateUserRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	user := &domain.DbUser{
+		User:     domain.User{Id: id, Name: req.Name, Avatar: req.Avatar},
+		Password: req.Password,
+	}
+	if err := c.userService.Update(ctx, user); err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	updated, err := c.userService.GetById(ctx, id)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+	ctx.JSON(http.StatusOK, updated)
 }
 
 // @Summary      Delete user

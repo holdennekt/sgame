@@ -42,7 +42,7 @@ func HandleRevealingStartedMessage(ctx context.Context, server realtime.Channel,
 					!rsp.Question.IsCurrent(newRoom)
 			deadlineChanged := newRoom.CurrentQuestion != nil &&
 				!room.CurrentQuestion.TimerStartsAt.Equal(newRoom.CurrentQuestion.TimerStartsAt)
-			if questionEnded || deadlineChanged {
+			if questionEnded || deadlineChanged || newRoom.PausedState.Paused {
 				return ErrDeferredFunctionCancelled
 			}
 

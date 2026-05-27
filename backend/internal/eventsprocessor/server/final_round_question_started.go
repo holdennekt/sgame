@@ -29,6 +29,12 @@ func HandleFinalRoundQuestionStartedMessage(ctx context.Context, server realtime
 			if newRoom.State != domain.ShowingFinalRoundQuestion {
 				return ErrDeferredFunctionCancelled
 			}
+			deadlineChanged := newRoom.FinalRoundState != nil &&
+				newRoom.FinalRoundState.TimerEndsAt != nil &&
+				!room.FinalRoundState.TimerEndsAt.Equal(*newRoom.FinalRoundState.TimerEndsAt)
+			if deadlineChanged || newRoom.PausedState.Paused {
+				return ErrDeferredFunctionCancelled
+			}
 
 			newRoom.EndFinalRoundQuestion()
 			return nil

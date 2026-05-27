@@ -64,23 +64,40 @@ func (r *roomRepository) GetById(ctx context.Context, id string) (*domain.Room, 
 	return &room, nil
 }
 
-func (r *roomRepository) GetByCreatedBy(ctx context.Context, id string, search dto.SearchRequest) ([]domain.Room, error) {
+func (r *roomRepository) GetByParticipant(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.Room, int, error) {
+	filter := bson.M{
+		"$or": []bson.M{
+			{"players": bson.M{"$elemMatch": bson.M{"id": userId}}},
+			{"host.id": userId},
+		},
+	}
+	total, err := r.db.Collection(ROOMS_COLLECTION).CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, custerr.NewInternalErr(err)
+	}
+	orderBy := search.OrderBy
+	if orderBy == "" {
+		orderBy = "finishedAt"
+	}
+	sortDir := -1
+	if search.OrderDir == "ASC" {
+		sortDir = 1
+	}
 	cur, err := r.db.Collection(ROOMS_COLLECTION).Find(
 		ctx,
-		bson.M{"createdBy": id},
-		options.
-			Find().
-			SetSort(bson.M{"_id": 1}).
+		filter,
+		options.Find().
+			SetSort(bson.D{{Key: orderBy, Value: sortDir}}).
 			SetSkip(int64((search.Page-1)*search.Limit)).
 			SetLimit(int64(search.Limit)),
 	)
 	if err != nil {
-		return nil, custerr.NewInternalErr(err)
+		return nil, 0, custerr.NewInternalErr(err)
 	}
 	defer cur.Close(ctx)
 	rooms := make([]domain.Room, 0)
 	if err := cur.All(ctx, &rooms); err != nil {
-		return nil, custerr.NewInternalErr(err)
+		return nil, 0, custerr.NewInternalErr(err)
 	}
-	return rooms, nil
+	return rooms, int(total), nil
 }

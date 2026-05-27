@@ -13,8 +13,6 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
-const TimeToBet = 30 * time.Second
-
 type BettingStartedPayload struct {
 	domain.Question
 }
@@ -33,12 +31,17 @@ func HandleBettingStartedMessage(ctx context.Context, server realtime.Channel, i
 	if err != nil {
 		return err
 	}
-	time.AfterFunc(TimeToBet, func() {
+	time.AfterFunc(time.Until(room.CurrentQuestion.BettingEndsAt), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		newerRoom, err := roomCache.SafeSet(ctx, roomId, func(newRoom *domain.Room) error {
 			if newRoom.State != domain.Betting || !bsp.Question.IsCurrent(newRoom) {
+				return ErrDeferredFunctionCancelled
+			}
+			deadlineChanged := newRoom.CurrentQuestion != nil &&
+				!room.CurrentQuestion.BettingEndsAt.Equal(newRoom.CurrentQuestion.BettingEndsAt)
+			if deadlineChanged || newRoom.PausedState.Paused {
 				return ErrDeferredFunctionCancelled
 			}
 

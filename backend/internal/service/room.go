@@ -20,6 +20,7 @@ const UPDATE_ROOM_RETRIES = 3
 type RoomService struct {
 	userRepository                    repository.User
 	packRepository                    repository.Pack
+	roomRepository                    repository.Room
 	roomCache                         cache.Room
 	lobbyChannelGetter                realtime.ServerChannelGetter
 	roomChannelGetter                 realtime.ServerChannelGetter
@@ -27,8 +28,8 @@ type RoomService struct {
 	roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter
 }
 
-func NewRoomService(userRepository repository.User, packRepository repository.Pack, roomCache cache.Room, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *RoomService {
-	return &RoomService{userRepository, packRepository, roomCache, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomInternalEventsProcessorGetter}
+func NewRoomService(userRepository repository.User, packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *RoomService {
+	return &RoomService{userRepository, packRepository, roomRepository, roomCache, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomInternalEventsProcessorGetter}
 }
 
 func (s *RoomService) Create(ctx context.Context, userId string, crr dto.CreateRoomRequest) (string, error) {
@@ -192,4 +193,8 @@ func (s *RoomService) Leave(ctx context.Context, userId, id string) error {
 	}
 	lobbyServerChannel := s.lobbyChannelGetter.Get(domain.LOBBY)
 	return lobbyServerChannel.Send(ctx, roomUpdatedMessage)
+}
+
+func (s *RoomService) GetHistory(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.Room, int, error) {
+	return s.roomRepository.GetByParticipant(ctx, userId, search)
 }

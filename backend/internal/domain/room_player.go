@@ -29,6 +29,8 @@ type HiddenCurrentQuestion struct {
 	TimerStartsAt                time.Time    `json:"timerStartsAt"`
 	TimerEndsAt                  time.Time    `json:"timerEndsAt"`
 	TimerLastProgress            float64      `json:"timerLastProgress"`
+	BettingEndsAt                time.Time    `json:"bettingEndsAt"`
+	PassingEndsAt                time.Time    `json:"passingEndsAt"`
 }
 
 type HiddenFinalRoundState struct {
@@ -36,6 +38,7 @@ type HiddenFinalRoundState struct {
 	Question            *HiddenFinalRoundQuestion `json:"question"`
 	Players             []string                  `json:"players"`
 	PlayersAnswers      map[string]bool           `json:"playersAnswers"`
+	BettingEndsAt       *time.Time                `json:"bettingEndsAt"`
 	TimerEndsAt         *time.Time                `json:"timerEndsAt"`
 }
 
@@ -58,6 +61,8 @@ func NewPlayerRoom(room *Room) RoomPlayer {
 			TimerStartsAt:                room.CurrentQuestion.TimerStartsAt,
 			TimerEndsAt:                  room.CurrentQuestion.TimerEndsAt,
 			TimerLastProgress:            room.CurrentQuestion.TimerLastProgress,
+			BettingEndsAt:                room.CurrentQuestion.BettingEndsAt,
+			PassingEndsAt:                room.CurrentQuestion.PassingEndsAt,
 		}
 	}
 	var finalRoundState *HiddenFinalRoundState
@@ -78,6 +83,7 @@ func NewPlayerRoom(room *Room) RoomPlayer {
 			Question:            finalRoundQuestion,
 			Players:             room.FinalRoundState.Players,
 			PlayersAnswers:      finalRoundPlayersAnswers,
+			BettingEndsAt:       room.FinalRoundState.BettingEndsAt,
 			TimerEndsAt:         room.FinalRoundState.TimerEndsAt,
 		}
 	}

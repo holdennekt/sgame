@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"log"
+	"os"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -68,7 +69,11 @@ func (a *app) Run() {
 	})
 
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{envvar.GetEnvVar("FRONTEND_URL")}
+	if os.Getenv("APP_ENV") == "development" {
+		corsConfig.AllowAllOrigins = true
+	} else {
+		corsConfig.AllowOrigins = []string{envvar.GetEnvVar("FRONTEND_URL")}
+	}
 	corsConfig.AllowCredentials = true
 
 	engine := gin.New()

@@ -19,7 +19,7 @@ services:
     image: sgame-frontend
     build: frontend
     depends_on:
-      - backend:
+      - backend
     environment:
       PORT: 80
       BACKEND_HOST: backend
@@ -33,6 +33,7 @@ services:
       mongodb:
         condition: service_healthy
     environment:
+      APP_ENV: production
       HOST: 0.0.0.0
       PORT: 80
       MONGO_NAME: ${MONGO_DB_NAME}
@@ -46,6 +47,7 @@ services:
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_USE_SSL: false
       BUCKET_NAME: attachments
       FRONTEND_URL: http://localhost
       USER_AGENT: "SGame/1.0"

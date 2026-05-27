@@ -13,8 +13,6 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
-const TimeToPass = 30 * time.Second
-
 type PassingStartedPayload struct {
 	domain.Question
 }
@@ -29,12 +27,21 @@ func HandlePassingStartedMessage(ctx context.Context, server realtime.Channel, i
 	if err := json.Unmarshal(msg.Payload, &psp); err != nil {
 		return err
 	}
-	time.AfterFunc(TimeToPass, func() {
+	room, err := roomCache.GetById(ctx, roomId)
+	if err != nil {
+		return err
+	}
+	time.AfterFunc(time.Until(room.CurrentQuestion.PassingEndsAt), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		newerRoom, err := roomCache.SafeSet(ctx, roomId, func(newRoom *domain.Room) error {
 			if newRoom.State != domain.Passing || !psp.Question.IsCurrent(newRoom) {
+				return ErrDeferredFunctionCancelled
+			}
+			deadlineChanged := newRoom.CurrentQuestion != nil &&
+				!room.CurrentQuestion.PassingEndsAt.Equal(newRoom.CurrentQuestion.PassingEndsAt)
+			if deadlineChanged || newRoom.PausedState.Paused {
 				return ErrDeferredFunctionCancelled
 			}
 

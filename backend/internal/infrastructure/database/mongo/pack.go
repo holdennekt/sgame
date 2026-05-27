@@ -177,28 +177,41 @@ func (r *packRepository) GetByChecksum(ctx context.Context, userId string, check
 	return packs, nil
 }
 
-func (r *packRepository) GetPreviews(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackPreview, error) {
+func (r *packRepository) GetPreviews(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackPreview, int, error) {
+	filter := bson.M{
+		"name": primitive.Regex{
+			Pattern: search.SearchRequest,
+			Options: "i",
+		},
+		"$or": []bson.M{
+			{"type": domain.Public},
+			{"createdBy": userId},
+		},
+	}
+	total, err := r.db.Collection(PACKS_COLLECTION).CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, custerr.NewInternalErr(err)
+	}
+	orderBy := search.OrderBy
+	if orderBy == "" {
+		orderBy = "_id"
+	}
+	sortDir := -1
+	if search.OrderDir == "ASC" {
+		sortDir = 1
+	}
 	cur, err := r.db.Collection(PACKS_COLLECTION).Find(
 		ctx,
-		bson.M{
-			"name": primitive.Regex{
-				Pattern: search.SearchRequest,
-				Options: "i",
-			},
-			"$or": []bson.M{
-				{"type": domain.Public},
-				{"createdBy": userId},
-			},
-		},
+		filter,
 		options.
 			Find().
-			SetSort(bson.M{"_id": 1}).
+			SetSort(bson.D{{Key: orderBy, Value: sortDir}}).
 			SetSkip(int64((search.Page-1)*search.Limit)).
 			SetLimit(int64(search.Limit)).
 			SetProjection(bson.M{"_id": 1, "name": 1}),
 	)
 	if err != nil {
-		return nil, custerr.NewInternalErr(err)
+		return nil, 0, custerr.NewInternalErr(err)
 	}
 	defer cur.Close(ctx)
 
@@ -206,37 +219,50 @@ func (r *packRepository) GetPreviews(ctx context.Context, userId string, search 
 	for cur.Next(ctx) {
 		var mPackPreview mongoPackPreview
 		if err := cur.Decode(&mPackPreview); err != nil {
-			return nil, custerr.NewInternalErr(err)
+			return nil, 0, custerr.NewInternalErr(err)
 		}
 		packsPreviews = append(packsPreviews, toDomainPackPreview(mPackPreview))
 	}
 	if err := cur.Err(); err != nil {
-		return nil, custerr.NewInternalErr(err)
+		return nil, 0, custerr.NewInternalErr(err)
 	}
-	return packsPreviews, nil
+	return packsPreviews, int(total), nil
 }
 
-func (r *packRepository) GetHiddens(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.HiddenPack, error) {
+func (r *packRepository) GetHiddens(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.HiddenPack, int, error) {
+	filter := bson.M{
+		"content": primitive.Regex{
+			Pattern: search.SearchRequest,
+			Options: "i",
+		},
+		"$or": []bson.M{
+			{"type": "public"},
+			{"createdBy": userId},
+		},
+	}
+	total, err := r.db.Collection(PACKS_COLLECTION).CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, custerr.NewInternalErr(err)
+	}
+	orderBy := search.OrderBy
+	if orderBy == "" {
+		orderBy = "_id"
+	}
+	sortDir := -1
+	if search.OrderDir == "ASC" {
+		sortDir = 1
+	}
 	cur, err := r.db.Collection(PACKS_COLLECTION).Find(
 		ctx,
-		bson.M{
-			"content": primitive.Regex{
-				Pattern: search.SearchRequest,
-				Options: "i",
-			},
-			"$or": []bson.M{
-				{"type": "public"},
-				{"createdBy": userId},
-			},
-		},
+		filter,
 		options.
 			Find().
-			SetSort(bson.M{"_id": 1}).
+			SetSort(bson.D{{Key: orderBy, Value: sortDir}}).
 			SetSkip(int64((search.Page-1)*search.Limit)).
 			SetLimit(int64(search.Limit)),
 	)
 	if err != nil {
-		return nil, custerr.NewInternalErr(err)
+		return nil, 0, custerr.NewInternalErr(err)
 	}
 	defer cur.Close(ctx)
 
@@ -244,34 +270,60 @@ func (r *packRepository) GetHiddens(ctx context.Context, userId string, search d
 	for cur.Next(ctx) {
 		var pack mongoPack
 		if err := cur.Decode(&pack); err != nil {
-			return nil, custerr.NewInternalErr(err)
+			return nil, 0, custerr.NewInternalErr(err)
 		}
 		hiddenPacks = append(hiddenPacks, domain.NewHiddenPack(*toDomainPack(&pack)))
 	}
 	if err := cur.Err(); err != nil {
-		return nil, custerr.NewInternalErr(err)
+		return nil, 0, custerr.NewInternalErr(err)
 	}
-	return hiddenPacks, nil
+	return hiddenPacks, int(total), nil
 }
 
-func (r *packRepository) GetCount(ctx context.Context, userId string, search dto.SearchRequest) (int, error) {
-	count, err := r.db.Collection(PACKS_COLLECTION).CountDocuments(
+func (r *packRepository) GetCreatedBy(ctx context.Context, userId, createdBy string, search dto.SearchRequest) ([]domain.HiddenPack, int, error) {
+	filter := bson.M{
+		"content":   primitive.Regex{Pattern: search.SearchRequest, Options: "i"},
+		"createdBy": createdBy,
+	}
+	if userId != createdBy {
+		filter["type"] = domain.Public
+	}
+	total, err := r.db.Collection(PACKS_COLLECTION).CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, custerr.NewInternalErr(err)
+	}
+	orderBy := search.OrderBy
+	if orderBy == "" {
+		orderBy = "_id"
+	}
+	sortDir := -1
+	if search.OrderDir == "ASC" {
+		sortDir = 1
+	}
+	cur, err := r.db.Collection(PACKS_COLLECTION).Find(
 		ctx,
-		bson.M{
-			"name": primitive.Regex{
-				Pattern: search.SearchRequest,
-				Options: "i",
-			},
-			"$or": []bson.M{
-				{"type": "public"},
-				{"createdBy": userId},
-			},
-		},
+		filter,
+		options.Find().
+			SetSort(bson.D{{Key: orderBy, Value: sortDir}}).
+			SetSkip(int64((search.Page-1)*search.Limit)).
+			SetLimit(int64(search.Limit)),
 	)
 	if err != nil {
-		return 0, custerr.NewInternalErr(err)
+		return nil, 0, custerr.NewInternalErr(err)
 	}
-	return int(count), nil
+	defer cur.Close(ctx)
+	hiddenPacks := make([]domain.HiddenPack, 0)
+	for cur.Next(ctx) {
+		var pack mongoPack
+		if err := cur.Decode(&pack); err != nil {
+			return nil, 0, custerr.NewInternalErr(err)
+		}
+		hiddenPacks = append(hiddenPacks, domain.NewHiddenPack(*toDomainPack(&pack)))
+	}
+	if err := cur.Err(); err != nil {
+		return nil, 0, custerr.NewInternalErr(err)
+	}
+	return hiddenPacks, int(total), nil
 }
 
 func (r *packRepository) Update(ctx context.Context, pack *domain.Pack) error {

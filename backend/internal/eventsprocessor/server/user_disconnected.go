@@ -36,26 +36,6 @@ func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel,
 		return err
 	}
 
-	// Pause if needed
-	// newRoom, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
-	// 	hostConnected := room.Host != nil && room.Host.IsConnected
-	// 	connectedPlayerIndex := slices.IndexFunc(room.Players, func(p domain.Player) bool {
-	// 		return p.IsConnected
-	// 	})
-	// 	playerAnswering := room.State == domain.Answering && room.AnsweringPlayer.Id == udp.UserId
-	// 	if (!hostConnected || connectedPlayerIndex == -1 || playerAnswering) &&
-	// 		!room.PausedState.Paused {
-	// 		room.PausedState.Paused = true
-	// 		now := time.Now()
-	// 		room.PausedState.PausedAt = &now
-	// 	}
-	// 	return nil
-	// })
-	// if err != nil {
-	// 	return err
-	// }
-
-	// Set expiration time if needed
 	room, err := roomCache.GetById(ctx, roomId)
 	if err != nil {
 		return err

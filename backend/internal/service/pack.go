@@ -70,37 +70,43 @@ func (s *PackService) GetById(ctx context.Context, userId, id string) (*domain.P
 	for ri, round := range pack.Rounds {
 		for ci, category := range round.Categories {
 			for qi := range category.Questions {
-				question := &pack.Rounds[ri].Categories[ci].Questions[qi]
-				if question.Attachment != nil {
-					if question.Attachment.URL == "" {
-						u, err := s.storage.URL(ctx, question.Attachment.Key, GET_URL_TTL)
-						if err != nil {
-							return nil, err
-						}
-						question.Attachment.URL = u
-					}
+				att := pack.Rounds[ri].Categories[ci].Questions[qi].Attachment
+				if att == nil {
+					continue
 				}
+				u, err := s.storage.URL(ctx, att.Key, GET_URL_TTL)
+				if err != nil {
+					return nil, err
+				}
+				pack.Rounds[ri].Categories[ci].Questions[qi].Attachment.URL = u
 			}
 		}
+	}
+	for ci := range pack.FinalRound.Categories {
+		att := pack.FinalRound.Categories[ci].Question.Attachment
+		if att == nil {
+			continue
+		}
+		u, err := s.storage.URL(ctx, att.Key, GET_URL_TTL)
+		if err != nil {
+			return nil, err
+		}
+		pack.FinalRound.Categories[ci].Question.Attachment.URL = u
 	}
 
 	return pack, nil
 }
 
-func (s *PackService) GetPreviews(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackPreview, error) {
+func (s *PackService) GetPreviews(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackPreview, int, error) {
 	return s.packRepository.GetPreviews(ctx, userId, search)
 }
 
 func (s *PackService) GetHiddens(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.HiddenPack, int, error) {
-	packs, err := s.packRepository.GetHiddens(ctx, userId, search)
-	if err != nil {
-		return nil, 0, err
-	}
-	count, err := s.packRepository.GetCount(ctx, userId, search)
-	if err != nil {
-		return nil, 0, err
-	}
-	return packs, count, nil
+	return s.packRepository.GetHiddens(ctx, userId, search)
+}
+
+func (s *PackService) GetCreatedBy(ctx context.Context, userId, createdBy string, search dto.SearchRequest) ([]domain.HiddenPack, int, error) {
+	return s.packRepository.GetCreatedBy(ctx, userId, createdBy, search)
 }
 
 func (s *PackService) Update(ctx context.Context, userId string, dto dto.UpdatePackRequest) error {
@@ -129,35 +135,50 @@ func (s *PackService) Update(ctx context.Context, userId string, dto dto.UpdateP
 	}
 	newPack.Id = dto.Id
 
-	for _, r := range newPack.Rounds {
-		for _, c := range r.Categories {
-			for _, q := range c.Questions {
+	for ri, r := range newPack.Rounds {
+		for ci, c := range r.Categories {
+			for qi, q := range c.Questions {
 				oldQ, _ := pack.GetQuestion(r.Name, c.Name, q.Index)
-				if oldQ != nil && oldQ.Attachment != nil {
-					if q.Attachment == nil || q.Attachment.Key != oldQ.Attachment.Key {
-						if err := s.storage.Delete(ctx, oldQ.Attachment.Key); err != nil {
-							log.Printf("error during deleting old attachment: %v", err)
-						}
+				if oldQ == nil || oldQ.Attachment == nil {
+					continue
+				}
+				if q.Attachment == nil || q.Attachment.Key != oldQ.Attachment.Key {
+					if err := s.storage.Delete(ctx, oldQ.Attachment.Key); err != nil {
+						log.Printf("error during deleting old attachment: %v", err)
 					}
+				} else if pack.Type != dto.Type {
+					newKey := string(dto.Type) + q.Attachment.Key[strings.Index(q.Attachment.Key, "/"):]
+					if err := s.storage.Move(ctx, q.Attachment.Key, newKey); err != nil {
+						return err
+					}
+					newPack.Rounds[ri].Categories[ci].Questions[qi].Attachment.Key = newKey
 				}
 			}
 		}
 	}
 
-	for _, newC := range newPack.FinalRound.Categories {
+	for ci, newC := range newPack.FinalRound.Categories {
 		oldCIndex := slices.IndexFunc(pack.FinalRound.Categories, func(oldC domain.FinalRoundCategory) bool {
 			return newC.Name == oldC.Name
 		})
 		if oldCIndex == -1 {
 			continue
 		}
-		oldAttachment := pack.FinalRound.Categories[oldCIndex].Question.Attachment
-		if oldAttachment != nil {
-			if newC.Question.Attachment == nil || newC.Question.Attachment.Key != oldAttachment.Key {
-				if err := s.storage.Delete(ctx, oldAttachment.Key); err != nil {
-					log.Printf("error during deleting old attachment: %v", err)
-				}
+		oldAtt := pack.FinalRound.Categories[oldCIndex].Question.Attachment
+		newAtt := newC.Question.Attachment
+		if oldAtt == nil {
+			continue
+		}
+		if newAtt == nil || newAtt.Key != oldAtt.Key {
+			if err := s.storage.Delete(ctx, oldAtt.Key); err != nil {
+				log.Printf("error during deleting old attachment: %v", err)
 			}
+		} else if pack.Type != dto.Type {
+			newKey := string(dto.Type) + newAtt.Key[strings.Index(newAtt.Key, "/"):]
+			if err := s.storage.Move(ctx, newAtt.Key, newKey); err != nil {
+				return err
+			}
+			newPack.FinalRound.Categories[ci].Question.Attachment.Key = newKey
 		}
 	}
 
@@ -196,8 +217,20 @@ func (s *PackService) Delete(ctx context.Context, userId, id string) error {
 	return s.packRepository.Delete(ctx, id)
 }
 
-func (s *PackService) SignURL(ctx context.Context, dto dto.SignURLRequest) (*storage.SignUploadPolicyResult, error) {
-	return s.storage.SignUploadPolicy(ctx, storage.SignUploadPolicyInput{Key: s.generateKey(dto.Filename, dto.Public), TTL: POST_URL_TTL})
+func (s *PackService) SignURL(ctx context.Context, req dto.SignURLRequest) (*storage.SignUploadPolicyResult, string, error) {
+	key := s.generateKey(req.Filename, req.Public)
+	result, err := s.storage.SignUploadPolicy(ctx, storage.SignUploadPolicyInput{Key: key, TTL: POST_URL_TTL})
+	if err != nil {
+		return nil, "", err
+	}
+	getUrl := ""
+	if req.Public {
+		getUrl, err = s.storage.URL(ctx, key, GET_URL_TTL)
+		if err != nil {
+			return nil, "", err
+		}
+	}
+	return result, getUrl, nil
 }
 
 func (s *PackService) validateRoundsCheckSum(ctx context.Context, userId string, pack dto.CreatePackRequest, packId string) ([]byte, error) {
@@ -324,8 +357,9 @@ func (s *PackService) createDomainAttachment(ctx context.Context, dto dto.Create
 		err = s.storage.UploadFromURL(
 			ctx,
 			storage.URLUploadInput{
-				Key: key,
-				URL: dto.URL,
+				Key:      key,
+				URL:      dto.URL,
+				MaxBytes: MAX_FILE_SIZE,
 			},
 		)
 		if err != nil {
@@ -359,14 +393,6 @@ func (s *PackService) createDomainAttachment(ctx context.Context, dto dto.Create
 		attachment.Duration = probeData.Format.DurationSeconds
 	} else {
 		attachment.Duration = DEFAULT_ATTACHMENT_DURATION
-	}
-
-	if public {
-		u, err := s.storage.URL(ctx, attachment.Key, GET_URL_TTL)
-		if err != nil {
-			return nil, err
-		}
-		attachment.URL = u
 	}
 
 	return attachment, nil

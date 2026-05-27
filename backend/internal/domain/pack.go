@@ -44,7 +44,7 @@ const (
 
 type Attachment struct {
 	Key      string   `json:"key" bson:"key"`
-	URL      string   `json:"url" bson:"url,omitempty"`
+	URL      string   `json:"url" bson:"-"`
 	Type     FileType `json:"type" bson:"type"`
 	MimeType string   `json:"mimeType" bson:"mimeType"`
 	Size     int64    `json:"size" bson:"size"`
@@ -217,9 +217,9 @@ func (p *Pack) GetQuestion(roundName string, categoryName string, questionIndex 
 }
 
 func (r *Round) getCurrentRoundQuestions() CurrentRoundQuestions {
-	currentRoundQuestions := make(CurrentRoundQuestions)
+	currentRoundQuestions := make(CurrentRoundQuestions, 0, len(r.Categories))
 	for _, category := range r.Categories {
-		categoryQuestions := make([]BoardQuestion, 0)
+		categoryQuestions := make([]BoardQuestion, 0, len(category.Questions))
 		for _, question := range category.Questions {
 			categoryQuestions = append(categoryQuestions, BoardQuestion{
 				Index:         question.Index,
@@ -227,7 +227,10 @@ func (r *Round) getCurrentRoundQuestions() CurrentRoundQuestions {
 				HasBeenPlayed: false,
 			})
 		}
-		currentRoundQuestions[category.Name] = categoryQuestions
+		currentRoundQuestions = append(currentRoundQuestions, CategoryQuestions{
+			Category:  category.Name,
+			Questions: categoryQuestions,
+		})
 	}
 	return currentRoundQuestions
 }

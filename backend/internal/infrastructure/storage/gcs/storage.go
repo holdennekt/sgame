@@ -98,6 +98,15 @@ func (s *GCSStorage) UploadFromURL(ctx context.Context, uui storage.URLUploadInp
 	return nil
 }
 
+func (s *GCSStorage) Move(ctx context.Context, oldKey, newKey string) error {
+	src := s.client.Bucket(s.bucketName).Object(oldKey)
+	dst := s.client.Bucket(s.bucketName).Object(newKey)
+	if _, err := dst.CopierFrom(src).Run(ctx); err != nil {
+		return custerr.NewInternalErr(fmt.Errorf("failed to copy file during move: %w", err))
+	}
+	return s.Delete(ctx, oldKey)
+}
+
 func (s *GCSStorage) Delete(ctx context.Context, key string) error {
 	err := s.client.Bucket(s.bucketName).Object(key).Delete(ctx)
 	if err != nil {

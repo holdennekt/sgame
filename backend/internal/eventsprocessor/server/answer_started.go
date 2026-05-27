@@ -45,7 +45,9 @@ func HandleAnswerStartedMessage(ctx context.Context, server realtime.Channel, in
 				newRoom.State != domain.Answering ||
 					newRoom.AnsweringPlayer.Id != asp.UserId ||
 					!asp.Question.IsCurrent(newRoom)
-			if answerRequestEnded {
+			deadlineChanged := newRoom.AnsweringPlayer != nil &&
+				!room.AnsweringPlayer.TimerEndsAt.Equal(newRoom.AnsweringPlayer.TimerEndsAt)
+			if answerRequestEnded || deadlineChanged || newRoom.PausedState.Paused {
 				return ErrDeferredFunctionCancelled
 			}
 
@@ -65,15 +67,21 @@ func HandleAnswerStartedMessage(ctx context.Context, server realtime.Channel, in
 		}
 
 		switch newerRoom.State {
-		case domain.SelectingQuestion:
-			questionEndedMessage := NewQuestionEndedMessage(asp.Question)
-			if err := internalServer.Send(ctx, questionEndedMessage); err != nil {
+		case domain.RevealingQuestion:
+			revealingStartedMessage := NewRevealingStartedMessage(asp.Question)
+			if err := internalServer.Send(ctx, revealingStartedMessage); err != nil {
 				log.Println(err)
 				return
 			}
 		case domain.ShowingQuestion:
 			questionStartedMessage := NewQuestionStartedMessage(asp.Question)
 			if err := internalServer.Send(ctx, questionStartedMessage); err != nil {
+				log.Println(err)
+				return
+			}
+		case domain.SelectingQuestion:
+			questionEndedMessage := NewQuestionEndedMessage(asp.Question)
+			if err := internalServer.Send(ctx, questionEndedMessage); err != nil {
 				log.Println(err)
 				return
 			}

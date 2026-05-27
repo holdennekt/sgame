@@ -132,6 +132,14 @@ func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg messa
 		return incoming.HandleSubmitFinalRoundAnswerMessage(ctx, p.roomServer, p.roomCache, p.id, p.user, msg)
 	case domain.ValidateFinalRoundAnswer:
 		return incoming.HandleValidateFinalRoundAnswerMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
+	case domain.SkipQuestion:
+		return incoming.HandleSkipQuestionMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
+	case domain.ChangeScore:
+		return incoming.HandleChangeScoreMessage(ctx, p.roomServer, p.roomCache, p.id, p.user, msg)
+	case domain.Pause:
+		return incoming.HandlePauseMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
+	case domain.Unpause:
+		return incoming.HandleUnpauseMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
 	}
 	return nil
 }

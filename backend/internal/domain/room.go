@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"slices"
 	"time"
@@ -16,6 +17,10 @@ const (
 	LOCK_POSTFIX     = ":lock"
 	OWNER_POSTFIX    = ":owner"
 	INTERNAL_POSTFIX = ":internal"
+
+	TimeToBet        = 30 * time.Second
+	TimeToPass       = 30 * time.Second
+	MaxPauseDuration = time.Hour
 )
 
 type Room struct {
@@ -36,6 +41,7 @@ type Room struct {
 	AllowedToAnswer       []string              `json:"allowedToAnswer" bson:"allowedToAnswer"`
 	FinalRoundState       *FinalRoundState      `json:"finalRoundState" bson:"finalRoundState"`
 	PausedState           PausedState           `json:"pausedState" bson:"pausedState"`
+	FinishedAt            *time.Time            `json:"finishedAt" bson:"finishedAt"`
 }
 
 type RoomOptions struct {
@@ -72,11 +78,24 @@ const (
 	GameOver                    RoomState = "game_over"
 )
 
-type CurrentRoundQuestions map[string][]BoardQuestion
+type CurrentRoundQuestions []CategoryQuestions
+type CategoryQuestions struct {
+	Category  string          `json:"category" bson:"category"`
+	Questions []BoardQuestion `json:"questions" bson:"questions"`
+}
 type BoardQuestion struct {
 	Index         int  `json:"index" bson:"index"`
 	Value         int  `json:"value" bson:"value"`
 	HasBeenPlayed bool `json:"hasBeenPlayed" bson:"hasBeenPlayed"`
+}
+
+func (crq CurrentRoundQuestions) findCategory(category string) *CategoryQuestions {
+	for i := range crq {
+		if crq[i].Category == category {
+			return &crq[i]
+		}
+	}
+	return nil
 }
 
 type CurrentQuestion struct {
@@ -87,6 +106,8 @@ type CurrentQuestion struct {
 	TimerStartsAt                time.Time `json:"timerStartsAt" bson:"timerStartsAt"`
 	TimerEndsAt                  time.Time `json:"timerEndsAt" bson:"timerEndsAt"`
 	TimerLastProgress            float64   `json:"timerLastProgress" bson:"timerLastProgress"`
+	BettingEndsAt                time.Time `json:"bettingEndsAt" bson:"bettingEndsAt"`
+	PassingEndsAt                time.Time `json:"passingEndsAt" bson:"passingEndsAt"`
 }
 
 type AnsweringPlayer struct {
@@ -100,6 +121,7 @@ type FinalRoundState struct {
 	Question            *FinalRoundQuestion `json:"question" bson:"question"`
 	Players             []string            `json:"players" bson:"players"`
 	PlayersAnswers      map[string]string   `json:"playersAnswers" bson:"playersAnswers"`
+	BettingEndsAt       *time.Time          `json:"bettingEndsAt" bson:"bettingEndsAt"`
 	TimerEndsAt         *time.Time          `json:"timerEndsAt" bson:"timerEndsAt"`
 }
 
@@ -173,7 +195,8 @@ func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index 
 	if userId != *r.CurrentPlayer && userId != r.Host.Id {
 		return custerr.NewForbiddenErr("not allowed to select question")
 	}
-	if r.CurrentRoundQuestions[category][index].HasBeenPlayed {
+	catQuestions := r.CurrentRoundQuestions.findCategory(category)
+	if catQuestions == nil || catQuestions.Questions[index].HasBeenPlayed {
 		return custerr.NewConflictErr("question has already been played")
 	}
 
@@ -183,17 +206,15 @@ func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index 
 	}
 
 	if question.Attachment != nil {
-		if question.Attachment.URL == "" {
-			u, err := getAttachmentUrl(question.Attachment.Key)
-			if err != nil {
-				return err
-			}
-			question.Attachment.URL = u
+		u, err := getAttachmentUrl(question.Attachment.Key)
+		if err != nil {
+			return err
 		}
+		question.Attachment.URL = u
 	}
 
 	r.CurrentQuestion = &CurrentQuestion{Question: *question}
-	r.CurrentRoundQuestions[category][index].HasBeenPlayed = true
+	catQuestions.Questions[index].HasBeenPlayed = true
 
 	switch question.Type {
 	case Regular:
@@ -215,6 +236,7 @@ func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index 
 			r.startNonRegularQuestion(canPassTo[0].Id)
 		} else {
 			r.State = Passing
+			r.CurrentQuestion.PassingEndsAt = time.Now().Add(TimeToPass)
 		}
 	case Auction:
 		canBet := make([]Player, 0)
@@ -225,6 +247,7 @@ func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index 
 		}
 		if len(canBet) > 0 {
 			r.State = Betting
+			r.CurrentQuestion.BettingEndsAt = time.Now().Add(TimeToBet)
 		} else {
 			allowedToAnswer := make([]string, len(r.Players))
 			for i, player := range r.Players {
@@ -249,6 +272,10 @@ func (r *Room) revealRegularQuestion(allowedToAnswer []string) {
 }
 
 func (r *Room) StartRegularQuestion() {
+	if r.CurrentQuestion.Attachment != nil {
+		r.CurrentQuestion.AttachmentRevealLastProgress = 1
+	}
+	r.CurrentQuestion.TextRevealLastProgress = 1
 	thinkingDuration := time.Duration(r.Options.QuestionThinkingTime) * time.Second
 	r.CurrentQuestion.TimerEndsAt = r.CurrentQuestion.TimerStartsAt.Add(thinkingDuration)
 	r.CurrentQuestion.TimerLastProgress = 1
@@ -259,6 +286,7 @@ func (r *Room) startNonRegularQuestion(allowedToAnswer string) {
 	r.CurrentPlayer = &allowedToAnswer
 	now := time.Now()
 	revealingDuration := r.CurrentQuestion.GetMediaRevealingDuration() + r.CurrentQuestion.GetTextRevealingDuration()
+	r.CurrentQuestion.TextRevealLastProgress = 1
 	thinkingDuration := time.Duration(r.Options.AnswerThinkingTime) * time.Second
 	r.AnsweringPlayer = &AnsweringPlayer{
 		Id:            allowedToAnswer,
@@ -280,6 +308,16 @@ func (r *Room) SubmitAnswer(userId string) error {
 	}
 
 	now := time.Now()
+	if r.State == RevealingQuestion {
+		if r.CurrentQuestion.Attachment != nil && now.Before(r.CurrentQuestion.AttachmentRevealEndsAt) {
+			mediaDurationRemained := r.CurrentQuestion.AttachmentRevealEndsAt.Sub(now)
+			r.CurrentQuestion.AttachmentRevealLastProgress = 1 - (float64(mediaDurationRemained) /
+				float64(r.CurrentQuestion.GetMediaRevealingDuration()))
+		}
+		textDurationRemained := r.CurrentQuestion.TimerStartsAt.Sub(now)
+		r.CurrentQuestion.TextRevealLastProgress = math.Max(0, 1-(float64(textDurationRemained)/
+			float64(r.CurrentQuestion.GetTextRevealingDuration())))
+	}
 	thinkingDuration := time.Duration(r.Options.AnswerThinkingTime) * time.Second
 	r.AnsweringPlayer = &AnsweringPlayer{
 		Id:            userId,
@@ -469,8 +507,8 @@ func (r *Room) EndQuestion() {
 }
 
 func (r *Room) AnyAvailableQuestions() bool {
-	for _, questions := range r.CurrentRoundQuestions {
-		notPlayedIndex := slices.IndexFunc(questions, func(bq BoardQuestion) bool {
+	for _, cq := range r.CurrentRoundQuestions {
+		notPlayedIndex := slices.IndexFunc(cq.Questions, func(bq BoardQuestion) bool {
 			return !bq.HasBeenPlayed
 		})
 		if notPlayedIndex != -1 {
@@ -565,16 +603,16 @@ func (r *Room) chooseFinalRoundCategory(pack *Pack, category string, getAttachme
 	})
 	r.FinalRoundState.Question = &pack.FinalRound.Categories[categoryIndex].Question
 	if r.FinalRoundState.Question.Attachment != nil {
-		if r.FinalRoundState.Question.Attachment.URL == "" {
-			u, err := getAttachmentUrl(r.FinalRoundState.Question.Attachment.Key)
-			if err != nil {
-				return err
-			}
-			r.FinalRoundState.Question.Attachment.URL = u
+		u, err := getAttachmentUrl(r.FinalRoundState.Question.Attachment.Key)
+		if err != nil {
+			return err
 		}
+		r.FinalRoundState.Question.Attachment.URL = u
 	}
 	r.CurrentPlayer = nil
 	r.State = FinalRoundBetting
+	bettingEndsAt := time.Now().Add(TimeToBet)
+	r.FinalRoundState.BettingEndsAt = &bettingEndsAt
 	return nil
 }
 
@@ -593,7 +631,6 @@ func (r *Room) PlaceFinalRoundBet(userId string, amount int) error {
 	if alreadyBet {
 		return custerr.NewConflictErr("can not place bet again")
 	}
-	// betIncreased := r.Players[playerIndex].BetAmount != nil && *r.Players[playerIndex].BetAmount < amount
 	insufficientScore := amount > r.Players[playerIndex].Score || amount < 0
 	if insufficientScore {
 		return custerr.NewConflictErr("insufficient score")
@@ -698,6 +735,33 @@ func (r *Room) ValidateFinalRoundAnswer(userId string, isCorrect bool) error {
 	return nil
 }
 
+func (r *Room) SkipQuestion(userId string) error {
+	skippable := r.State == RevealingQuestion || r.State == ShowingQuestion ||
+		r.State == Answering || r.State == Passing || r.State == Betting
+	if !skippable {
+		return custerr.NewConflictErr("can not skip question now")
+	}
+	if !r.IsUserHost(userId) {
+		return custerr.NewForbiddenErr("not allowed to skip question")
+	}
+	r.EndQuestion()
+	return nil
+}
+
+func (r *Room) ChangeScore(userId string, playerId string, score int) error {
+	if !r.IsUserHost(userId) {
+		return custerr.NewForbiddenErr("not allowed to change score")
+	}
+	playerIndex := slices.IndexFunc(r.Players, func(p Player) bool {
+		return p.Id == playerId
+	})
+	if playerIndex == -1 {
+		return custerr.NewNotFoundErr(fmt.Sprintf("no player with id \"%s\" in room", playerId))
+	}
+	r.Players[playerIndex].Score = score
+	return nil
+}
+
 func (r *Room) EndGame() {
 	// TODO: maybe some cleanup
 	r.CurrentPlayer = nil
@@ -705,4 +769,113 @@ func (r *Room) EndGame() {
 		r.FinalRoundState.TimerEndsAt = nil
 	}
 	r.State = GameOver
+}
+
+func (r *Room) Pause(userId string) error {
+	if !r.IsUserHost(userId) {
+		return custerr.NewForbiddenErr("not allowed to pause")
+	}
+	if r.PausedState.Paused {
+		return custerr.NewConflictErr("already paused")
+	}
+	if !slices.Contains(
+		[]RoomState{
+			SelectingQuestion, RevealingQuestion, ShowingQuestion,
+			Answering, Betting, Passing, SelectingFinalRoundCategory,
+			FinalRoundBetting, ShowingFinalRoundQuestion,
+		},
+		r.State,
+	) {
+		return custerr.NewConflictErr("can not pause now")
+	}
+	now := time.Now()
+	switch r.State {
+	case ShowingQuestion:
+		remaining := r.CurrentQuestion.TimerEndsAt.Sub(now)
+		total := time.Duration(r.Options.QuestionThinkingTime) * time.Second
+		r.CurrentQuestion.TimerLastProgress = math.Max(0, float64(remaining)/float64(total))
+	case RevealingQuestion:
+		if r.CurrentQuestion.Attachment != nil && now.Before(r.CurrentQuestion.AttachmentRevealEndsAt) {
+			mediaDurationRemained := r.CurrentQuestion.AttachmentRevealEndsAt.Sub(now)
+			r.CurrentQuestion.AttachmentRevealLastProgress = 1 - float64(mediaDurationRemained)/
+				float64(r.CurrentQuestion.GetMediaRevealingDuration())
+		}
+		if now.Before(r.CurrentQuestion.TimerStartsAt) {
+			textDurationRemained := r.CurrentQuestion.TimerStartsAt.Sub(now)
+			r.CurrentQuestion.TextRevealLastProgress = math.Max(0, 1-float64(textDurationRemained)/
+				float64(r.CurrentQuestion.GetTextRevealingDuration()))
+		}
+	}
+	r.PausedState.Paused = true
+	r.PausedState.PausedAt = &now
+	return nil
+}
+
+func (r *Room) Unpause(userId string) error {
+	if !r.IsUserHost(userId) {
+		return custerr.NewForbiddenErr("not allowed to unpause")
+	}
+	if !r.PausedState.Paused {
+		return custerr.NewConflictErr("not paused")
+	}
+	elapsed := time.Since(*r.PausedState.PausedAt)
+	r.PausedState.Paused = false
+	r.PausedState.PausedAt = nil
+
+	switch r.State {
+	case RevealingQuestion:
+		if r.CurrentQuestion.Attachment != nil {
+			r.CurrentQuestion.AttachmentRevealEndsAt = r.CurrentQuestion.AttachmentRevealEndsAt.Add(elapsed)
+		}
+		r.CurrentQuestion.TimerStartsAt = r.CurrentQuestion.TimerStartsAt.Add(elapsed)
+	case ShowingQuestion:
+		r.CurrentQuestion.TimerEndsAt = r.CurrentQuestion.TimerEndsAt.Add(elapsed)
+	case Answering:
+		r.AnsweringPlayer.TimerStartsAt = r.AnsweringPlayer.TimerStartsAt.Add(elapsed)
+		r.AnsweringPlayer.TimerEndsAt = r.AnsweringPlayer.TimerEndsAt.Add(elapsed)
+	case Betting:
+		r.CurrentQuestion.BettingEndsAt = r.CurrentQuestion.BettingEndsAt.Add(elapsed)
+	case Passing:
+		r.CurrentQuestion.PassingEndsAt = r.CurrentQuestion.PassingEndsAt.Add(elapsed)
+	case FinalRoundBetting:
+		newBettingEndsAt := r.FinalRoundState.BettingEndsAt.Add(elapsed)
+		r.FinalRoundState.BettingEndsAt = &newBettingEndsAt
+	case ShowingFinalRoundQuestion:
+		newTimerEndsAt := r.FinalRoundState.TimerEndsAt.Add(elapsed)
+		r.FinalRoundState.TimerEndsAt = &newTimerEndsAt
+	}
+	return nil
+}
+
+func (r *Room) UnpauseSystem(pausedAt time.Time) error {
+	if !r.PausedState.Paused || !r.PausedState.PausedAt.Equal(pausedAt) {
+		return custerr.NewConflictErr("pause session changed")
+	}
+	elapsed := time.Since(*r.PausedState.PausedAt)
+	r.PausedState.Paused = false
+	r.PausedState.PausedAt = nil
+
+	switch r.State {
+	case RevealingQuestion:
+		if r.CurrentQuestion.Attachment != nil {
+			r.CurrentQuestion.AttachmentRevealEndsAt = r.CurrentQuestion.AttachmentRevealEndsAt.Add(elapsed)
+		}
+		r.CurrentQuestion.TimerStartsAt = r.CurrentQuestion.TimerStartsAt.Add(elapsed)
+	case ShowingQuestion:
+		r.CurrentQuestion.TimerEndsAt = r.CurrentQuestion.TimerEndsAt.Add(elapsed)
+	case Answering:
+		r.AnsweringPlayer.TimerStartsAt = r.AnsweringPlayer.TimerStartsAt.Add(elapsed)
+		r.AnsweringPlayer.TimerEndsAt = r.AnsweringPlayer.TimerEndsAt.Add(elapsed)
+	case Betting:
+		r.CurrentQuestion.BettingEndsAt = r.CurrentQuestion.BettingEndsAt.Add(elapsed)
+	case Passing:
+		r.CurrentQuestion.PassingEndsAt = r.CurrentQuestion.PassingEndsAt.Add(elapsed)
+	case FinalRoundBetting:
+		newBettingEndsAt := r.FinalRoundState.BettingEndsAt.Add(elapsed)
+		r.FinalRoundState.BettingEndsAt = &newBettingEndsAt
+	case ShowingFinalRoundQuestion:
+		newTimerEndsAt := r.FinalRoundState.TimerEndsAt.Add(elapsed)
+		r.FinalRoundState.TimerEndsAt = &newTimerEndsAt
+	}
+	return nil
 }

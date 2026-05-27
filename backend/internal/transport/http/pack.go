@@ -26,9 +26,10 @@ func (c *PackController) RegisterRoutes(r *gin.RouterGroup) {
 	packs.GET("/:id", c.getById)
 	packs.GET("/", c.getHiddens)
 	packs.GET("/previews", c.getPreviews)
+	packs.GET("/by/:id", c.getCreatedBy)
 	packs.PUT("/:id", c.update)
 	packs.DELETE("/:id", c.delete)
-	packs.GET("/presign", c.signURL)
+	packs.GET("/signURL", c.signURL)
 }
 
 // @Summary      Create a new pack
@@ -107,13 +108,19 @@ func (c *PackController) getPreviews(ctx *gin.Context) {
 		query.Limit = DEFAULT_LIMIT
 	}
 
-	packs, err := c.packService.GetPreviews(ctx, userId, query)
+	packs, total, err := c.packService.GetPreviews(ctx, userId, query)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, packs)
+	ctx.JSON(http.StatusOK, dto.SearchResponse{
+		Items:    packs,
+		Total:    total,
+		Page:     query.Page,
+		PageSize: query.Limit,
+		HasNext:  query.Page*query.Limit < total,
+	})
 }
 
 // @Summary      Get user's hidden packs
@@ -232,11 +239,42 @@ func (c *PackController) signURL(ctx *gin.Context) {
 		return
 	}
 
-	signed, err := c.packService.SignURL(ctx, sr)
+	signed, getUrl, err := c.packService.SignURL(ctx, sr)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, dto.SignURLResponse{URL: signed.URL, FormData: signed.FormData})
+	ctx.JSON(http.StatusOK, dto.SignURLResponse{URL: signed.URL, FormData: signed.FormData, GetUrl: getUrl})
+}
+
+func (c *PackController) getCreatedBy(ctx *gin.Context) {
+	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+	createdBy := ctx.Param("id")
+
+	var query dto.SearchRequest
+	if err := ctx.ShouldBindQuery(&query); err != nil {
+		ctx.Error(err)
+		return
+	}
+	if query.Page == 0 {
+		query.Page = DEFAULT_PAGE
+	}
+	if query.Limit == 0 {
+		query.Limit = DEFAULT_LIMIT
+	}
+
+	packs, total, err := c.packService.GetCreatedBy(ctx, userId, createdBy, query)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.SearchResponse{
+		Items:    packs,
+		Total:    total,
+		Page:     query.Page,
+		PageSize: query.Limit,
+		HasNext:  query.Page*query.Limit < total,
+	})
 }

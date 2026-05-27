@@ -28,6 +28,7 @@ func (c *RoomController) RegisterRoutes(r *gin.RouterGroup) {
 	rooms := r.Group("/rooms")
 	rooms.POST("/", c.create)
 	rooms.GET("/", c.get)
+	rooms.GET("/history", c.getHistory)
 	rooms.GET("/:id", c.getProjection)
 	rooms.PATCH("/:id/join", c.join)
 	rooms.PATCH("/:id/leave", c.leave)
@@ -161,4 +162,34 @@ func (c *RoomController) leave(ctx *gin.Context) {
 	}
 
 	ctx.Status(http.StatusOK)
+}
+
+func (c *RoomController) getHistory(ctx *gin.Context) {
+	userId := ctx.MustGet(USER_ID_CONTEXT_KEY).(string)
+
+	var query dto.SearchRequest
+	if err := ctx.ShouldBindQuery(&query); err != nil {
+		ctx.Error(err)
+		return
+	}
+	if query.Page == 0 {
+		query.Page = DEFAULT_PAGE
+	}
+	if query.Limit == 0 {
+		query.Limit = DEFAULT_LIMIT
+	}
+
+	rooms, total, err := c.roomService.GetHistory(ctx, userId, query)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.SearchResponse{
+		Items:    rooms,
+		Total:    total,
+		Page:     query.Page,
+		PageSize: query.Limit,
+		HasNext:  query.Page*query.Limit < total,
+	})
 }

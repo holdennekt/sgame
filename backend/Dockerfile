@@ -5,14 +5,14 @@ WORKDIR /app
 RUN apk add --no-cache curl tar xz ca-certificates
 
 COPY go.mod go.sum ./
-RUN go mod download
-
-COPY . .
-
-RUN CGO_ENABLED=0 go build -o bin/sgame ./cmd/server
+RUN --mount=type=cache,target=/root/go/pkg/mod go mod download
 
 RUN curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
   | tar -xJ -C /tmp --strip-components=1
+
+COPY . .
+
+RUN --mount=type=cache,target=/root/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 go build -o bin/sgame ./cmd/server
 
 FROM scratch
 

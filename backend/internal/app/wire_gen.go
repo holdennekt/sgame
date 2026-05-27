@@ -90,7 +90,7 @@ func provideRoomInternalEventsProcessorGetter(roomCache cache.Room, roomRepo rep
 }
 
 func provideRoomService(userRepository repository.User, packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *service.RoomService {
-	return service.NewRoomService(userRepository, packRepository, roomCache, pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, roomInternalEventsProcessorGetter)
+	return service.NewRoomService(userRepository, packRepository, roomRepository, roomCache, pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, roomInternalEventsProcessorGetter)
 }
 
 var ServiceSet = wire.NewSet(service.NewAuthService, service.NewUserService, provideRoomService, service.NewPackService)
