@@ -59,11 +59,13 @@ export default function PackEditor({
     selectedCategoryIndex,
     selectedRoundIndex,
     addRound,
+    duplicateRound,
     deleteRound,
     renameRound,
     toggleRoundExpand,
     selectCategory,
     addCategory,
+    duplicateCategory,
     deleteCategory,
     addFinalRoundCategory,
     changeFinalRoundCategory,
@@ -234,6 +236,7 @@ export default function PackEditor({
                       readOnly={readOnly}
                       onToggleExpand={() => toggleRoundExpand(ri)}
                       onRename={(name) => renameRound(ri, name)}
+                      onDuplicate={() => duplicateRound(ri)}
                       onDelete={() => deleteRound(ri)}
                       onAddRound={addRound}
                     >
@@ -260,6 +263,7 @@ export default function PackEditor({
                                   cat={cat}
                                   readOnly={readOnly}
                                   onSelect={() => selectCategory(ri, ci)}
+                                  onDuplicate={() => duplicateCategory(ri, ci)}
                                   onDelete={() => deleteCategory(ri, ci)}
                                 />
                               ))}

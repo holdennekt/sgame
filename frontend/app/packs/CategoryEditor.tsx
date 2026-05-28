@@ -77,6 +77,17 @@ export default function CategoryEditor({
     });
   };
 
+  const duplicateQuestion = (qi: number) => {
+    setPack((pack) => {
+      const questions = pack.rounds[roundIndex].categories[categoryIndex].questions;
+      const src = questions[qi];
+      const copy = { ...src, answers: [...src.answers], attachment: { ...src.attachment } };
+      questions.splice(qi + 1, 0, copy);
+      pack.rounds[roundIndex].categories[categoryIndex].questions = questions.map((q, i) => ({ ...q, index: i }));
+      return { ...pack };
+    });
+  };
+
   const deleteQuestion = (qi: number) => {
     setPack((pack) => {
       pack.rounds[roundIndex].categories[categoryIndex].questions = pack.rounds[
@@ -156,6 +167,7 @@ export default function CategoryEditor({
                   question={question}
                   readOnly={readOnly}
                   onOpen={() => openQuestionModal(question, qi)}
+                  onDuplicate={() => duplicateQuestion(qi)}
                   onDelete={() => deleteQuestion(qi)}
                 />
               ))}

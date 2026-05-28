@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { CategoryFormData } from "@/types/pack";
 import { FaTrashCan } from "react-icons/fa6";
 import { RiDraggable } from "react-icons/ri";
+import { FiCopy } from "react-icons/fi";
 
 const iconBtnCls =
   "h-6 w-6 inline-flex items-center justify-center rounded-md text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150";
@@ -15,12 +16,14 @@ export default function SortableCategory({
   cat,
   readOnly,
   onSelect,
+  onDuplicate,
   onDelete,
 }: {
   id: string;
   cat: CategoryFormData;
   readOnly: boolean;
   onSelect: () => void;
+  onDuplicate: () => void;
   onDelete: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -48,6 +51,9 @@ export default function SortableCategory({
       </button>
       {!readOnly && (
         <div className="absolute right-0 flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:group-hover:bg-surface-raised transition-opacity shrink-0 rounded-sm">
+          <button type="button" title="Duplicate category" className={iconBtnCls} onClick={onDuplicate}>
+            <FiCopy size={10} />
+          </button>
           <button
             type="button"
             className={`${iconBtnCls} cursor-grab active:cursor-grabbing touch-none`}

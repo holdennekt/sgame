@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { QuestionFormData } from "@/types/pack";
 import { FaTrashCan } from "react-icons/fa6";
 import { RiDraggable } from "react-icons/ri";
+import { FiCopy } from "react-icons/fi";
 
 const iconBtnCls =
   "h-6 w-6 inline-flex items-center justify-center rounded-md text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150";
@@ -21,12 +22,14 @@ export default function SortableQuestion({
   question,
   readOnly,
   onOpen,
+  onDuplicate,
   onDelete,
 }: {
   id: string;
   question: QuestionFormData;
   readOnly: boolean;
   onOpen: () => void;
+  onDuplicate: () => void;
   onDelete: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -88,16 +91,23 @@ export default function SortableQuestion({
         </div>
       </div>
       {!readOnly && (
-        <button
-          type="button"
-          className={`${dangerIconBtnCls} opacity-0 group-hover:opacity-100 shrink-0`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-        >
-          <FaTrashCan size={12} />
-        </button>
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 shrink-0">
+          <button
+            type="button"
+            className={iconBtnCls}
+            title="Duplicate question"
+            onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
+          >
+            <FiCopy size={12} />
+          </button>
+          <button
+            type="button"
+            className={dangerIconBtnCls}
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          >
+            <FaTrashCan size={12} />
+          </button>
+        </div>
       )}
     </div>
   );

@@ -43,6 +43,21 @@ export function usePack(initialPack: Omit<Pack, "id" | "createdBy">) {
     });
   };
 
+  const duplicateRound = (ri: number) => {
+    const src = pack.rounds[ri];
+    const copy = {
+      ...src,
+      name: `${src.name} (copy)`,
+      categories: src.categories.map((cat) => ({
+        ...cat,
+        selected: false,
+        questions: cat.questions.map((q) => ({ ...q, answers: [...q.answers], attachment: { ...q.attachment } })),
+      })),
+    };
+    pack.rounds.splice(ri + 1, 0, copy);
+    setPack({ ...pack });
+  };
+
   const deleteRound = (ri: number) => {
     pack.rounds = pack.rounds.filter((_, i) => i !== ri);
     setPack({ ...pack });
@@ -72,6 +87,18 @@ export function usePack(initialPack: Omit<Pack, "id" | "createdBy">) {
       questions: [],
     });
     pack.rounds[ri].expanded = true;
+    setPack({ ...pack });
+  };
+
+  const duplicateCategory = (ri: number, ci: number) => {
+    const src = pack.rounds[ri].categories[ci];
+    const copy = {
+      ...src,
+      name: `${src.name} (copy)`,
+      selected: false,
+      questions: src.questions.map((q) => ({ ...q, answers: [...q.answers], attachment: { ...q.attachment } })),
+    };
+    pack.rounds[ri].categories.splice(ci + 1, 0, copy);
     setPack({ ...pack });
   };
 
@@ -123,11 +150,13 @@ export function usePack(initialPack: Omit<Pack, "id" | "createdBy">) {
     selectedCategoryIndex,
     selectedRoundIndex,
     addRound,
+    duplicateRound,
     deleteRound,
     renameRound,
     toggleRoundExpand,
     selectCategory,
     addCategory,
+    duplicateCategory,
     deleteCategory,
     addFinalRoundCategory,
     changeFinalRoundCategory,

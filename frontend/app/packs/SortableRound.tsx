@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { RoundFormData } from "@/types/pack";
 import { FaTrashCan } from "react-icons/fa6";
 import { RiDraggable } from "react-icons/ri";
+import { FiCopy } from "react-icons/fi";
 import { IoIosAdd, IoIosArrowDown as ChevronDown } from "react-icons/io";
 
 const iconBtnCls =
@@ -18,6 +19,7 @@ export default function SortableRound({
   children,
   onToggleExpand,
   onRename,
+  onDuplicate,
   onDelete,
   onAddRound,
 }: {
@@ -27,6 +29,7 @@ export default function SortableRound({
   children: React.ReactNode;
   onToggleExpand: () => void;
   onRename: (name: string) => void;
+  onDuplicate: () => void;
   onDelete: () => void;
   onAddRound: () => void;
 }) {
@@ -65,6 +68,9 @@ export default function SortableRound({
           <div className="absolute right-0 flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:group-hover:bg-surface-raised transition-opacity shrink-0 rounded-sm">
             <button type="button" title="Add round" className={iconBtnCls} onClick={onAddRound}>
               <IoIosAdd size={13} />
+            </button>
+            <button type="button" title="Duplicate round" className={iconBtnCls} onClick={onDuplicate}>
+              <FiCopy size={11} />
             </button>
             <button
               type="button"
