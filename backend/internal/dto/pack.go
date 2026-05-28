@@ -9,6 +9,29 @@ type CreatePackRequest struct {
 	FinalRound CreateFinalRoundRequest `json:"finalRound"`
 }
 
+type AttachmentKeyer interface {
+	AttachmentKeys() map[string]struct{}
+}
+
+func (cpr CreatePackRequest) AttachmentKeys() map[string]struct{} {
+	set := make(map[string]struct{})
+	for _, round := range cpr.Rounds {
+		for _, cat := range round.Categories {
+			for _, q := range cat.Questions {
+				if q.Attachment != nil {
+					set[q.Attachment.Key] = struct{}{}
+				}
+			}
+		}
+	}
+	for _, cat := range cpr.FinalRound.Categories {
+		if cat.Question.Attachment != nil {
+			set[cat.Question.Attachment.Key] = struct{}{}
+		}
+	}
+	return set
+}
+
 type CreateRoundRequest struct {
 	Name       string                  `json:"name" binding:"min=1,max=50"`
 	Categories []CreateCategoryRequest `json:"categories" binding:"min=1,max=10,unique=Name,same_length=Questions,dive"`
@@ -60,8 +83,8 @@ type UpdatePackRequest struct {
 }
 
 type SignURLRequest struct {
-	Filename string `form:"filename" binding:"required"`
-	Public   *bool  `form:"public" binding:"required"`
+	Filename string `json:"filename" binding:"required"`
+	Public   *bool  `json:"public" binding:"required"`
 }
 
 type SignURLResponse struct {

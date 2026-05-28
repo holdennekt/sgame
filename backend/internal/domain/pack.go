@@ -216,6 +216,43 @@ func (p *Pack) GetQuestion(roundName string, categoryName string, questionIndex 
 	return &category.Questions[questionSliceIndex], nil
 }
 
+func (p *Pack) AttachmentKeys() map[string]struct{} {
+	set := make(map[string]struct{})
+	for _, round := range p.Rounds {
+		for _, cat := range round.Categories {
+			for _, q := range cat.Questions {
+				if q.Attachment != nil {
+					set[q.Attachment.Key] = struct{}{}
+				}
+			}
+		}
+	}
+	for _, cat := range p.FinalRound.Categories {
+		if cat.Question.Attachment != nil {
+			set[cat.Question.Attachment.Key] = struct{}{}
+		}
+	}
+	return set
+}
+
+func (p *Pack) GetAttachment(key string) *Attachment {
+	for _, round := range p.Rounds {
+		for _, category := range round.Categories {
+			for _, question := range category.Questions {
+				if question.Attachment != nil && question.Attachment.Key == key {
+					return question.Attachment
+				}
+			}
+		}
+	}
+	for _, category := range p.FinalRound.Categories {
+		if category.Question.Attachment != nil && category.Question.Attachment.Key == key {
+			return category.Question.Attachment
+		}
+	}
+	return nil
+}
+
 func (r *Round) getCurrentRoundQuestions() CurrentRoundQuestions {
 	currentRoundQuestions := make(CurrentRoundQuestions, 0, len(r.Categories))
 	for _, category := range r.Categories {

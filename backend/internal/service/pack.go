@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/url"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/pkg/sets"
 	"gopkg.in/vansante/go-ffprobe.v2"
 )
 
@@ -43,12 +43,19 @@ func (s *PackService) Create(ctx context.Context, user domain.User, cpr dto.Crea
 		return "", custerr.NewForbiddenErr("guest users aren't allowed to create packs")
 	}
 
-	roundsCheckSum, err := s.validateRoundsCheckSum(ctx, user.Id, cpr, "")
-	if err != nil {
-		return "", err
-	}
+	var err error
 
-	pack, err := s.createDomain(ctx, cpr, user, roundsCheckSum)
+	defer func() {
+		if err != nil {
+			for key := range cpr.AttachmentKeys() {
+				if err := s.storage.Delete(context.Background(), key); err != nil {
+					log.Printf("failed to cleanup attachment %s: %v", key, err)
+				}
+			}
+		}
+	}()
+
+	pack, err := s.createDomain(ctx, cpr, user)
 	if err != nil {
 		return "", err
 	}
@@ -117,65 +124,32 @@ func (s *PackService) Update(ctx context.Context, user domain.User, dto dto.Upda
 		return custerr.NewForbiddenErr("can only edit your own packs")
 	}
 
-	newRoundsCheckSum, err := s.validateRoundsCheckSum(ctx, user.Id, dto.CreatePackRequest, dto.Id)
+	defer func() {
+		if err != nil {
+			for key := range sets.Delta(dto.CreatePackRequest.AttachmentKeys(), pack.AttachmentKeys()) {
+				if err := s.storage.Delete(context.Background(), key); err != nil {
+					log.Printf("failed to cleanup attachment %s: %v", key, err)
+				}
+			}
+		}
+	}()
+
+	newPack, err := s.updateDomain(ctx, pack, dto, user)
 	if err != nil {
 		return err
 	}
 
-	newPack, err := s.createDomain(ctx, dto.CreatePackRequest, user, newRoundsCheckSum)
+	err = s.packRepository.Update(ctx, newPack)
 	if err != nil {
 		return err
 	}
-	newPack.Id = dto.Id
 
-	for ri, r := range newPack.Rounds {
-		for ci, c := range r.Categories {
-			for qi, q := range c.Questions {
-				oldQ, _ := pack.GetQuestion(r.Name, c.Name, q.Index)
-				if oldQ == nil || oldQ.Attachment == nil {
-					continue
-				}
-				if q.Attachment == nil || q.Attachment.Key != oldQ.Attachment.Key {
-					if err := s.storage.Delete(ctx, oldQ.Attachment.Key); err != nil {
-						log.Printf("error during deleting old attachment: %v", err)
-					}
-				} else if pack.Type != dto.Type {
-					newKey := string(dto.Type) + q.Attachment.Key[strings.Index(q.Attachment.Key, "/"):]
-					if err := s.storage.Move(ctx, q.Attachment.Key, newKey); err != nil {
-						return err
-					}
-					newPack.Rounds[ri].Categories[ci].Questions[qi].Attachment.Key = newKey
-				}
-			}
+	for key := range sets.Delta(pack.AttachmentKeys(), dto.CreatePackRequest.AttachmentKeys()) {
+		if err := s.storage.Delete(context.Background(), key); err != nil {
+			log.Printf("failed to cleanup attachment %s: %v", key, err)
 		}
 	}
-
-	for ci, newC := range newPack.FinalRound.Categories {
-		oldCIndex := slices.IndexFunc(pack.FinalRound.Categories, func(oldC domain.FinalRoundCategory) bool {
-			return newC.Name == oldC.Name
-		})
-		if oldCIndex == -1 {
-			continue
-		}
-		oldAtt := pack.FinalRound.Categories[oldCIndex].Question.Attachment
-		newAtt := newC.Question.Attachment
-		if oldAtt == nil {
-			continue
-		}
-		if newAtt == nil || newAtt.Key != oldAtt.Key {
-			if err := s.storage.Delete(ctx, oldAtt.Key); err != nil {
-				log.Printf("error during deleting old attachment: %v", err)
-			}
-		} else if pack.Type != dto.Type {
-			newKey := string(dto.Type) + newAtt.Key[strings.Index(newAtt.Key, "/"):]
-			if err := s.storage.Move(ctx, newAtt.Key, newKey); err != nil {
-				return err
-			}
-			newPack.FinalRound.Categories[ci].Question.Attachment.Key = newKey
-		}
-	}
-
-	return s.packRepository.Update(ctx, newPack)
+	return nil
 }
 
 func (s *PackService) Delete(ctx context.Context, userId, id string) error {
@@ -188,29 +162,20 @@ func (s *PackService) Delete(ctx context.Context, userId, id string) error {
 		return custerr.NewForbiddenErr("can only delete your own packs")
 	}
 
-	for _, round := range pack.Rounds {
-		for _, category := range round.Categories {
-			for _, question := range category.Questions {
-				if question.Attachment != nil {
-					if err := s.storage.Delete(ctx, question.Attachment.Key); err != nil {
-						log.Printf("error during deleting old attachment: %v", err)
-					}
-				}
-			}
-		}
-	}
-	for _, category := range pack.FinalRound.Categories {
-		if category.Question.Attachment != nil {
-			if err := s.storage.Delete(ctx, category.Question.Attachment.Key); err != nil {
-				log.Printf("error during deleting old attachment: %v", err)
-			}
+	for key := range pack.AttachmentKeys() {
+		if err := s.storage.Delete(context.Background(), key); err != nil {
+			log.Printf("failed to cleanup attachment %s: %v", key, err)
 		}
 	}
 
 	return s.packRepository.Delete(ctx, id)
 }
 
-func (s *PackService) SignURL(ctx context.Context, req dto.SignURLRequest) (*storage.SignUploadPolicyResult, string, error) {
+func (s *PackService) SignURL(ctx context.Context, user domain.User, req dto.SignURLRequest) (*storage.SignUploadPolicyResult, string, error) {
+	if user.IsGuest {
+		return nil, "", custerr.NewForbiddenErr("guest users aren't allowed to upload media")
+	}
+
 	key := s.generateKey(req.Filename, *req.Public)
 	result, err := s.storage.SignUploadPolicy(ctx, storage.SignUploadPolicyInput{Key: key, TTL: POST_URL_TTL})
 	if err != nil {
@@ -258,7 +223,12 @@ func (s *PackService) validateRoundsCheckSum(ctx context.Context, userId string,
 	)
 }
 
-func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackRequest, user domain.User, roundsChecksum []byte) (*domain.Pack, error) {
+func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackRequest, user domain.User) (*domain.Pack, error) {
+	roundsChecksum, err := s.validateRoundsCheckSum(ctx, user.Id, dto, "")
+	if err != nil {
+		return nil, err
+	}
+
 	content := []string{dto.Name}
 	rounds := []domain.Round{}
 	for _, r := range dto.Rounds {
@@ -328,6 +298,124 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 	}
 
 	return &domain.Pack{
+		CreatedBy:      user,
+		RoundsChecksum: roundsChecksum,
+		Content:        strings.Join(content, ", "),
+		Name:           dto.Name,
+		Type:           dto.Type,
+		Rounds:         rounds,
+		FinalRound:     finalRound,
+	}, nil
+}
+
+func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dto dto.UpdatePackRequest, user domain.User) (*domain.Pack, error) {
+	roundsChecksum, err := s.validateRoundsCheckSum(ctx, user.Id, dto.CreatePackRequest, "")
+	if err != nil {
+		return nil, err
+	}
+
+	content := []string{dto.Name}
+	rounds := []domain.Round{}
+	for _, r := range dto.Rounds {
+		content = append(content, r.Name)
+		round := domain.Round{
+			Name:       r.Name,
+			Categories: []domain.Category{},
+		}
+		for _, c := range r.Categories {
+			content = append(content, c.Name)
+			category := domain.Category{
+				Name:      c.Name,
+				Questions: []domain.Question{},
+			}
+			for _, q := range c.Questions {
+				question := domain.Question{
+					HiddenQuestion: domain.HiddenQuestion{
+						Round:      r.Name,
+						Category:   c.Name,
+						Index:      q.Index,
+						Value:      q.Value,
+						Attachment: nil,
+					},
+					Type:    q.Type,
+					Text:    q.Text,
+					Answers: q.Answers,
+					Comment: q.Comment,
+				}
+
+				if q.Attachment != nil {
+					keyUUID := q.Attachment.Key[strings.Index(q.Attachment.Key, "/"):]
+					oldKey := string(oldPack.Type) + keyUUID
+					oldAttachment := oldPack.GetAttachment(oldKey)
+					if oldAttachment != nil {
+						newKey := string(dto.Type) + keyUUID
+						if err := s.storage.Move(ctx, oldKey, newKey); err != nil {
+							return nil, err
+						}
+						question.Attachment = oldAttachment
+						question.Attachment.Key = newKey
+					} else {
+						attachment, err := s.createDomainAttachment(
+							ctx,
+							*q.Attachment,
+							dto.Type == domain.Public,
+						)
+						if err != nil {
+							return nil, err
+						}
+						question.Attachment = attachment
+					}
+				}
+				category.Questions = append(category.Questions, question)
+			}
+			round.Categories = append(round.Categories, category)
+		}
+		rounds = append(rounds, round)
+	}
+	finalRound := domain.FinalRound{
+		Categories: []domain.FinalRoundCategory{},
+	}
+	for _, c := range dto.FinalRound.Categories {
+		category := domain.FinalRoundCategory{
+			HiddenFinalRoundCategory: domain.HiddenFinalRoundCategory{
+				Name: c.Name,
+			},
+			Question: domain.FinalRoundQuestion{
+				HiddenFinalRoundQuestion: domain.HiddenFinalRoundQuestion{
+					Text: c.Question.Text,
+				},
+				Answers: c.Question.Answers,
+				Comment: c.Question.Comment,
+			},
+		}
+		if c.Question.Attachment != nil {
+			keyUUID := c.Question.Attachment.Key[strings.Index(c.Question.Attachment.Key, "/"):]
+			oldKey := string(oldPack.Type) + keyUUID
+			oldAttachment := oldPack.GetAttachment(oldKey)
+			if oldAttachment != nil {
+				newKey := string(dto.Type) + keyUUID
+				if err := s.storage.Move(ctx, oldKey, newKey); err != nil {
+					return nil, err
+				}
+				category.Question.Attachment = oldAttachment
+				category.Question.Attachment.Key = newKey
+			} else {
+				attachment, err := s.createDomainAttachment(
+					ctx,
+					*c.Question.Attachment,
+					dto.Type == domain.Public,
+				)
+				if err != nil {
+					return nil, err
+				}
+				category.Question.Attachment = attachment
+			}
+		}
+		finalRound.Categories = append(finalRound.Categories, category)
+	}
+
+	return &domain.Pack{
+		Id:             dto.Id,
 		CreatedBy:      user,
 		RoundsChecksum: roundsChecksum,
 		Content:        strings.Join(content, ", "),
