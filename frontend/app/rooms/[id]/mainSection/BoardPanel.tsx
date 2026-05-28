@@ -50,7 +50,7 @@ export default function BoardPanel({
             key={index}
             className="flex items-center justify-center p-2 min-h-12 rounded-lg text-xs font-bold uppercase tracking-wide bg-primary text-on-primary"
           >
-            <span className="text-center break-words">{category}</span>
+            <span className="text-center break-words w-full min-w-0">{category}</span>
           </div>
         ))}
       </div>
