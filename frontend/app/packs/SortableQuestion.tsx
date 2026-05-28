@@ -91,7 +91,7 @@ export default function SortableQuestion({
         </div>
       </div>
       {!readOnly && (
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 shrink-0">
+        <div className="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 shrink-0">
           <button
             type="button"
             className={iconBtnCls}
