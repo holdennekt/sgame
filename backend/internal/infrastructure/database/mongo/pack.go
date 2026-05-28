@@ -237,7 +237,7 @@ func (r *packRepository) GetHiddens(ctx context.Context, userId string, search d
 		},
 		"$or": []bson.M{
 			{"type": "public"},
-			{"createdBy": userId},
+			{"createdBy.id": userId},
 		},
 	}
 	total, err := r.db.Collection(PACKS_COLLECTION).CountDocuments(ctx, filter)
