@@ -4,9 +4,12 @@ import { QuestionFormData, QuestionType } from "@/types/pack";
 import AttachmentEditor from "./AttachmentEditor";
 import { IoIosClose, IoIosArrowDown } from "react-icons/io";
 
-const inputCls = "w-full h-9 px-2.5 bg-background border border-border text-on-background rounded-lg text-sm outline-none focus-ring placeholder:text-on-surface-muted transition-[border-color] duration-150";
-const textareaCls = "w-full px-2.5 py-2 bg-background border border-border text-on-background rounded-lg text-sm outline-none focus-ring placeholder:text-on-surface-muted transition-[border-color] duration-150 resize-none overflow-hidden";
-const selectCls = "w-full h-9 pl-2.5 pr-8 bg-background border border-border text-on-background rounded-lg text-sm outline-none focus-ring appearance-none";
+const inputCls =
+  "w-full h-9 px-2.5 bg-background border border-border text-on-background rounded-lg text-sm outline-none focus-ring placeholder:text-on-surface-muted transition-[border-color] duration-150";
+const textareaCls =
+  "w-full px-2.5 py-2 bg-background border border-border text-on-background rounded-lg text-sm outline-none focus-ring placeholder:text-on-surface-muted transition-[border-color] duration-150 resize-none overflow-hidden";
+const selectCls =
+  "w-full h-9 pl-2.5 pr-8 bg-background border border-border text-on-background rounded-lg text-sm outline-none focus-ring appearance-none";
 const labelCls = "block text-xs font-medium text-on-surface-muted";
 
 const autoResize = (el: HTMLTextAreaElement | null) => {
@@ -60,29 +63,53 @@ export default function QuestionModal({
 
   const onSave = () => {
     const numValue = Number(value);
-    if (!numValue || numValue < 1 || !Number.isInteger(numValue) || numValue > 10000)
+    if (
+      !numValue ||
+      numValue < 1 ||
+      !Number.isInteger(numValue) ||
+      numValue > 10000
+    )
       return setError("Value must be a positive integer under 10k");
-    if (!text || text.length > 200)
-      return setError("Text must be between 1 and 200 characters long");
-    if (editAttachment.type === "url" && editAttachment?.url && editAttachment?.url.length > 2000)
+    if (text.length > 500)
+      return setError("Text must be under 500 characters long");
+    if (
+      !text.length &&
+      ((editAttachment.type === "file" && !editAttachment.file) ||
+        (editAttachment.type === "url" && !editAttachment.url))
+    )
+      return setError("Text is required without attachment");
+    if (
+      editAttachment.type === "url" &&
+      editAttachment?.url &&
+      editAttachment?.url.length > 2000
+    )
       return setError("Attachment URL is too long");
-    if (!answers.length)
-      return setError("At least 1 answer is required");
+    if (!answers.length) return setError("At least 1 answer is required");
     if (comment && comment.length > 200)
       return setError("Comment must be less than 200 characters long");
-    saveQuestion({ index: 0, value: numValue, text, attachment: editAttachment, type, answers, comment });
+    saveQuestion({
+      index: 0,
+      value: numValue,
+      text,
+      attachment: editAttachment,
+      type,
+      answers,
+      comment,
+    });
     close();
   };
 
   const addAnswer = () => {
     if (!answerInput.trim()) return;
-    setAnswers(answers => [...answers, answerInput.trim()]);
+    setAnswers((answers) => [...answers, answerInput.trim()]);
     setAnswerInput("");
   };
 
   return (
     <Modal isOpen={isOpen} onClose={close} closeByClickingOutside>
-      <h3 className="text-base font-semibold text-on-surface mb-4">Edit question</h3>
+      <h3 className="text-base font-semibold text-on-surface mb-4">
+        Edit question
+      </h3>
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex flex-col gap-3 w-52">
@@ -95,7 +122,9 @@ export default function QuestionModal({
               pattern="[0-9]*"
               placeholder="e.g. 100"
               value={value}
-              onChange={e => setValue(Number(e.target.value.replace(/[^0-9]/g, "")))}
+              onChange={(e) =>
+                setValue(Number(e.target.value.replace(/[^0-9]/g, "")))
+              }
               required
               readOnly={readOnly}
             />
@@ -108,7 +137,7 @@ export default function QuestionModal({
               className={textareaCls}
               placeholder="Enter question text..."
               value={text}
-              onChange={e => setText(e.target.value)}
+              onChange={(e) => setText(e.target.value)}
               maxLength={200}
               required
               readOnly={readOnly}
@@ -121,7 +150,7 @@ export default function QuestionModal({
               <select
                 className={selectCls}
                 value={type}
-                onChange={e => setType(e.target.value as QuestionType)}
+                onChange={(e) => setType(e.target.value as QuestionType)}
                 disabled={readOnly}
               >
                 <option value="regular">Regular</option>
@@ -148,7 +177,11 @@ export default function QuestionModal({
                       <button
                         type="button"
                         className="w-4 h-4 inline-flex items-center justify-center rounded-full text-on-surface-muted hover:bg-primary hover:text-on-primary transition-colors duration-150"
-                        onClick={() => setAnswers(answers => answers.filter((_, i) => i !== index))}
+                        onClick={() =>
+                          setAnswers((answers) =>
+                            answers.filter((_, i) => i !== index),
+                          )
+                        }
                       >
                         <IoIosClose size={14} />
                       </button>
@@ -164,8 +197,13 @@ export default function QuestionModal({
                   type="text"
                   placeholder="Add answer..."
                   value={answerInput}
-                  onChange={e => setAnswerInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addAnswer(); } }}
+                  onChange={(e) => setAnswerInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addAnswer();
+                    }
+                  }}
                 />
                 <button
                   type="button"
@@ -187,7 +225,7 @@ export default function QuestionModal({
               className={textareaCls}
               placeholder="Explanation (optional)"
               value={comment ?? ""}
-              onChange={e => setComment(e.target.value || null)}
+              onChange={(e) => setComment(e.target.value || null)}
               maxLength={200}
               readOnly={readOnly}
             />
