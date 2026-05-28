@@ -34,17 +34,17 @@ export default function Message({
 
   const avatar = message.from.avatar ? (
     <img
-      className="h-7 w-7 aspect-square rounded-full object-cover shrink-0"
+      className="h-9 w-9 aspect-square rounded-full object-cover shrink-0"
       src={message.from.avatar}
       alt="avatar"
     />
   ) : (
-    <div className="flex justify-center items-center h-7 w-7 rounded-full bg-primary text-on-primary text-xs font-bold shrink-0">
+    <div className="flex justify-center items-center h-9 w-9 rounded-full bg-primary text-on-primary text-xs font-bold shrink-0">
       {initials}
     </div>
   );
 
-  const spacer = <div className="h-7 w-7 shrink-0" />;
+  const spacer = <div className="h-9 w-9 shrink-0" />;
 
   return (
     <div
