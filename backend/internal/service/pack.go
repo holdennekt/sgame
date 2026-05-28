@@ -376,7 +376,7 @@ func (s *PackService) createDomainAttachment(ctx context.Context, dto dto.Create
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	probeData, err := ffprobe.ProbeURL(ctx, url)
+	probeData, err := ffprobe.ProbeURL(ctx, url, "-loglevel", "verbose")
 	if err != nil {
 		return nil, custerr.NewInternalErr(fmt.Errorf("failed to analyze media: %w", err))
 	}
