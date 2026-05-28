@@ -37,6 +37,7 @@ export default function RoomPage({ initialRoom }: { initialRoom: RoomHost | Room
   useEffect(() => {
     if (chat.messages.length === 0) return;
     if (mobileTab !== "game") return;
+    if (chat.messages[chat.messages.length - 1].from.id === "") return;
     setUnreadCount((c) => c + 1);
   }, [chat.messages.length]);
 

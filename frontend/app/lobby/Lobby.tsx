@@ -35,6 +35,7 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
   useEffect(() => {
     if (chatMessages.length === 0) return;
     if (mobileTab !== "rooms") return;
+    if (chatMessages[chatMessages.length - 1].from.id === "") return;
     setUnreadCount((c) => c + 1);
   }, [chatMessages.length]);
 
