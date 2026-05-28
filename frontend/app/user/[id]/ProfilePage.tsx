@@ -84,9 +84,10 @@ export default function ProfilePage({
                 <button
                   onClick={() => setEditing(true)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
+                  title="Edit"
                 >
                   <FiEdit2 size={13} />
-                  Edit
+                  <span className="hidden sm:inline">Edit</span>
                 </button>
               )}
               <button
@@ -95,7 +96,7 @@ export default function ProfilePage({
                 title="Log out"
               >
                 <FiLogOut size={13} />
-                Log out
+                <span className="hidden sm:inline">Log out</span>
               </button>
               {!user.isGuest && (
                 <button
@@ -104,7 +105,7 @@ export default function ProfilePage({
                   title="Delete account"
                 >
                   <FiTrash2 size={13} />
-                  Delete account
+                  <span className="hidden sm:inline">Delete account</span>
                 </button>
               )}
             </div>
