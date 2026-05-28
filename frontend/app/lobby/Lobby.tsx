@@ -18,6 +18,7 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
   const [searchInput, setSearchInput] = useState("");
   const [isNewRoomModalOpen, setIsNewRoomModalOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<Tab>("rooms");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const tabs: Tab[] = ["rooms", "chat"];
 
@@ -30,6 +31,12 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
     if (!lastError) return;
     toast.error(lastError.msg, { containerId: "lobby" });
   }, [lastError]);
+
+  useEffect(() => {
+    if (chatMessages.length === 0) return;
+    if (mobileTab !== "rooms") return;
+    setUnreadCount((c) => c + 1);
+  }, [chatMessages.length]);
 
   const filteredRooms = useMemo(
     () =>
@@ -46,14 +53,19 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
         {tabs.map((tab) => (
           <button
             key={tab}
-            className={`flex-1 py-2.5 text-sm font-medium capitalize transition-colors duration-150 ${
+            className={`flex-1 py-2.5 text-sm font-medium capitalize transition-colors duration-150 inline-flex items-center justify-center gap-1.5 border-b-2 ${
               mobileTab === tab
-                ? "text-primary border-b-2 border-primary"
-                : "text-on-surface-muted"
+                ? "text-primary border-primary"
+                : "text-on-surface-muted border-transparent"
             }`}
-            onClick={() => setMobileTab(tab)}
+            onClick={() => { setMobileTab(tab); if (tab === "chat") setUnreadCount(0); }}
           >
             {tab}
+            {tab === "chat" && unreadCount > 0 && mobileTab !== "chat" && (
+              <span className="min-w-[15px] h-[15px] px-1 rounded-full bg-danger text-white text-[9px] font-bold leading-[15px] text-center">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
