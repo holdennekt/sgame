@@ -29,7 +29,7 @@ func (c *PackController) RegisterRoutes(r *gin.RouterGroup) {
 	packs.GET("/by/:id", c.getCreatedBy)
 	packs.PUT("/:id", c.update)
 	packs.DELETE("/:id", c.delete)
-	packs.GET("/signURL", c.signURL)
+	packs.POST("/signURL", c.signURL)
 }
 
 // @Summary      Create a new pack
@@ -233,13 +233,15 @@ func (c *PackController) delete(ctx *gin.Context) {
 // @Security     CookieAuth
 // @Router       /packs/signURL [get]
 func (c *PackController) signURL(ctx *gin.Context) {
+	user := ctx.MustGet(USER_CONTEXT_KEY).(domain.User)
+
 	var sr dto.SignURLRequest
-	if err := ctx.ShouldBindQuery(&sr); err != nil {
+	if err := ctx.ShouldBindJSON(&sr); err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	signed, getUrl, err := c.packService.SignURL(ctx, sr)
+	signed, getUrl, err := c.packService.SignURL(ctx, user, sr)
 	if err != nil {
 		ctx.Error(err)
 		return

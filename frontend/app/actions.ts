@@ -275,11 +275,10 @@ export const signURL = async (
   dto: SignURLRequest,
 ): Promise<ActionResult<SignURLResponse>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/signURL`);
-  url.searchParams.set(FILENAME_QUERY_PARAM, dto.filename);
-  url.searchParams.set(PUBLIC_QUERY_PARAM, dto.public.toString());
   const resp = await fetch(url, {
-    method: "GET",
+    method: "POST",
     headers: { cookie: cookies().toString() },
+    body: JSON.stringify(dto),
   });
   return await resp?.json();
 };
