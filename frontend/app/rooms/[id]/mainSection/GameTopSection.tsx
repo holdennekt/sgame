@@ -83,9 +83,7 @@ export default function GameTopSection() {
           questionType={room.currentQuestion!.type}
           timeBar={{
             progress: room.currentQuestion!.timerLastProgress,
-            durationMs:
-              new Date(room.currentQuestion!.timerEndsAt).getTime() -
-              Date.now(),
+            endsAt: new Date(room.currentQuestion!.timerEndsAt).getTime(),
             paused: room.pausedState.paused,
           }}
         />
@@ -103,9 +101,7 @@ export default function GameTopSection() {
           questionType={room.currentQuestion!.type}
           timeBar={{
             progress: 1,
-            durationMs:
-              new Date(room.answeringPlayer!.timerEndsAt).getTime() -
-              Date.now(),
+            endsAt: new Date(room.answeringPlayer!.timerEndsAt).getTime(),
             paused: room.pausedState.paused,
           }}
         />
@@ -118,9 +114,7 @@ export default function GameTopSection() {
           bottomText="Pass the question to another player"
           timeBar={{
             progress: 1,
-            durationMs:
-              new Date(room.currentQuestion!.passingEndsAt).getTime() -
-              Date.now(),
+            endsAt: new Date(room.currentQuestion!.passingEndsAt).getTime(),
             paused: room.pausedState.paused,
           }}
         />
@@ -133,9 +127,7 @@ export default function GameTopSection() {
           bottomText="Place your bet"
           timeBar={{
             progress: 1,
-            durationMs:
-              new Date(room.currentQuestion!.bettingEndsAt).getTime() -
-              Date.now(),
+            endsAt: new Date(room.currentQuestion!.bettingEndsAt).getTime(),
             paused: room.pausedState.paused,
           }}
         />
@@ -163,9 +155,7 @@ export default function GameTopSection() {
           questionType="final"
           timeBar={{
             progress: 1,
-            durationMs:
-              new Date(room.finalRoundState!.timerEndsAt!).getTime() -
-              Date.now(),
+            endsAt: new Date(room.finalRoundState!.timerEndsAt!).getTime(),
             paused: room.pausedState.paused,
           }}
         />
@@ -181,7 +171,7 @@ export default function GameTopSection() {
           questionType="regular"
           timeBar={{
             progress: 0,
-            durationMs: 0,
+            endsAt: 0,
           }}
         />
       );

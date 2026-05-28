@@ -21,7 +21,7 @@ export default function QuestionPanel({
   questionType: QuestionType | "final";
   timeBar: {
     progress: number;
-    durationMs: number;
+    endsAt: number;
     paused?: boolean;
   };
 }) {
@@ -44,16 +44,16 @@ export default function QuestionPanel({
     <div className="relative h-full">
       <TimerBar
         initProgress={timeBar.progress}
-        durationMs={timeBar.durationMs}
+        endsAt={timeBar.endsAt}
         paused={timeBar.paused}
       />
       <div className="h-full flex flex-col items-center justify-center p-4 sm:p-6 gap-3 overflow-hidden">
         {attachment && (
-          <div className="w-full flex justify-center shrink min-h-0">
+          <div className="w-full flex justify-center flex-1 min-h-0">
             {attachment.type === "video" && (
               <video
                 ref={videoRef}
-                className="w-full max-h-[35vh] object-contain rounded-md"
+                className="w-full h-full object-contain rounded-md"
                 src={attachment.url}
                 loop={loopMedia}
               />
@@ -75,7 +75,7 @@ export default function QuestionPanel({
               <img
                 src={attachment.url}
                 alt="Question attachment"
-                className="w-full max-h-[35vh] object-contain rounded-lg"
+                className="w-full h-full object-contain rounded-lg"
               />
             )}
           </div>

@@ -108,11 +108,11 @@ export default function RevealingQuestionPanel({
     <div className="relative h-full">
       <div className="h-full flex flex-col items-center justify-center p-4 sm:p-6 gap-3 overflow-hidden">
         {attachment && (
-          <div className="w-full flex justify-center shrink min-h-0">
+          <div className="w-full flex justify-center flex-1 min-h-0">
             {attachment.type === "video" && (
               <video
                 ref={mediaRef as React.RefObject<HTMLVideoElement>}
-                className="w-full max-h-[35vh] object-contain rounded-md"
+                className="w-full h-full object-contain rounded-md"
                 src={attachment.url}
                 onEnded={startTextReveal}
                 controls={false}
@@ -139,7 +139,7 @@ export default function RevealingQuestionPanel({
               <img
                 src={attachment.url}
                 alt="Question attachment"
-                className="w-full max-h-[35vh] object-contain rounded-lg"
+                className="w-full h-full object-contain rounded-lg"
               />
             )}
           </div>

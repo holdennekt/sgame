@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
 export default function TimerBar({
+  endsAt,
   initProgress,
-  durationMs,
   paused,
 }: {
+  endsAt: number;
   initProgress: number;
-  durationMs: number;
   paused?: boolean;
 }) {
   const [progress, setProgress] = useState(initProgress);
@@ -16,12 +16,14 @@ export default function TimerBar({
     if (reqIdRef.current) cancelAnimationFrame(reqIdRef.current);
     if (paused || initProgress <= 0) return;
 
-    const totalTime = durationMs / initProgress;
-    const start = performance.now() - totalTime * (1 - initProgress);
+    const remaining = endsAt - Date.now();
+    if (remaining <= 0) { setProgress(0); return; }
+
+    const totalDuration = remaining / initProgress;
+    const start = performance.now() - (totalDuration - remaining);
 
     const tick = (now: number) => {
-      const elapsed = now - start;
-      const newProgress = Math.max(1 - elapsed / totalTime, 0);
+      const newProgress = Math.max(1 - (now - start) / totalDuration, 0);
       setProgress(newProgress);
       if (newProgress > 0) {
         reqIdRef.current = requestAnimationFrame(tick);
@@ -29,11 +31,10 @@ export default function TimerBar({
     };
 
     reqIdRef.current = requestAnimationFrame(tick);
-
     return () => {
       if (reqIdRef.current) cancelAnimationFrame(reqIdRef.current);
     };
-  }, [initProgress, durationMs, paused]);
+  }, [endsAt, initProgress, paused]);
 
   return (
     <div className="absolute top-0 left-0 h-1 bg-primary transition-none rounded-full"

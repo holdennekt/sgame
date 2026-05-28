@@ -22,7 +22,7 @@ export default function MainPanel() {
   return (
     <>
       <div className="flex-[3_0_0%] flex flex-col gap-2 min-w-0 min-h-0">
-        <div className="relative flex-1 w-full bg-surface border border-border rounded-md p-2">
+        <div className="relative flex-1 min-h-0 w-full bg-surface border border-border rounded-md p-2">
           <GameTopSection />
           {room.pausedState.paused && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-md z-10">
@@ -46,10 +46,10 @@ export default function MainPanel() {
 
         {canSkip && (
           <button
-            className="self-end inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-on-surface-muted border border-border hover:border-danger hover:text-danger bg-surface hover:bg-surface-raised transition-colors duration-150"
+            className="w-full h-12 inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150"
             onClick={skipQuestion}
           >
-            <FiSkipForward size={13} />
+            <FiSkipForward size={12} />
             Skip question
           </button>
         )}

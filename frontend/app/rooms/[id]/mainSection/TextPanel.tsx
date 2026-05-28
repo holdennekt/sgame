@@ -9,7 +9,7 @@ export default function TextPanel({
   bottomText?: string | null;
   timeBar?: {
     progress: number;
-    durationMs: number;
+    endsAt: number;
     paused?: boolean;
   };
 }) {
@@ -18,7 +18,7 @@ export default function TextPanel({
       {timeBar && (
         <TimerBar
           initProgress={timeBar.progress}
-          durationMs={timeBar.durationMs}
+          endsAt={timeBar.endsAt}
           paused={timeBar.paused}
         />
       )}
