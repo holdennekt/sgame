@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
@@ -11,7 +13,8 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const SESSIONS_KEY = "sessions"
+const SESSION_KEY_PREFIX = "session:"
+const SESSION_TTL = 7 * 24 * time.Hour
 
 type sessionCache struct {
 	client *redis.Client
@@ -22,7 +25,7 @@ func NewSessionCache(client *redis.Client) cache.Session {
 }
 
 func (c *sessionCache) Get(ctx context.Context, sessionId string) (*domain.User, error) {
-	raw, err := c.client.HGet(ctx, SESSIONS_KEY, sessionId).Result()
+	raw, err := c.client.Get(ctx, SESSION_KEY_PREFIX+sessionId).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, custerr.NewNotFoundErr("invalid session")
@@ -37,17 +40,28 @@ func (c *sessionCache) Get(ctx context.Context, sessionId string) (*domain.User,
 }
 
 func (c *sessionCache) GetKey(ctx context.Context, userId string) (string, error) {
-	sessions, err := c.client.HGetAll(ctx, SESSIONS_KEY).Result()
-	if err != nil {
-		return "", custerr.NewInternalErr(err)
-	}
-	for sessionId, raw := range sessions {
-		var user domain.User
-		if err := json.Unmarshal([]byte(raw), &user); err != nil {
-			continue
+	var cursor uint64
+	for {
+		keys, nextCursor, err := c.client.Scan(ctx, cursor, SESSION_KEY_PREFIX+"*", 100).Result()
+		if err != nil {
+			return "", custerr.NewInternalErr(err)
 		}
-		if user.Id == userId {
-			return sessionId, nil
+		for _, key := range keys {
+			raw, err := c.client.Get(ctx, key).Result()
+			if err != nil {
+				continue
+			}
+			var user domain.User
+			if err := json.Unmarshal([]byte(raw), &user); err != nil {
+				continue
+			}
+			if user.Id == userId {
+				return strings.TrimPrefix(key, SESSION_KEY_PREFIX), nil
+			}
+		}
+		cursor = nextCursor
+		if cursor == 0 {
+			break
 		}
 	}
 	return "", custerr.NewNotFoundErr(fmt.Sprintf("no session for user \"%s\"", userId))
@@ -58,14 +72,14 @@ func (c *sessionCache) Set(ctx context.Context, sessionId string, user *domain.U
 	if err != nil {
 		return custerr.NewInternalErr(err)
 	}
-	if err := c.client.HSet(ctx, SESSIONS_KEY, sessionId, data).Err(); err != nil {
+	if err := c.client.Set(ctx, SESSION_KEY_PREFIX+sessionId, data, SESSION_TTL).Err(); err != nil {
 		return custerr.NewInternalErr(err)
 	}
 	return nil
 }
 
 func (c *sessionCache) Delete(ctx context.Context, sessionId string) error {
-	if err := c.client.HDel(ctx, SESSIONS_KEY, sessionId).Err(); err != nil {
+	if err := c.client.Del(ctx, SESSION_KEY_PREFIX+sessionId).Err(); err != nil {
 		return custerr.NewInternalErr(err)
 	}
 	return nil

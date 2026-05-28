@@ -11,6 +11,7 @@ import (
 
 const SESSION_ID_COOKIE_NAME = "sessionId"
 const USER_CONTEXT_KEY = "user"
+const SESSION_COOKIE_TTL = 7 * 24 * 60 * 60
 
 type AuthController struct {
 	authService *service.AuthService
@@ -52,7 +53,7 @@ func (c *AuthController) login(ctx *gin.Context) {
 		return
 	}
 
-	ctx.SetCookie(SESSION_ID_COOKIE_NAME, sessionId, 0, "", "", false, true)
+	ctx.SetCookie(SESSION_ID_COOKIE_NAME, sessionId, SESSION_COOKIE_TTL, "", "", false, true)
 	ctx.JSON(http.StatusOK, dto.AuthResponse{UserId: userId})
 }
 
@@ -80,7 +81,7 @@ func (c *AuthController) register(ctx *gin.Context) {
 		return
 	}
 
-	ctx.SetCookie(SESSION_ID_COOKIE_NAME, sessionId, 0, "", "", false, true)
+	ctx.SetCookie(SESSION_ID_COOKIE_NAME, sessionId, SESSION_COOKIE_TTL, "", "", false, true)
 	ctx.JSON(http.StatusOK, dto.AuthResponse{UserId: userId})
 }
 
@@ -108,7 +109,7 @@ func (c *AuthController) guest(ctx *gin.Context) {
 		return
 	}
 
-	ctx.SetCookie(SESSION_ID_COOKIE_NAME, sessionId, 0, "", "", false, true)
+	ctx.SetCookie(SESSION_ID_COOKIE_NAME, sessionId, SESSION_COOKIE_TTL, "", "", false, true)
 	ctx.JSON(http.StatusOK, dto.AuthResponse{UserId: userId})
 }
 
