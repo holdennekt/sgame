@@ -191,7 +191,7 @@ func (s *PackService) SignURL(ctx context.Context, user domain.User, req dto.Sig
 	return result, getUrl, nil
 }
 
-func (s *PackService) validateRoundsCheckSum(ctx context.Context, userId string, pack dto.CreatePackRequest, packId string) ([]byte, error) {
+func (s *PackService) validateRoundsCheckSum(ctx context.Context, userId string, pack dto.CreatePackRequest, ignoreId string) ([]byte, error) {
 	marshaledRounds, _ := json.Marshal(struct {
 		Rounds     []dto.CreateRoundRequest    `json:"rounds"`
 		FinalRound dto.CreateFinalRoundRequest `json:"finalRound"`
@@ -210,7 +210,7 @@ func (s *PackService) validateRoundsCheckSum(ctx context.Context, userId string,
 		ctx,
 		userId,
 		roundsChecksum,
-		packId,
+		ignoreId,
 	)
 	if err != nil {
 		return nil, err
@@ -309,7 +309,7 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 }
 
 func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dto dto.UpdatePackRequest, user domain.User) (*domain.Pack, error) {
-	roundsChecksum, err := s.validateRoundsCheckSum(ctx, user.Id, dto.CreatePackRequest, "")
+	roundsChecksum, err := s.validateRoundsCheckSum(ctx, user.Id, dto.CreatePackRequest, dto.Id)
 	if err != nil {
 		return nil, err
 	}
