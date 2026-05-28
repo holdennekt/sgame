@@ -369,14 +369,15 @@ func (s *PackService) createDomainAttachment(ctx context.Context, dto dto.Create
 	attachment.MimeType = attachmentStats.ContentType
 	attachment.Size = attachmentStats.Size
 
-	url, err := s.storage.DirectURL(ctx, attachment.Key, GET_URL_TTL)
+	reader, err := s.storage.Get(ctx, attachment.Key)
 	if err != nil {
 		return nil, err
 	}
+	defer reader.Close()
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	probeData, err := ffprobe.ProbeURL(ctx, url, "-loglevel", "verbose")
+	probeData, err := ffprobe.ProbeReader(ctx, reader)
 	if err != nil {
 		return nil, custerr.NewInternalErr(fmt.Errorf("failed to analyze media: %w", err))
 	}

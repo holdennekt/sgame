@@ -148,6 +148,18 @@ func (s *MinioStorage) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+func (s *MinioStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+	obj, err := s.client.GetObject(ctx, s.bucketName, key, minio.GetObjectOptions{})
+	if err != nil {
+		errResponse := minio.ToErrorResponse(err)
+		if errResponse.Code == "NoSuchKey" {
+			return nil, custerr.NewNotFoundErr(fmt.Sprintf("file with key %q not found", key))
+		}
+		return nil, custerr.NewInternalErr(fmt.Errorf("failed to read file: %w", err))
+	}
+	return obj, nil
+}
+
 func (s *MinioStorage) GetStats(ctx context.Context, key string) (*storage.Stats, error) {
 	stats, err := s.client.StatObject(ctx, s.bucketName, key, minio.StatObjectOptions{})
 	if err != nil {
@@ -172,15 +184,6 @@ func (s *MinioStorage) URL(ctx context.Context, key string, ttl time.Duration) (
 	furl, _ := url.Parse(s.publicBase)
 	u.Host = furl.Host
 	u.Path = "/storage" + u.Path
-
-	return u.String(), nil
-}
-
-func (s *MinioStorage) DirectURL(ctx context.Context, key string, ttl time.Duration) (string, error) {
-	u, err := s.client.PresignedGetObject(ctx, s.bucketName, key, ttl, nil)
-	if err != nil {
-		return "", custerr.NewInternalErr(fmt.Errorf("failed to generate presigned URL: %w", err))
-	}
 
 	return u.String(), nil
 }

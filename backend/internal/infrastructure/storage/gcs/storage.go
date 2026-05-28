@@ -118,6 +118,17 @@ func (s *GCSStorage) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+func (s *GCSStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+	r, err := s.client.Bucket(s.bucketName).Object(key).NewReader(ctx)
+	if err != nil {
+		if err == gcsstorage.ErrObjectNotExist {
+			return nil, custerr.NewNotFoundErr(fmt.Sprintf("file with key %q not found", key))
+		}
+		return nil, custerr.NewInternalErr(fmt.Errorf("failed to read file: %w", err))
+	}
+	return r, nil
+}
+
 func (s *GCSStorage) GetStats(ctx context.Context, key string) (*storage.Stats, error) {
 	attrs, err := s.client.Bucket(s.bucketName).Object(key).Attrs(ctx)
 	if err != nil {
@@ -138,10 +149,6 @@ func (s *GCSStorage) URL(ctx context.Context, key string, ttl time.Duration) (st
 		return fmt.Sprintf("%s/%s/%s", s.publicBase, s.bucketName, key), nil
 	}
 
-	return s.signedURL(ctx, key, ttl)
-}
-
-func (s *GCSStorage) DirectURL(ctx context.Context, key string, ttl time.Duration) (string, error) {
 	return s.signedURL(ctx, key, ttl)
 }
 
