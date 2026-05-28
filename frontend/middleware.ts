@@ -36,16 +36,15 @@ export async function middleware(request: NextRequest) {
   const resp = await fetch(`http://${process.env.BACKEND_HOST}/api/user`, {
     headers: { cookie: request.cookies.toString() },
   });
-  const user: User | ErrorBody = await resp?.json();
 
-  if (!resp.ok || isError(user)) {
+  if (!resp.ok) {
     const response = NextResponse.redirect(new URL("/login", request.url));
     response.cookies.delete(SESSION_ID_COOKIE_NAME);
     return response;
   }
 
   const clonedRequest = request.clone();
-  clonedRequest.headers.set(USER_HEADER_NAME, JSON.stringify(user));
+  clonedRequest.headers.set(USER_HEADER_NAME, encodeURIComponent(await resp.text()));
   return NextResponse.rewrite(request.url.toString(), {
     request: clonedRequest,
   });

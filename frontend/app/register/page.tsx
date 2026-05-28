@@ -3,7 +3,6 @@
 import { toast, ToastContainer } from "react-toastify";
 import Navbar from "../../components/Navbar";
 import { FormEventHandler } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { register } from "../actions";
 import { isError } from "@/middleware";
@@ -13,8 +12,6 @@ const btnPrimary = "inline-flex items-center justify-center px-3.5 py-1.5 rounde
 const btnSecondary = "inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-surface-raised text-on-surface border border-border hover:bg-border transition-colors duration-150";
 
 export default function Page() {
-  const router = useRouter();
-
   const onSubmit: FormEventHandler<HTMLFormElement> = async e => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -26,7 +23,7 @@ export default function Page() {
       toast.error(result.error, { containerId: "register" });
       return;
     }
-    router.push("/");
+    window.location.href = "/lobby";
   };
 
   return (

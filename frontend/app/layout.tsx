@@ -21,7 +21,7 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   const userHeader = headers().get(USER_HEADER_NAME);
-  const user: User | null = userHeader ? JSON.parse(userHeader) : null;
+  const user: User | null = userHeader ? JSON.parse(decodeURIComponent(userHeader)) : null;
 
   return (
     <html lang="en">

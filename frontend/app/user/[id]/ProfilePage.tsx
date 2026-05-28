@@ -48,7 +48,7 @@ export default function ProfilePage({
     isOpen: false,
   });
 
-  const tabs: Tab[] = isOwn ? ["packs", "history"] : ["packs"];
+  const tabs: Tab[] = isOwn && !user.isGuest ? ["packs", "history"] : user.isGuest ? [] : ["packs"];
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-5 sm:py-8 flex flex-col gap-5 sm:gap-6">
@@ -80,13 +80,15 @@ export default function ProfilePage({
 
           {isOwn && (
             <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setEditing(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
-              >
-                <FiEdit2 size={13} />
-                Edit
-              </button>
+              {!user.isGuest && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
+                >
+                  <FiEdit2 size={13} />
+                  Edit
+                </button>
+              )}
               <button
                 onClick={handleLogout}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
@@ -95,47 +97,51 @@ export default function ProfilePage({
                 <FiLogOut size={13} />
                 Log out
               </button>
-              <button
-                onClick={handleDeleteAccount}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-border text-danger hover:bg-danger/10 transition-colors duration-150"
-                title="Delete account"
-              >
-                <FiTrash2 size={13} />
-                Delete account
-              </button>
+              {!user.isGuest && (
+                <button
+                  onClick={handleDeleteAccount}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-border text-danger hover:bg-danger/10 transition-colors duration-150"
+                  title="Delete account"
+                >
+                  <FiTrash2 size={13} />
+                  Delete account
+                </button>
+              )}
             </div>
           )}
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-1 border-b border-border">
-          {tabs.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-4 py-2 text-sm font-medium capitalize transition-colors duration-150 border-b-2 -mb-px ${
-                tab === t
-                  ? "border-primary text-primary"
-                  : "border-transparent text-on-surface-muted hover:text-on-surface"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
+      {tabs.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-1 border-b border-border">
+            {tabs.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-4 py-2 text-sm font-medium capitalize transition-colors duration-150 border-b-2 -mb-px ${
+                  tab === t
+                    ? "border-primary text-primary"
+                    : "border-transparent text-on-surface-muted hover:text-on-surface"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+
+          {tab === "packs" && (
+            <PacksTab
+              userId={user.id}
+              isOwn={isOwn}
+              onPlay={(pack) => setNewRoomModal({ isOpen: true, pack })}
+            />
+          )}
+
+          {tab === "history" && <HistoryTab />}
         </div>
-
-        {tab === "packs" && (
-          <PacksTab
-            userId={user.id}
-            isOwn={isOwn}
-            onPlay={(pack) => setNewRoomModal({ isOpen: true, pack })}
-          />
-        )}
-
-        {tab === "history" && <HistoryTab />}
-      </div>
+      )}
 
       <NewRoomModal
         isOpen={newRoomModal.isOpen}
