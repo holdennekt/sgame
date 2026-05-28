@@ -349,8 +349,10 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 					oldAttachment := oldPack.GetAttachment(oldKey)
 					if oldAttachment != nil {
 						newKey := string(dto.Type) + keyUUID
-						if err := s.storage.Move(ctx, oldKey, newKey); err != nil {
-							return nil, err
+						if oldKey != newKey {
+							if err := s.storage.Move(ctx, oldKey, newKey); err != nil {
+								return nil, err
+							}
 						}
 						question.Attachment = oldAttachment
 						question.Attachment.Key = newKey
@@ -394,8 +396,10 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 			oldAttachment := oldPack.GetAttachment(oldKey)
 			if oldAttachment != nil {
 				newKey := string(dto.Type) + keyUUID
-				if err := s.storage.Move(ctx, oldKey, newKey); err != nil {
-					return nil, err
+				if oldKey != newKey {
+					if err := s.storage.Move(ctx, oldKey, newKey); err != nil {
+						return nil, err
+					}
 				}
 				category.Question.Attachment = oldAttachment
 				category.Question.Attachment.Key = newKey
