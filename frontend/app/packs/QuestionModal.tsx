@@ -28,7 +28,7 @@ export default function QuestionModal({
   isOpen: boolean;
   close: () => void;
   question: QuestionFormData;
-  saveQuestion: (question: QuestionFormData) => void;
+  saveQuestion: (question: Omit<QuestionFormData, "index">) => void;
   readOnly?: boolean;
 }) {
   const [value, setValue] = useState(question.value);
@@ -88,7 +88,6 @@ export default function QuestionModal({
     if (comment && comment.length > 200)
       return setError("Comment must be less than 200 characters long");
     saveQuestion({
-      index: 0,
       value: numValue,
       text,
       attachment: editAttachment,
@@ -106,7 +105,7 @@ export default function QuestionModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={close} closeByClickingOutside>
+    <Modal isOpen={isOpen} onClose={close} closeByClickingOutside={readOnly}>
       <h3 className="text-base font-semibold text-on-surface mb-4">
         Edit question
       </h3>
@@ -241,14 +240,23 @@ export default function QuestionModal({
 
       {!readOnly && (
         <div className="mt-4 flex items-center justify-between gap-4">
-          {error ? <p className="text-xs text-danger">{error}</p> : <span />}
           <button
-            className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150 shrink-0"
             type="button"
-            onClick={onSave}
+            className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
+            onClick={close}
           >
-            Save
+            Cancel
           </button>
+          <div className="flex items-center gap-2">
+            {error && <p className="text-xs text-danger">{error}</p>}
+            <button
+              type="button"
+              className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150 shrink-0"
+              onClick={onSave}
+            >
+              Save
+            </button>
+          </div>
         </div>
       )}
     </Modal>

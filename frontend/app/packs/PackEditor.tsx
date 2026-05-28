@@ -77,7 +77,7 @@ export default function PackEditor({
   const [questionModal, setQuestionModal] = useState<{
     isOpen: boolean;
     question: QuestionFormData;
-    saveQuestion: (q: QuestionFormData) => void;
+    saveQuestion: (q: Omit<QuestionFormData, "index">) => void;
   }>({
     isOpen: false,
     question: {

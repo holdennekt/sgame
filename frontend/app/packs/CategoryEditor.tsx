@@ -36,7 +36,7 @@ export default function CategoryEditor({
     React.SetStateAction<{
       isOpen: boolean;
       question: QuestionFormData;
-      saveQuestion: (q: QuestionFormData) => void;
+      saveQuestion: (q: Omit<QuestionFormData, "index">) => void;
     }>
   >;
   readOnly?: boolean;
