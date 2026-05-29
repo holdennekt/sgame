@@ -85,6 +85,7 @@ export default function QuestionModal({
     )
       return setError("Attachment URL is too long");
     if (!answers.length) return setError("At least 1 answer is required");
+    if (answers.some((answer) => answer.length > 200)) return setError("Answer must be under 200 characters long");
     if (comment && comment.length > 200)
       return setError("Comment must be less than 200 characters long");
     saveQuestion({
