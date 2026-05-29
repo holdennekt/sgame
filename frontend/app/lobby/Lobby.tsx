@@ -115,6 +115,7 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
           <Chat
             messages={chatMessages}
             sendMessage={sendChatMessage}
+            className="sm:rounded-md sm:border sm:border-border"
           />
         </div>
       </main>

@@ -9,9 +9,11 @@ import { useRequiredUser } from "@/contexts/UserContext";
 export default function Chat({
   messages,
   sendMessage,
+  className = "rounded-md border border-border",
 }: {
   messages: ChatMessage[];
   sendMessage: (text: string) => void;
+  className?: string;
 }) {
   const user = useRequiredUser();
   const [input, setInput] = useState("");
@@ -37,7 +39,7 @@ export default function Chat({
   };
 
   return (
-    <div className="w-full h-full flex flex-col rounded-md overflow-hidden border border-border bg-surface">
+    <div className={`w-full h-full flex flex-col overflow-hidden bg-surface ${className}`}>
       <div
         className="flex-1 flex flex-col overflow-y-auto px-3 py-2 min-h-0"
         ref={scrollableRef}
