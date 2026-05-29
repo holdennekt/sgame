@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEventHandler, useState } from "react";
+import { FormEventHandler, useEffect, useMemo, useState } from "react";
 import QuestionModal from "./QuestionModal";
 import FinalRoundCategoryModal from "./FinalRoundCategoryModal";
 import CategoryEditor from "./CategoryEditor";
@@ -16,13 +16,16 @@ import {
   IoIosArrowDown as SelectArrow,
 } from "react-icons/io";
 import { DndContext, closestCenter } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import {
   convertPackFormDataToRequest,
-  convertPackToFormData,
   CreatePackRequest,
   FinalRoundCategoryFormData,
   Pack,
+  PackFormData,
   QuestionFormData,
 } from "@/types/pack";
 import { signURL } from "@/app/actions";
@@ -43,12 +46,21 @@ export default function PackEditor({
   initialPack,
   readOnly = false,
 }: {
-  savePack: (pack: CreatePackRequest) => Promise<{ id: string } | { error: string }>;
+  savePack: (
+    pack: CreatePackRequest,
+  ) => Promise<{ id: string } | { error: string }>;
   initialPack: Omit<Pack, "id" | "createdBy">;
   readOnly?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const draftKey = `pack_draft:${pathname.split('/').at(-1)}`;
+
+  const initialFormData = useMemo<PackFormData | undefined>(() => {
+    if (readOnly) return;
+    const saved = localStorage.getItem(draftKey);
+    if (saved) return JSON.parse(saved) as PackFormData;
+  }, [readOnly]);
 
   const {
     pack,
@@ -72,7 +84,7 @@ export default function PackEditor({
     deleteFinalRoundCategory,
     onDragEndRounds,
     onDragEndCategories,
-  } = usePack(initialPack);
+  } = usePack(initialPack, initialFormData);
 
   const [questionModal, setQuestionModal] = useState<{
     isOpen: boolean;
@@ -110,6 +122,14 @@ export default function PackEditor({
     saveCategory: () => {},
   });
 
+  useEffect(() => {
+    if (readOnly) return;
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify(pack, (_, v) => (v instanceof File ? undefined : v)),
+    );
+  }, [pack]);
+
   const onSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
     try {
@@ -120,12 +140,19 @@ export default function PackEditor({
         toast.error(result.error, { containerId: "editor" });
         return;
       }
-      router.push(`/packs/${result.id}`);
+      localStorage.removeItem(draftKey);
       toast.success("Pack successfully saved!", { containerId: "editor" });
+      router.push(`/packs/${result.id}`);
     } catch (error) {
       if (error instanceof Error)
         toast.error(error.message, { containerId: "editor" });
     }
+  };
+
+  const onDiscard = () => {
+    if (!confirm("Discard all changes?")) return;
+    localStorage.removeItem(draftKey);
+    window.location.replace(pathname);
   };
 
   return (
@@ -178,11 +205,7 @@ export default function PackEditor({
               <button
                 className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-md text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
                 type="button"
-                onClick={() => {
-                  if (!confirm("Discard all changes?")) return;
-                  setPack(convertPackToFormData(initialPack));
-                  router.push(pathname.split("?")[0]);
-                }}
+                onClick={onDiscard}
               >
                 Discard
               </button>
@@ -317,7 +340,10 @@ export default function PackEditor({
                           setFinalRoundCategoryModal({
                             isOpen: true,
                             category: cat,
-                            saveCategory: changeFinalRoundCategory.bind(null, i),
+                            saveCategory: changeFinalRoundCategory.bind(
+                              null,
+                              i,
+                            ),
                           })
                         }
                       >

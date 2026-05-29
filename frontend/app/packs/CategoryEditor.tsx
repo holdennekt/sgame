@@ -42,7 +42,7 @@ export default function CategoryEditor({
   readOnly?: boolean;
 }) {
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5, delay: 250, tolerance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5, delay: 100, tolerance: 5 } }),
   );
 
   const renameCategory = (name: string) => {

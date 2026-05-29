@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import {
@@ -8,8 +8,13 @@ import {
   PackFormData,
 } from "@/types/pack";
 
-export function usePack(initialPack: Omit<Pack, "id" | "createdBy">) {
-  const [pack, setPack] = useState<PackFormData>(convertPackToFormData(initialPack));
+export function usePack(initialPack: Omit<Pack, "id" | "createdBy">, initialFormData?: PackFormData) {
+  const [pack, setPack] = useState<PackFormData>(initialFormData ?? convertPackToFormData(initialPack));
+
+  useEffect(() => {
+    setPack(initialFormData ?? convertPackToFormData(initialPack));
+  }, [initialFormData]);
+
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(
