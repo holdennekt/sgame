@@ -17,7 +17,7 @@ func NewGameEndedMessage() message.Message {
 	return message.Message{Event: domain.GameEnded}
 }
 
-func HandleGameEndedMessage(ctx context.Context, server realtime.Channel, lobbyServer realtime.Channel, roomCache cache.Room, roomRepository repository.Room, roomId string) error {
+func HandleGameEndedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, lobbyServer realtime.Channel, roomCache cache.Room, roomRepository repository.Room, roomId string) error {
 	room, err := roomCache.GetById(ctx, roomId)
 	if err != nil {
 		return err
@@ -41,6 +41,10 @@ func HandleGameEndedMessage(ctx context.Context, server realtime.Channel, lobbyS
 			return
 		}
 		if err := server.Send(ctx, deletedRoomMsg); err != nil {
+			log.Println(err)
+			return
+		}
+		if err := internalServer.Send(ctx, deletedRoomMsg); err != nil {
 			log.Println(err)
 			return
 		}

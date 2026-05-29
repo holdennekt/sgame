@@ -55,6 +55,8 @@ func (c *channel) Recieve(ctx context.Context) <-chan message.Message {
 	return messages
 }
 
+func (c *channel) Delete(_ context.Context) error { return nil }
+
 func (c *channel) Close() error {
 	if err := c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 		return custerr.NewInternalErr(err)

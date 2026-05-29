@@ -99,7 +99,7 @@ func (s *RoomService) Get(ctx context.Context) ([]domain.RoomLobby, error) {
 }
 
 func (s *RoomService) Join(ctx context.Context, user domain.User, id, password string) (any, error) {
-	newRoom, err := s.roomCache.SafeSet(ctx, id, func(room *domain.Room) error {
+	newRoom, err := s.roomCache.SafeUpdate(ctx, id, func(room *domain.Room) error {
 		if room.IsUserIn(user.Id) {
 			return nil
 		}
@@ -145,7 +145,7 @@ func (s *RoomService) Connect(ctx context.Context, userId, id string) (*domain.R
 		return nil, err
 	}
 
-	return s.roomCache.SafeSet(ctx, id, func(room *domain.Room) error {
+	return s.roomCache.SafeUpdate(ctx, id, func(room *domain.Room) error {
 		if room.IsUserHost(userId) {
 			room.Host.IsConnected = true
 		} else {
@@ -159,7 +159,7 @@ func (s *RoomService) Connect(ctx context.Context, userId, id string) (*domain.R
 }
 
 func (s *RoomService) Leave(ctx context.Context, userId, id string) error {
-	_, err := s.roomCache.SafeSet(ctx, id, func(room *domain.Room) error {
+	_, err := s.roomCache.SafeUpdate(ctx, id, func(room *domain.Room) error {
 		if !room.IsUserIn(userId) {
 			return custerr.NewForbiddenErr("not allowed to leave room you are not in")
 		}

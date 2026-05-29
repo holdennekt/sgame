@@ -11,7 +11,7 @@ import (
 )
 
 func HandleUnpauseMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string, user domain.User, msg message.Message) error {
-	newRoom, err := roomCache.SafeSet(ctx, roomId, func(r *domain.Room) error {
+	newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(r *domain.Room) error {
 		return r.Unpause(user.Id)
 	})
 	if err != nil {

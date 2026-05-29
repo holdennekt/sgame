@@ -768,6 +768,10 @@ func (r *Room) EndGame() {
 	if r.FinalRoundState != nil && r.FinalRoundState.TimerEndsAt != nil {
 		r.FinalRoundState.TimerEndsAt = nil
 	}
+	for pi := range r.Players {
+		newBetAmount := 0
+		r.Players[pi].BetAmount = &newBetAmount
+	}
 	r.State = GameOver
 }
 

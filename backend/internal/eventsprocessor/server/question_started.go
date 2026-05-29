@@ -35,7 +35,7 @@ func HandleQuestionStartedMessage(ctx context.Context, server realtime.Channel, 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		_, err := roomCache.SafeSet(ctx, roomId, func(newRoom *domain.Room) error {
+		_, err := roomCache.SafeUpdate(ctx, roomId, func(newRoom *domain.Room) error {
 			questionEnded :=
 				newRoom.State != domain.ShowingQuestion ||
 					!qsp.Question.IsCurrent(newRoom)

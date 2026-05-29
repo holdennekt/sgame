@@ -35,7 +35,7 @@ func HandlePassingStartedMessage(ctx context.Context, server realtime.Channel, i
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		newerRoom, err := roomCache.SafeSet(ctx, roomId, func(newRoom *domain.Room) error {
+		newerRoom, err := roomCache.SafeUpdate(ctx, roomId, func(newRoom *domain.Room) error {
 			if newRoom.State != domain.Passing || !psp.Question.IsCurrent(newRoom) {
 				return ErrDeferredFunctionCancelled
 			}

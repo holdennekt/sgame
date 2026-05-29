@@ -20,7 +20,7 @@ func HandleSubmitFinalRoundAnswerMessage(ctx context.Context, server realtime.Ch
 	if err := json.Unmarshal(msg.Payload, &afrap); err != nil {
 		return err
 	}
-	_, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
+	_, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
 		return room.SubmitFinalRoundAnswer(user.Id, afrap.Answer)
 	})
 	if err != nil {

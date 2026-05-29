@@ -39,7 +39,7 @@ func HandleSelectQuestionMessage(ctx context.Context, server realtime.Channel, i
 	}
 
 	time.AfterFunc(outgoing.QuestionDemoDuration*time.Second, func() {
-		newRoom, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
+		newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
 			return room.SelectQuestion(user.Id, pack, qsp.Category, qsp.Index, getAttachmentUrl)
 		})
 		if err != nil {

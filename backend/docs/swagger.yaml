@@ -853,14 +853,14 @@ definitions:
       attachment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
       comment:
-        maxLength: 200
+        maxLength: 400
         type: string
       index:
         maximum: 9
         minimum: 0
         type: integer
       text:
-        maxLength: 300
+        maxLength: 400
         type: string
       type:
         allOf:

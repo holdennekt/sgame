@@ -63,7 +63,12 @@ func (c *channel) Recieve(ctx context.Context) <-chan message.Message {
 	return messages
 }
 
+func (c *channel) Delete(_ context.Context) error { return nil }
+
 func (c *channel) Close() error {
+	if c.pubSub == nil {
+		return nil
+	}
 	if err := c.pubSub.Close(); err != nil {
 		return custerr.NewInternalErr(err)
 	}

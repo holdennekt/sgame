@@ -21,7 +21,7 @@ func HandleRemoveFinalRoundCategoryMessage(ctx context.Context, server realtime.
 	if err := json.Unmarshal(msg.Payload, &rfrcp); err != nil {
 		return err
 	}
-	newRoom, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
+	newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
 		return room.RemoveFinalRoundCategory(pack, user.Id, rfrcp.Category, getAttachmentUrl)
 	})
 	if err != nil {

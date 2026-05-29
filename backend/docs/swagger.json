@@ -2346,7 +2346,7 @@
                 },
                 "comment": {
                     "type": "string",
-                    "maxLength": 200
+                    "maxLength": 400
                 },
                 "index": {
                     "type": "integer",
@@ -2355,7 +2355,7 @@
                 },
                 "text": {
                     "type": "string",
-                    "maxLength": 300
+                    "maxLength": 400
                 },
                 "type": {
                     "enum": [

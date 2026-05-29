@@ -44,13 +44,14 @@ func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage2 storage.Stor
 	repositoryRoom := mongo2.NewRoomRepository(mdb)
 	pubSubChannelGetter := providePubSubChannelGetter(rds)
 	streamsChannelGetter := provideStreamsChannelGetter(rds)
-	roomInternalEventsProcessorGetter := provideRoomInternalEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter)
-	roomService := provideRoomService(pack, repositoryRoom, room, pubSubChannelGetter, streamsChannelGetter, roomInternalEventsProcessorGetter)
+	persistentStreamsChannelGetter := providePersistentStreamsChannelGetter(rds)
+	roomInternalEventsProcessorGetter := provideRoomInternalEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter)
+	roomService := provideRoomService(pack, repositoryRoom, room, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter, roomInternalEventsProcessorGetter)
 	roomController := http.NewRoomController(packService, roomService)
 	lobbyEventsProcessorGetter := provideLobbyEventsProcessorGetter(room, pubSubChannelGetter)
 	lobbyHandler := provideLobbyHandler(pubSubChannelGetter, lobbyEventsProcessorGetter)
-	roomEventsProcessorGetter := provideRoomEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter)
-	roomHandler := provideRoomHandler(roomService, roomEventsProcessorGetter, pubSubChannelGetter, streamsChannelGetter)
+	roomEventsProcessorGetter := provideRoomEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter)
+	roomHandler := provideRoomHandler(roomService, roomEventsProcessorGetter, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter)
 	appApp := NewApp(room, authController, userController, packController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter)
 	return appApp
 }
@@ -69,6 +70,10 @@ type StreamsChannelGetter struct {
 	realtime.ServerChannelGetter
 }
 
+type PersistentStreamsChannelGetter struct {
+	realtime.ServerChannelGetter
+}
+
 func providePubSubChannelGetter(client *redis.Client) PubSubChannelGetter {
 	return PubSubChannelGetter{pubsub.NewServerChannelGetter(client)}
 }
@@ -77,20 +82,24 @@ func provideStreamsChannelGetter(client *redis.Client) StreamsChannelGetter {
 	return StreamsChannelGetter{streams.NewServerChannelGetter(client)}
 }
 
+func providePersistentStreamsChannelGetter(client *redis.Client) PersistentStreamsChannelGetter {
+	return PersistentStreamsChannelGetter{streams.NewPersistentServerChannelGetter(client)}
+}
+
 func provideLobbyEventsProcessorGetter(roomCache cache.Room, pubsubGetter PubSubChannelGetter) eventsprocessor.LobbyEventsProcessorGetter {
 	return eventsprocessor.NewLobbyEventsProcessorGetter(pubsubGetter.ServerChannelGetter, roomCache)
 }
 
-func provideRoomEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter) eventsprocessor.RoomEventsProcessorGetter {
-	return eventsprocessor.NewRoomEventsProcessorGetter(pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, roomCache, roomRepo, packRepo, storage2)
+func provideRoomEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter) eventsprocessor.RoomEventsProcessorGetter {
+	return eventsprocessor.NewRoomEventsProcessorGetter(pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, persistentStreamsGetter.ServerChannelGetter, roomCache, roomRepo, packRepo, storage2)
 }
 
-func provideRoomInternalEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter) eventsprocessor.RoomInternalEventsProcessorGetter {
-	return eventsprocessor.NewRoomInternalEventsProcessorGetter(pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, roomCache, roomRepo, packRepo, storage2)
+func provideRoomInternalEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter) eventsprocessor.RoomInternalEventsProcessorGetter {
+	return eventsprocessor.NewRoomInternalEventsProcessorGetter(pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, persistentStreamsGetter.ServerChannelGetter, roomCache, roomRepo, packRepo, storage2)
 }
 
-func provideRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *service.RoomService {
-	return service.NewRoomService(packRepository, roomRepository, roomCache, pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, roomInternalEventsProcessorGetter)
+func provideRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *service.RoomService {
+	return service.NewRoomService(packRepository, roomRepository, roomCache, pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, persistentStreamsGetter.ServerChannelGetter, roomInternalEventsProcessorGetter)
 }
 
 var ServiceSet = wire.NewSet(service.NewAuthService, service.NewUserService, provideRoomService, service.NewPackService)
@@ -101,8 +110,8 @@ func provideLobbyHandler(pubsubGetter PubSubChannelGetter, lobbyEventsProcessorG
 	return ws.NewLobbyHandler(pubsubGetter.ServerChannelGetter, lobbyEventsProcessorGetter)
 }
 
-func provideRoomHandler(roomService *service.RoomService, roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter) *ws.RoomHandler {
-	return ws.NewRoomHandler(roomService, pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, roomEventsProcessorGetter)
+func provideRoomHandler(roomService *service.RoomService, roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter) *ws.RoomHandler {
+	return ws.NewRoomHandler(roomService, pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, persistentStreamsGetter.ServerChannelGetter, roomEventsProcessorGetter)
 }
 
 var HandlerSet = wire.NewSet(

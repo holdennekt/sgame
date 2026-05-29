@@ -183,6 +183,7 @@ func (s *MinioStorage) URL(ctx context.Context, key string, ttl time.Duration) (
 	}
 	furl, _ := url.Parse(s.publicBase)
 	u.Host = furl.Host
+	u.Scheme = furl.Scheme
 	u.Path = "/storage" + u.Path
 
 	return u.String(), nil
@@ -199,8 +200,9 @@ func (s *MinioStorage) SignUploadPolicy(ctx context.Context, in storage.SignUplo
 	if err != nil {
 		return nil, custerr.NewInternalErr(fmt.Errorf("failed to generate presigned set URL and formData: %w", err))
 	}
-	furl, _ := url.Parse(envvar.GetEnvVar("FRONTEND_URL"))
+	furl, _ := url.Parse(s.publicBase)
 	u.Host = furl.Host
+	u.Scheme = furl.Scheme
 	u.Path = "/storage" + u.Path
 
 	return &storage.SignUploadPolicyResult{URL: u.String(), FormData: formData}, nil

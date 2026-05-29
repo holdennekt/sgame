@@ -17,6 +17,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/internal/message"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
 const (
@@ -146,7 +147,14 @@ func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg messa
 
 func (p *RoomEventsProcessor) handleClientClosure(ctx context.Context) error {
 	log.Printf("User \"%s(%s)\" room \"%s\" client channel closed\n", p.user.Name, p.user.Id, p.id)
-	_, err := p.roomCache.SafeSet(ctx, p.id, func(room *domain.Room) error {
+	_, err := p.roomCache.GetById(ctx, p.id)
+	if err != nil {
+		if _, ok := err.(custerr.NotFoundErr); ok {
+			return nil
+		}
+		return err
+	}
+	_, err = p.roomCache.SafeUpdate(ctx, p.id, func(room *domain.Room) error {
 		playerIndex := slices.IndexFunc(room.Players, func(player domain.Player) bool {
 			return p.user.Id == player.Id
 		})
@@ -193,12 +201,14 @@ func (p *RoomEventsProcessor) handleServerMessage(ctx context.Context, msg messa
 	case domain.CorrectAnswerDemo:
 		return outgoing.HandleCorrectAnswerDemoMessage(ctx, p.client, msg)
 	case domain.RoomDeleted:
+		p.lobbyServer.Close()
+		p.roomServer.Close()
 		return outgoing.HandleRoomDeletedMessage(ctx, p.client, msg)
 	}
 	return nil
 }
 
-func (p *RoomEventsProcessor) handleServerClosure(ctx context.Context) error {
+func (p *RoomEventsProcessor) handleServerClosure(_ context.Context) error {
 	log.Printf("User \"%s(%s)\" room \"%s\" roomServer channel closed\n", p.user.Name, p.user.Id, p.id)
 	return nil
 }
@@ -239,8 +249,14 @@ func NewRoomInternalEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter,
 	}
 }
 
-func (p *RoomInternalEventsProcessor) Listen(ctx context.Context) error {
-	defer p.handleServerClosure(ctx)
+func (p *RoomInternalEventsProcessor) Listen(ctx context.Context) {
+	defer func() {
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := p.handleServerClosure(cleanupCtx); err != nil {
+			log.Println("error while handling internalRoomServer closure", err)
+		}
+	}()
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -250,6 +266,7 @@ func (p *RoomInternalEventsProcessor) Listen(ctx context.Context) error {
 		for {
 			select {
 			case <-ctx.Done():
+				log.Println("EXITING TICKER GOROUTINE")
 				return
 			case <-tickerC:
 				p.roomCache.UpdateOwner(ctx, p.id, OWNER_TTL)
@@ -259,15 +276,16 @@ func (p *RoomInternalEventsProcessor) Listen(ctx context.Context) error {
 
 	messages := p.roomInternalServer.Recieve(ctx)
 	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case msg := <-messages:
-			log.Printf("Server has recieved room \"%s\" internal message with event \"%s\": %v\n", p.id, msg.Event, string(msg.Payload))
-			if err := p.handleMessage(ctx, msg); err != nil {
-				log.Println(err)
-				return err
-			}
+		msg, ok := <-messages
+		if !ok {
+			log.Println("INTERNAL ROOM SERVER CHANNEL WAS CLOSED")
+			return
+		}
+
+		log.Printf("Server has recieved room \"%s\" internal message with event \"%s\": %v\n", p.id, msg.Event, string(msg.Payload))
+		if err := p.handleMessage(ctx, msg); err != nil {
+			log.Println(err)
+			return
 		}
 	}
 }
@@ -296,16 +314,22 @@ func (p *RoomInternalEventsProcessor) handleMessage(ctx context.Context, msg mes
 	case domain.FinalRoundQuestionStarted:
 		return server.HandleFinalRoundQuestionStartedMessage(ctx, p.roomServer, p.roomCache, p.id)
 	case domain.GameEnded:
-		return server.HandleGameEndedMessage(ctx, p.roomServer, p.lobbyServer, p.roomCache, p.roomRepository, p.id)
+		return server.HandleGameEndedMessage(ctx, p.roomServer, p.lobbyServer, p.roomInternalServer, p.roomCache, p.roomRepository, p.id)
 	case domain.UserDisconnected:
-		return server.HandleUserDisconnectedMessage(ctx, p.roomServer, p.lobbyServer, p.roomCache, p.roomRepository, p.id, msg)
+		return server.HandleUserDisconnectedMessage(ctx, p.roomServer, p.roomInternalServer, p.lobbyServer, p.roomCache, p.roomRepository, p.id, msg)
 	case domain.RoomDeleted:
-		return p.roomServer.Close()
+		log.Println("INTERNAL ROOM SERVER GOT ROOM_DELETED EVENT")
+		p.lobbyServer.Close()
+		p.roomServer.Close()
+		return p.roomInternalServer.Close()
 	}
 	return nil
 }
 
 func (p *RoomInternalEventsProcessor) handleServerClosure(ctx context.Context) error {
 	log.Printf("Server room \"%s\" channel closed\n", p.id)
-	return p.roomInternalServer.Close()
+	if err := p.roomServer.Delete(ctx); err != nil {
+		return err
+	}
+	return p.roomInternalServer.Delete(ctx)
 }

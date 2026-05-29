@@ -25,7 +25,7 @@ func HandleFinalRoundQuestionStartedMessage(ctx context.Context, server realtime
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		_, err := roomCache.SafeSet(ctx, roomId, func(newRoom *domain.Room) error {
+		_, err := roomCache.SafeUpdate(ctx, roomId, func(newRoom *domain.Room) error {
 			if newRoom.State != domain.ShowingFinalRoundQuestion {
 				return ErrDeferredFunctionCancelled
 			}

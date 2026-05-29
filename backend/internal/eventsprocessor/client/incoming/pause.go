@@ -16,7 +16,7 @@ import (
 )
 
 func HandlePauseMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string, user domain.User, msg message.Message) error {
-	room, err := roomCache.SafeSet(ctx, roomId, func(r *domain.Room) error {
+	room, err := roomCache.SafeUpdate(ctx, roomId, func(r *domain.Room) error {
 		return r.Pause(user.Id)
 	})
 	if err != nil {
@@ -32,7 +32,7 @@ func HandlePauseMessage(ctx context.Context, server realtime.Channel, internalSe
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		newRoom, err := roomCache.SafeSet(ctx, roomId, func(r *domain.Room) error {
+		newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(r *domain.Room) error {
 			return r.UnpauseSystem(pausedAt)
 		})
 		if err != nil {

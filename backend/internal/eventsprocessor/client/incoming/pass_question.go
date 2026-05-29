@@ -21,7 +21,7 @@ func HandlePassQuestionMessage(ctx context.Context, server realtime.Channel, int
 	if err := json.Unmarshal(msg.Payload, &pqp); err != nil {
 		return err
 	}
-	newRoom, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
+	newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
 		return room.PassQuestion(user.Id, pqp.PassTo)
 	})
 	if err != nil {

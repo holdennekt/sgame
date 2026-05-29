@@ -22,7 +22,7 @@ func HandleValidateAnswerMessage(ctx context.Context, server realtime.Channel, i
 		return err
 	}
 	var question domain.Question
-	newRoom, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
+	newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
 		question = room.CurrentQuestion.Question
 		return room.ValidateAnswer(user.Id, vap.IsCorrect)
 	})

@@ -77,7 +77,7 @@ func (c *roomCache) Set(ctx context.Context, room *domain.Room) error {
 	return nil
 }
 
-func (c *roomCache) SafeSet(ctx context.Context, roomId string, updateFunc func(room *domain.Room) error) (*domain.Room, error) {
+func (c *roomCache) SafeUpdate(ctx context.Context, roomId string, updateFunc func(room *domain.Room) error) (*domain.Room, error) {
 	lock, err := c.waitAndLock(ctx, roomId)
 	if err != nil {
 		return nil, custerr.NewInternalErr(err)
@@ -100,19 +100,9 @@ func (c *roomCache) SafeSet(ctx context.Context, roomId string, updateFunc func(
 }
 
 func (c *roomCache) Delete(ctx context.Context, roomId string) error {
-	iter := c.client.Scan(ctx, 0, domain.ROOM_PREFIX+roomId+":*", 0).Iterator()
-
-	for iter.Next(ctx) {
-		err := c.client.Del(ctx, iter.Val()).Err()
-		if err != nil {
-			return custerr.NewInternalErr(err)
-		}
-	}
-
-	if err := iter.Err(); err != nil {
+	if err := c.client.Del(ctx, getKey(roomId), getLockKey(roomId)).Err(); err != nil {
 		return custerr.NewInternalErr(err)
 	}
-
 	return nil
 }
 
@@ -173,7 +163,7 @@ func (c *roomCache) waitAndLock(ctx context.Context, roomId string) (*redislock.
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(50 * time.Millisecond):
 		}
 	}
 }

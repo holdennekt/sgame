@@ -18,7 +18,7 @@ func HandlePlaceFinalRoundBetMessage(ctx context.Context, server realtime.Channe
 	if err := json.Unmarshal(msg.Payload, &pbp); err != nil {
 		return err
 	}
-	newRoom, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
+	newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
 		return room.PlaceFinalRoundBet(user.Id, pbp.Amount)
 	})
 	if err != nil {

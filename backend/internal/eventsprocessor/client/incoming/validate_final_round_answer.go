@@ -18,7 +18,7 @@ func HandleValidateFinalRoundAnswerMessage(ctx context.Context, server realtime.
 	if err := json.Unmarshal(msg.Payload, &vap); err != nil {
 		return err
 	}
-	newRoom, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
+	newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
 		return room.ValidateFinalRoundAnswer(user.Id, vap.IsCorrect)
 	})
 	if err != nil {

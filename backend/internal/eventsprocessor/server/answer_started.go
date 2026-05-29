@@ -40,7 +40,7 @@ func HandleAnswerStartedMessage(ctx context.Context, server realtime.Channel, in
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		newerRoom, err := roomCache.SafeSet(ctx, roomId, func(newRoom *domain.Room) error {
+		newerRoom, err := roomCache.SafeUpdate(ctx, roomId, func(newRoom *domain.Room) error {
 			answerRequestEnded :=
 				newRoom.State != domain.Answering ||
 					newRoom.AnsweringPlayer.Id != asp.UserId ||

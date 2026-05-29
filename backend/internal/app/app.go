@@ -55,6 +55,10 @@ func (a *app) Run() {
 	}
 
 	go a.roomCache.ListenForExpiredOwners(context.Background(), func(roomId string) {
+		if _, err := a.roomCache.GetById(context.Background(), roomId); err != nil {
+			return
+		}
+
 		ok, err := a.roomCache.TrySetOwner(context.Background(), roomId, eventsprocessor.OWNER_TTL)
 		if err != nil || !ok {
 			return

@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	IDLE_ROOM_TTL       = 5 * time.Minute
+	IDLE_ROOM_TTL       = 10 * time.Minute
 	EXPIRE_GRACE_PERIOD = 1 * time.Second
 )
 
@@ -30,7 +30,7 @@ func NewUserDisconnectedMessage(userId string) message.Message {
 	return message.Message{Event: domain.UserDisconnected, Payload: payload}
 }
 
-func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel, lobbyServer realtime.Channel, roomCache cache.Room, roomRepository repository.Room, roomId string, msg message.Message) error {
+func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, lobbyServer realtime.Channel, roomCache cache.Room, roomRepository repository.Room, roomId string, msg message.Message) error {
 	var udp userDisconnectedPayload
 	if err := json.Unmarshal(msg.Payload, &udp); err != nil {
 		return err
@@ -65,6 +65,9 @@ func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel,
 				log.Println(err)
 			}
 			if err := server.Send(ctx, deletedRoomMsg); err != nil {
+				log.Println(err)
+			}
+			if err := internalServer.Send(ctx, deletedRoomMsg); err != nil {
 				log.Println(err)
 			}
 			if room.State != domain.WaitingForStart && room.State != domain.GameOver {

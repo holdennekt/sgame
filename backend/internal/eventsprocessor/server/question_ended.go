@@ -27,7 +27,7 @@ func HandleQuestionEndedMessage(ctx context.Context, server realtime.Channel, in
 	}
 
 	var nextRoundStarted bool
-	newRoom, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
+	newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
 		if !room.AnyAvailableQuestions() {
 			nextRoundStarted = room.StartNextRegularRound(pack)
 			if !nextRoundStarted {

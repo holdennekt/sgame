@@ -6,13 +6,18 @@ import (
 )
 
 type serverChannelGetter struct {
-	client *redis.Client
+	client     *redis.Client
+	persistent bool
 }
 
 func NewServerChannelGetter(client *redis.Client) realtime.ServerChannelGetter {
-	return &serverChannelGetter{client}
+	return &serverChannelGetter{client: client, persistent: false}
+}
+
+func NewPersistentServerChannelGetter(client *redis.Client) realtime.ServerChannelGetter {
+	return &serverChannelGetter{client: client, persistent: true}
 }
 
 func (g *serverChannelGetter) Get(name string) realtime.Channel {
-	return NewChannel(g.client, name)
+	return NewChannel(g.client, name, g.persistent)
 }

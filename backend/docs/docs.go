@@ -2352,7 +2352,7 @@ const docTemplate = `{
                 },
                 "comment": {
                     "type": "string",
-                    "maxLength": 200
+                    "maxLength": 400
                 },
                 "index": {
                     "type": "integer",
@@ -2361,7 +2361,7 @@ const docTemplate = `{
                 },
                 "text": {
                     "type": "string",
-                    "maxLength": 300
+                    "maxLength": 400
                 },
                 "type": {
                     "enum": [

@@ -21,7 +21,7 @@ func HandleChangeScoreMessage(ctx context.Context, server realtime.Channel, room
 	if err := json.Unmarshal(msg.Payload, &csp); err != nil {
 		return err
 	}
-	_, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
+	_, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
 		return room.ChangeScore(user.Id, csp.PlayerId, csp.Score)
 	})
 	if err != nil {

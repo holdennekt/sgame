@@ -13,7 +13,7 @@ import (
 
 func HandleSkipQuestionMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string, user domain.User, msg message.Message) error {
 	var question domain.Question
-	_, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
+	_, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
 		if room.CurrentQuestion != nil {
 			question = room.CurrentQuestion.Question
 		}

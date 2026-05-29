@@ -15,7 +15,7 @@ import (
 )
 
 func HandleStartGameMessage(ctx context.Context, lobbyServer realtime.Channel, roomServer realtime.Channel, roomInternalServer realtime.Channel, roomCache cache.Room, roomId string, user domain.User, pack *domain.Pack, msg message.Message) error {
-	_, err := roomCache.SafeSet(ctx, roomId, func(room *domain.Room) error {
+	_, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
 		anyConnectedPlayer := slices.ContainsFunc(room.Players, func(p domain.Player) bool {
 			return p.IsConnected
 		})
