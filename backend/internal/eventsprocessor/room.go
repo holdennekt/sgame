@@ -242,6 +242,9 @@ func NewRoomInternalEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter,
 func (p *RoomInternalEventsProcessor) Listen(ctx context.Context) error {
 	defer p.handleServerClosure(ctx)
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	go func() {
 		tickerC := time.Tick(OWNER_REFRESH_RATE)
 		for {
@@ -304,5 +307,5 @@ func (p *RoomInternalEventsProcessor) handleMessage(ctx context.Context, msg mes
 
 func (p *RoomInternalEventsProcessor) handleServerClosure(ctx context.Context) error {
 	log.Printf("Server room \"%s\" channel closed\n", p.id)
-	return nil
+	return p.roomInternalServer.Close()
 }

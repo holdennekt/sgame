@@ -18,8 +18,8 @@ const (
 	OWNER_POSTFIX    = ":owner"
 	INTERNAL_POSTFIX = ":internal"
 
-	TimeToBet        = 30 * time.Second
-	TimeToPass       = 30 * time.Second
+	TimeToBet        = 60 * time.Second
+	TimeToPass       = 60 * time.Second
 	MaxPauseDuration = time.Hour
 )
 
