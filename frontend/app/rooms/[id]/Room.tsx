@@ -12,11 +12,23 @@ import { useRoom } from "@/hooks/useRoom";
 import { RoomProvider } from "@/contexts/RoomContext";
 import { useRequiredUser } from "@/contexts/UserContext";
 
-export default function RoomPage({ initialRoom }: { initialRoom: RoomHost | RoomPlayer }) {
+export default function RoomPage({
+  initialRoom,
+}: {
+  initialRoom: RoomHost | RoomPlayer;
+}) {
   const user = useRequiredUser();
   const { lastError, chat, game } = useRoom(initialRoom, user.id);
-  const { room, startGame, togglePause, leave, submitAnswer, skipQuestion, changeScore, ...gameContext } =
-    game;
+  const {
+    room,
+    startGame,
+    togglePause,
+    leave,
+    submitAnswer,
+    skipQuestion,
+    changeScore,
+    ...gameContext
+  } = game;
 
   const [mobileTab, setMobileTab] = useState<"game" | "chat">("game");
   const [unreadCount, setUnreadCount] = useState(0);
@@ -78,7 +90,9 @@ export default function RoomPage({ initialRoom }: { initialRoom: RoomHost | Room
       >
         {/* Sidebar: room info + tabs (mobile) + chat */}
         <div
-          className={`flex flex-col gap-2 min-w-0 md:flex-1 md:min-h-0 md:order-last${mobileTab === "chat" ? " flex-1 min-h-0" : ""}`}
+          className={`flex flex-col gap-2 min-w-0 md:flex-1 md:min-h-0 md:order-last${
+            mobileTab === "chat" ? " flex-1 min-h-0" : ""
+          }`}
         >
           <div className="overflow-hidden shrink-0 bg-surface border border-border rounded-md">
             <div className="flex items-center gap-3 p-3">
@@ -126,14 +140,25 @@ export default function RoomPage({ initialRoom }: { initialRoom: RoomHost | Room
           {/* Tabs — mobile only */}
           <div className="md:hidden flex rounded-md overflow-hidden border border-border shrink-0">
             <button
-              className={`flex-1 py-2 text-sm font-medium transition-colors duration-150${mobileTab === "game" ? " bg-primary text-on-primary" : " bg-surface text-on-surface-muted hover:bg-surface-raised"}`}
+              className={`flex-1 py-2 text-sm font-medium transition-colors duration-150${
+                mobileTab === "game"
+                  ? " bg-primary text-on-primary"
+                  : " bg-surface text-on-surface-muted hover:bg-surface-raised"
+              }`}
               onClick={() => setMobileTab("game")}
             >
               Game
             </button>
             <button
-              className={`flex-1 py-2 text-sm font-medium transition-colors duration-150 inline-flex items-center justify-center gap-1.5${mobileTab === "chat" ? " bg-primary text-on-primary" : " bg-surface text-on-surface-muted hover:bg-surface-raised"}`}
-              onClick={() => { setMobileTab("chat"); setUnreadCount(0); }}
+              className={`flex-1 py-2 text-sm font-medium transition-colors duration-150 inline-flex items-center justify-center gap-1.5${
+                mobileTab === "chat"
+                  ? " bg-primary text-on-primary"
+                  : " bg-surface text-on-surface-muted hover:bg-surface-raised"
+              }`}
+              onClick={() => {
+                setMobileTab("chat");
+                setUnreadCount(0);
+              }}
             >
               Chat
               {unreadCount > 0 && mobileTab !== "chat" && (
@@ -145,18 +170,19 @@ export default function RoomPage({ initialRoom }: { initialRoom: RoomHost | Room
           </div>
 
           <div
-            className={`min-w-0 flex-1 min-h-0${mobileTab === "game" ? " hidden md:flex" : " flex"}`}
+            className={`min-w-0 flex-1 min-h-0${
+              mobileTab === "game" ? " hidden md:flex" : " flex"
+            }`}
           >
-            <Chat
-              messages={chat.messages}
-              sendMessage={chat.send}
-            />
+            <Chat messages={chat.messages} sendMessage={chat.send} />
           </div>
         </div>
 
         {/* Main game panel */}
         <div
-          className={`min-w-0 min-h-0 gap-2 md:flex md:flex-[3_0_0%] md:flex-col md:order-first${mobileTab === "game" ? " flex flex-1 flex-col" : " hidden"}`}
+          className={`min-w-0 min-h-0 gap-2 md:flex md:flex-[3_0_0%] md:flex-col md:order-first${
+            mobileTab === "game" ? " flex flex-1 flex-col" : " hidden"
+          }`}
         >
           <MainPanel />
         </div>

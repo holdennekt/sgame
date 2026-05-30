@@ -62,7 +62,9 @@ export default function QuestionPanel({
             {attachment.type === "audio" && (
               <div className="flex flex-col items-center gap-2">
                 <div
-                  className={`w-14 h-14 rounded-full bg-surface-raised border border-border flex items-center justify-center text-primary ${loopMedia ? "animate-pulse" : ""}`}
+                  className={`w-14 h-14 rounded-full bg-surface-raised border border-border flex items-center justify-center text-primary ${
+                    loopMedia ? "animate-pulse" : ""
+                  }`}
                 >
                   <FaMusic size={22} />
                 </div>
@@ -93,7 +95,9 @@ export default function QuestionPanel({
         )}
         {text && (
           <p
-            className={`shrink-0 text-center font-semibold whitespace-pre-wrap ${textSize(text.length)}`}
+            className={`shrink-0 text-center font-semibold whitespace-pre-wrap ${textSize(
+              text.length
+            )}`}
           >
             {visibleText}
           </p>

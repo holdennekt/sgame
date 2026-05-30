@@ -5,7 +5,9 @@ import { headers } from "next/headers";
 import ProfilePage from "./ProfilePage";
 
 export default async function Page({ params }: { params: { id: string } }) {
-  const user: User = JSON.parse(decodeURIComponent(headers().get(USER_HEADER_NAME)!));
+  const user: User = JSON.parse(
+    decodeURIComponent(headers().get(USER_HEADER_NAME)!)
+  );
   const isOwn = user.id === params.id;
   const profileUser = isOwn ? user : await getUser(params.id);
   if (isError(profileUser)) throw new Error(profileUser.error);

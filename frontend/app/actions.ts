@@ -1,7 +1,6 @@
 "use server";
 
 import { splitCookiesString, parse } from "set-cookie-parser";
-import { ErrorBody, isError } from "@/middleware";
 import { cookies } from "next/headers";
 import {
   CreatePackRequest,
@@ -25,8 +24,6 @@ export type ActionResult<T> = T | { error: string };
 const PAGE_QUERY_PARAM = "page";
 const PASSWORD_QUERY_PARAM = "password";
 const SEARCH_QUERY_PARAM = "search";
-const FILENAME_QUERY_PARAM = "filename";
-const PUBLIC_QUERY_PARAM = "public";
 
 const passCookies = (resp: Response) => {
   const setCookie = resp.headers.get("set-cookie");
@@ -46,7 +43,7 @@ const passCookies = (resp: Response) => {
 export const login = async (body: {
   login: string;
   password: string;
-}): Promise<ActionResult<string>> => {
+}): Promise<ActionResult<{ userId: string }>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/login`);
   const resp = await fetch(url, {
     method: "POST",
@@ -57,7 +54,9 @@ export const login = async (body: {
   return await resp?.json();
 };
 
-export const loginAsGuest = async (name: string): Promise<ActionResult<string>> => {
+export const loginAsGuest = async (
+  name: string
+): Promise<ActionResult<{ userId: string }>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/guest`);
   const resp = await fetch(url, {
     method: "POST",
@@ -70,7 +69,7 @@ export const loginAsGuest = async (name: string): Promise<ActionResult<string>> 
 export const register = async (body: {
   login: string;
   password: string;
-}): Promise<ActionResult<string>> => {
+}): Promise<ActionResult<{ userId: string }>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/register`);
   const resp = await fetch(url, {
     method: "POST",
@@ -91,7 +90,7 @@ export const getRooms = async (): Promise<ActionResult<RoomLobby[]>> => {
 };
 
 export const createRoom = async (
-  body: CreateRoomRequest,
+  body: CreateRoomRequest
 ): Promise<ActionResult<{ id: string }>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/rooms`);
   const resp = await fetch(url, {
@@ -104,10 +103,10 @@ export const createRoom = async (
 
 export const joinRoom = async (
   id: string,
-  password: string | undefined,
+  password: string | undefined
 ): Promise<ActionResult<Room>> => {
   const url = new URL(
-    `http://${process.env.BACKEND_HOST}/api/rooms/${id}/join`,
+    `http://${process.env.BACKEND_HOST}/api/rooms/${id}/join`
   );
   if (password) url.searchParams.set(PASSWORD_QUERY_PARAM, password);
   const resp = await fetch(url, {
@@ -120,7 +119,7 @@ export const joinRoom = async (
 
 export const leaveRoom = async (id: string): Promise<ActionResult<void>> => {
   const url = new URL(
-    `http://${process.env.BACKEND_HOST}/api/rooms/${id}/leave`,
+    `http://${process.env.BACKEND_HOST}/api/rooms/${id}/leave`
   );
   const resp = await fetch(url, {
     method: "PATCH",
@@ -131,7 +130,7 @@ export const leaveRoom = async (id: string): Promise<ActionResult<void>> => {
 
 export const getPacks = async (
   packFilter: string,
-  page?: number,
+  page?: number
 ): Promise<ActionResult<SearchResponse<HiddenPack>>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs`);
   url.searchParams.set(SEARCH_QUERY_PARAM, packFilter);
@@ -146,10 +145,10 @@ export const getPacks = async (
 export const getPacksCreatedBy = async (
   createdBy: string,
   packFilter: string,
-  page?: number,
+  page?: number
 ): Promise<ActionResult<SearchResponse<HiddenPack>>> => {
   const url = new URL(
-    `http://${process.env.BACKEND_HOST}/api/packs/by/${createdBy}`,
+    `http://${process.env.BACKEND_HOST}/api/packs/by/${createdBy}`
   );
   url.searchParams.set(SEARCH_QUERY_PARAM, packFilter);
   if (page) url.searchParams.set(PAGE_QUERY_PARAM, page.toString());
@@ -161,7 +160,7 @@ export const getPacksCreatedBy = async (
 };
 
 export const getPacksPreviews = async (
-  packFilter: string,
+  packFilter: string
 ): Promise<ActionResult<SearchResponse<PackPreview>>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/previews`);
   url.searchParams.set(SEARCH_QUERY_PARAM, packFilter);
@@ -182,7 +181,7 @@ export const getPack = async (id: string): Promise<ActionResult<Pack>> => {
 };
 
 export const createPack = async (
-  pack: CreatePackRequest,
+  pack: CreatePackRequest
 ): Promise<ActionResult<{ id: string }>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs`);
   const resp = await fetch(url, {
@@ -195,7 +194,7 @@ export const createPack = async (
 
 export const updatePack = async (
   id: string,
-  pack: CreatePackRequest,
+  pack: CreatePackRequest
 ): Promise<ActionResult<{ id: string }>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/${id}`);
   const resp = await fetch(url, {
@@ -208,7 +207,7 @@ export const updatePack = async (
 };
 
 export const deletePack = async (
-  id: string,
+  id: string
 ): Promise<ActionResult<{ id: string }>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/${id}`);
   const resp = await fetch(url, {
@@ -220,7 +219,7 @@ export const deletePack = async (
 };
 
 export const getGameHistory = async (
-  page?: number,
+  page?: number
 ): Promise<ActionResult<SearchResponse<GameHistoryEntry>>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/rooms/history`);
   if (page) url.searchParams.set(PAGE_QUERY_PARAM, page.toString());
@@ -242,8 +241,8 @@ export const getUser = async (id: string): Promise<ActionResult<User>> => {
 
 export const updateUser = async (
   id: string,
-  body: { name: string; avatar: string; password?: string },
-): Promise<ActionResult<User>> => {
+  body: { name: string; avatar: string; password?: string }
+): Promise<ActionResult<void>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/users/${id}`);
   const resp = await fetch(url, {
     method: "PUT",
@@ -272,7 +271,7 @@ export const deleteUser = async (id: string): Promise<ActionResult<void>> => {
 };
 
 export const signURL = async (
-  dto: SignURLRequest,
+  dto: SignURLRequest
 ): Promise<ActionResult<SignURLResponse>> => {
   const url = new URL(`http://${process.env.BACKEND_HOST}/api/packs/signURL`);
   const resp = await fetch(url, {

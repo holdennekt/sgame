@@ -18,12 +18,14 @@ export default function Modal({
     dialog.current?.close();
   }
 
-  const onClick: MouseEventHandler<HTMLDialogElement> = ev => {
+  const onClick: MouseEventHandler<HTMLDialogElement> = (ev) => {
     if (ev.target !== ev.currentTarget) return;
     const rect = dialog.current!.getBoundingClientRect();
     const outside =
-      ev.clientX < rect.left || ev.clientX > rect.right ||
-      ev.clientY < rect.top  || ev.clientY > rect.bottom;
+      ev.clientX < rect.left ||
+      ev.clientX > rect.right ||
+      ev.clientY < rect.top ||
+      ev.clientY > rect.bottom;
     if (outside) dialog.current?.close();
   };
 

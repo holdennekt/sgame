@@ -29,13 +29,14 @@ export default function NewRoomModal({
 }) {
   const router = useRouter();
   const [pack, setPack] = useState<PackPreview>(
-    fixedPack ?? { id: "", name: "" },
+    fixedPack ?? { id: "", name: "" }
   );
   const [maxPlayers, setMaxPlayers] = useState(4);
   const [privacyType, setPrivacyType] = useState<PrivacyType>("public");
   const [questionThinkingTime, setQuestionThinkingTime] = useState(10);
   const [answerThinkingTime, setAnswerThinkingTime] = useState(10);
-  const [questionThinkingTimeFinal, setQuestionThinkingTimeFinal] = useState(60);
+  const [questionThinkingTimeFinal, setQuestionThinkingTimeFinal] =
+    useState(60);
 
   useEffect(() => {
     if (fixedPack) setPack(fixedPack);
@@ -43,7 +44,7 @@ export default function NewRoomModal({
 
   const [debouncedPackSearch] = useDebounce(
     fixedPack ? "" : pack.id ? "" : pack.name.trim(),
-    400,
+    400
   );
 
   const { data: packs = [] } = useQuery<PackPreview[]>({
@@ -127,7 +128,11 @@ export default function NewRoomModal({
                   {packs.map((pack, index) => (
                     <div
                       key={index}
-                      className={`px-3 py-2 cursor-pointer text-sm truncate hover:bg-primary hover:text-on-primary transition-colors duration-100${index < packs.length - 1 ? " border-b border-border" : ""}`}
+                      className={`px-3 py-2 cursor-pointer text-sm truncate hover:bg-primary hover:text-on-primary transition-colors duration-100${
+                        index < packs.length - 1
+                          ? " border-b border-border"
+                          : ""
+                      }`}
                       onClick={() => {
                         setPack(pack);
                       }}
@@ -218,7 +223,8 @@ export default function NewRoomModal({
                 <div className="flex items-center justify-between">
                   <span className={labelCls}>{label}</span>
                   <span className="text-xs font-semibold text-on-surface tabular-nums">
-                    {value}{unit}
+                    {value}
+                    {unit}
                   </span>
                 </div>
                 <input

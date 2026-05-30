@@ -13,11 +13,14 @@ export default function PlayerCard({ player }: { player: Player }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isYellow =
     (room.state === "selecting_question" && player.id === room.currentPlayer) ||
-    (room.state === "passing" && player.id !== room.currentPlayer && player.isConnected) ||
+    (room.state === "passing" &&
+      player.id !== room.currentPlayer &&
+      player.isConnected) ||
     ((room.state === "betting" || room.state === "final_round_betting") &&
       player.score > 0 &&
       player.betAmount === null) ||
-    (room.state === "validating_final_round_answers" && player.id === room.currentPlayer);
+    (room.state === "validating_final_round_answers" &&
+      player.id === room.currentPlayer);
 
   const isOrange =
     room.state === "answering" && player.id === room.answeringPlayer?.id;
@@ -35,7 +38,9 @@ export default function PlayerCard({ player }: { player: Player }) {
     e.stopPropagation();
     setScoreInput(String(player.score));
     setEditingScore(true);
-    setTimeout(() => { inputRef.current?.select(); }, 0);
+    setTimeout(() => {
+      inputRef.current?.select();
+    }, 0);
   };
 
   const commitScore = () => {
@@ -54,8 +59,8 @@ export default function PlayerCard({ player }: { player: Player }) {
   const borderCls = isOrange
     ? "border-2 border-orange-400"
     : isYellow
-      ? "border-2 border-yellow-400"
-      : "border-2 border-border";
+    ? "border-2 border-yellow-400"
+    : "border-2 border-border";
 
   return (
     <div
@@ -73,7 +78,10 @@ export default function PlayerCard({ player }: { player: Player }) {
         )}
       </div>
       <div className="w-full px-1 py-0.5 text-center bg-surface-raised">
-        <p className="text-[10px] truncate text-on-surface-muted leading-tight" title={player.name}>
+        <p
+          className="text-[10px] truncate text-on-surface-muted leading-tight"
+          title={player.name}
+        >
           {player.name}
         </p>
         {isHost && editingScore ? (
@@ -88,7 +96,9 @@ export default function PlayerCard({ player }: { player: Player }) {
           />
         ) : (
           <p
-            className={`text-xs font-extrabold text-on-surface leading-tight${isHost ? " cursor-pointer hover:text-primary" : ""}`}
+            className={`text-xs font-extrabold text-on-surface leading-tight${
+              isHost ? " cursor-pointer hover:text-primary" : ""
+            }`}
             onDoubleClick={isHost ? startEditingScore : undefined}
             title={isHost ? "Double-click to edit score" : undefined}
           >

@@ -160,6 +160,16 @@ func (c *RoomController) leave(ctx *gin.Context) {
 	ctx.Status(http.StatusOK)
 }
 
+// @Summary      Get room history
+// @Description  Returns a paginated list of past rooms the authenticated user has participated in
+// @Tags         rooms
+// @Produce      json
+// @Param        query query     dto.SearchRequest false "Pagination and search parameters"
+// @Success      200  {object}  dto.SearchResponse
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /rooms/history [get]
 func (c *RoomController) getHistory(ctx *gin.Context) {
 	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 

@@ -21,15 +21,15 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   const userHeader = headers().get(USER_HEADER_NAME);
-  const user: User | null = userHeader ? JSON.parse(decodeURIComponent(userHeader)) : null;
+  const user: User | null = userHeader
+    ? JSON.parse(decodeURIComponent(userHeader))
+    : null;
 
   return (
     <html lang="en">
       <body className={`${inter.className} background h-svh flex flex-col`}>
         <QueryProvider>
-          <UserProvider user={user}>
-            {children}
-          </UserProvider>
+          <UserProvider user={user}>{children}</UserProvider>
         </QueryProvider>
       </body>
     </html>

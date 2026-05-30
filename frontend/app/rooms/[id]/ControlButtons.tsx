@@ -18,9 +18,9 @@ export default function ControlButtons({
 }) {
   const gameState = isGameStarted ? (isPaused ? "paused" : "started") : "idle";
   const stateToContent = {
-    paused:  { text: "Continue", icon: <FiPlay size={14} />,  func: togglePause },
-    started: { text: "Pause",    icon: <FiPause size={14} />, func: togglePause },
-    idle:    { text: "Start",    icon: <FiPlay size={14} />,  func: start },
+    paused: { text: "Continue", icon: <FiPlay size={14} />, func: togglePause },
+    started: { text: "Pause", icon: <FiPause size={14} />, func: togglePause },
+    idle: { text: "Start", icon: <FiPlay size={14} />, func: start },
   };
   const { text, icon, func } = stateToContent[gameState];
 
@@ -31,14 +31,16 @@ export default function ControlButtons({
           className="inline-flex items-center justify-center gap-1.5 flex-1 px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150"
           onClick={func}
         >
-          {icon}{text}
+          {icon}
+          {text}
         </button>
       )}
       <button
         className="inline-flex items-center justify-center gap-1.5 flex-1 px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-surface-raised text-danger border border-danger hover:bg-border transition-colors duration-150"
         onClick={leave}
       >
-        <FiLogOut size={14} />Leave
+        <FiLogOut size={14} />
+        Leave
       </button>
     </div>
   );

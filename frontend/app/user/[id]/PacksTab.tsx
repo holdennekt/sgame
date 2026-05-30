@@ -39,7 +39,7 @@ export default function PacksTab({
       const result = await getPacksCreatedBy(
         userId,
         debouncedFilter,
-        pageParam as number,
+        pageParam as number
       );
       if (isError(result)) throw new Error(result.error);
       return result;
@@ -63,7 +63,7 @@ export default function PacksTab({
       ([entry]) => {
         if (entry.isIntersecting) onIntersect.current();
       },
-      { rootMargin: "100px" },
+      { rootMargin: "100px" }
     );
     if (sentinelRef.current) obs.observe(sentinelRef.current);
     return () => obs.disconnect();

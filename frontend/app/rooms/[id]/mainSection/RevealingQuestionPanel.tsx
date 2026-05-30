@@ -23,7 +23,7 @@ export default function RevealingQuestionPanel({
   paused?: boolean;
 }) {
   const [currentText, setCurrentText] = useState(
-    text.slice(0, Math.floor(text.length * textLastProgress)),
+    text.slice(0, Math.floor(text.length * textLastProgress))
   );
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
   const textIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -66,7 +66,7 @@ export default function RevealingQuestionPanel({
 
     const timer = setTimeout(
       startTextReveal,
-      new Date(attachmentEndsAt).getTime() - Date.now(),
+      new Date(attachmentEndsAt).getTime() - Date.now()
     );
 
     const cleanupFuncs = [() => clearTimeout(timer)];
@@ -101,7 +101,7 @@ export default function RevealingQuestionPanel({
     () => () => {
       if (textIntervalRef.current) clearInterval(textIntervalRef.current);
     },
-    [],
+    []
   );
 
   return (
@@ -147,7 +147,9 @@ export default function RevealingQuestionPanel({
 
         {text && (
           <p
-            className={`shrink-0 text-center font-semibold whitespace-pre-wrap ${textSize(text.length)} min-h-[1em]`}
+            className={`shrink-0 text-center font-semibold whitespace-pre-wrap ${textSize(
+              text.length
+            )} min-h-[1em]`}
           >
             {currentText}
           </p>

@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 80",
     "lint": "next lint",
-    "lint:fix": "next lint --fix"
+    "lint:fix": "next lint --fix",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "**/*.{ts,tsx}": "prettier --write"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -30,6 +34,8 @@
     "@types/set-cookie-parser": "^2.4.10",
     "eslint": "^8",
     "eslint-config-next": "14.2.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
     "openapi-typescript": "^7.12.0",
     "postcss": "^8",
     "swagger2openapi": "^7.0.8",

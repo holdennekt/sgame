@@ -10,11 +10,18 @@ import GameBottomSection from "./GameBottomSection";
 import ValidateAnswerModal from "./ValidateAnswerModal";
 import { FiSkipForward, FiPause } from "react-icons/fi";
 
-const SKIPPABLE_STATES = new Set(["revealing_question", "showing_question", "answering", "passing", "betting"]);
+const SKIPPABLE_STATES = new Set([
+  "revealing_question",
+  "showing_question",
+  "answering",
+  "passing",
+  "betting",
+]);
 
 export default function MainPanel() {
   const user = useRequiredUser();
-  const { room, validateAnswer, validateFinalRoundAnswer, skipQuestion } = useRoomContext();
+  const { room, validateAnswer, validateFinalRoundAnswer, skipQuestion } =
+    useRoomContext();
   const isHost = user.id === room.host?.id;
   const player = room.players.find((p) => p.id === user.id);
   const canSkip = isHost && SKIPPABLE_STATES.has(room.state);
@@ -57,7 +64,10 @@ export default function MainPanel() {
 
       {isHost && (
         <ValidateAnswerModal
-          isOpen={room.state === "answering" || room.state === "validating_final_round_answers"}
+          isOpen={
+            room.state === "answering" ||
+            room.state === "validating_final_round_answers"
+          }
           question={
             room.state === "answering"
               ? (room.currentQuestion as CurrentQuestion)
@@ -65,10 +75,16 @@ export default function MainPanel() {
           }
           playerAnswer={
             room.state === "validating_final_round_answers"
-              ? (room.finalRoundState as FinalRoundState)?.playersAnswers[room.currentPlayer!]
+              ? (room.finalRoundState as FinalRoundState)?.playersAnswers[
+                  room.currentPlayer!
+                ]
               : undefined
           }
-          validateAnswer={room.state === "answering" ? validateAnswer : validateFinalRoundAnswer}
+          validateAnswer={
+            room.state === "answering"
+              ? validateAnswer
+              : validateFinalRoundAnswer
+          }
         />
       )}
     </>

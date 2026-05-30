@@ -32,14 +32,16 @@ export default function Chat({
     setInput("");
   };
 
-  const onInputKeyDown: KeyboardEventHandler = ev => {
+  const onInputKeyDown: KeyboardEventHandler = (ev) => {
     ev.stopPropagation();
     if (ev.key !== "Enter") return;
     handleSend();
   };
 
   return (
-    <div className={`w-full h-full flex flex-col overflow-hidden bg-surface ${className}`}>
+    <div
+      className={`w-full h-full flex flex-col overflow-hidden bg-surface ${className}`}
+    >
       <div
         className="flex-1 flex flex-col overflow-y-auto px-3 py-2 min-h-0"
         ref={scrollableRef}
@@ -51,8 +53,10 @@ export default function Chat({
         )}
         {messages.map((message, index) => {
           const isOwn = user.id === message.from.id;
-          const isPrevUserSame = message.from.id === messages[index - 1]?.from.id;
-          const isNextUserSame = message.from.id === messages[index + 1]?.from.id;
+          const isPrevUserSame =
+            message.from.id === messages[index - 1]?.from.id;
+          const isNextUserSame =
+            message.from.id === messages[index + 1]?.from.id;
           const isSystem = message.from.id === "";
           return isSystem ? (
             <SystemMessage key={index} text={message.text} />
@@ -73,9 +77,9 @@ export default function Chat({
           className="flex-1 min-w-0 h-9 px-2.5 rounded-lg border border-border bg-background text-on-background text-sm outline-none placeholder:text-on-surface-muted focus-ring transition-[border-color] duration-150"
           placeholder="Say something..."
           value={input}
-          onChange={ev => setInput(ev.target.value)}
+          onChange={(ev) => setInput(ev.target.value)}
           onKeyDown={onInputKeyDown}
-          onKeyUp={ev => ev.stopPropagation()}
+          onKeyUp={(ev) => ev.stopPropagation()}
         />
         <button
           className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150 shrink-0"

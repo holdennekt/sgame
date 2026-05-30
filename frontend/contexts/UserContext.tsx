@@ -22,6 +22,7 @@ export function useUser(): User | null {
 
 export function useRequiredUser(): User {
   const user = useContext(UserContext);
-  if (!user) throw new Error("useRequiredUser must be used in an authenticated context");
+  if (!user)
+    throw new Error("useRequiredUser must be used in an authenticated context");
   return user;
 }

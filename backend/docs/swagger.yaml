@@ -72,6 +72,16 @@ definitions:
     - category
     - questions
     type: object
+  github_com_holdennekt_sgame_backend_internal_domain.Comment:
+    properties:
+      attachment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
+      text:
+        type: string
+    required:
+    - attachment
+    - text
+    type: object
   github_com_holdennekt_sgame_backend_internal_domain.CurrentQuestion:
     properties:
       answers:
@@ -87,7 +97,7 @@ definitions:
       bettingEndsAt:
         type: string
       comment:
-        type: string
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment'
       index:
         type: integer
       passingEndsAt:
@@ -183,7 +193,7 @@ definitions:
       attachment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
       comment:
-        type: string
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment'
       text:
         type: string
     required:
@@ -406,7 +416,7 @@ definitions:
       attachment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
       comment:
-        type: string
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment'
       index:
         type: integer
       text:
@@ -763,6 +773,16 @@ definitions:
     - name
     - questions
     type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreateCommentRequest:
+    properties:
+      attachment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
+      text:
+        maxLength: 400
+        type: string
+    required:
+    - text
+    type: object
   github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundCategoryRequest:
     properties:
       name:
@@ -786,8 +806,7 @@ definitions:
       attachment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
       comment:
-        maxLength: 200
-        type: string
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCommentRequest'
       text:
         maxLength: 200
         type: string
@@ -853,8 +872,7 @@ definitions:
       attachment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
       comment:
-        maxLength: 400
-        type: string
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCommentRequest'
       index:
         maximum: 9
         minimum: 0
@@ -949,6 +967,15 @@ definitions:
     required:
     - error
     type: object
+  github_com_holdennekt_sgame_backend_internal_dto.GuestLoginRequest:
+    properties:
+      name:
+        maxLength: 50
+        minLength: 1
+        type: string
+    required:
+    - name
+    type: object
   github_com_holdennekt_sgame_backend_internal_dto.SearchResponse:
     properties:
       hasNext:
@@ -1018,6 +1045,41 @@ info:
   title: SGame API
   version: "1.0"
 paths:
+  /guest:
+    post:
+      consumes:
+      - application/json
+      description: Creates a temporary guest session using a display name, sets an
+        HttpOnly cookie
+      parameters:
+      - description: Guest login data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.GuestLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully logged in as guest
+          headers:
+            Set-Cookie:
+              description: session_id=abc...; HttpOnly; Path=/
+              type: string
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.AuthResponse'
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      summary: Guest Login
+      tags:
+      - auth
   /lobby:
     get:
       description: |-
@@ -1077,6 +1139,21 @@ paths:
           schema:
             $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       summary: User Login
+      tags:
+      - auth
+  /logout:
+    delete:
+      description: Invalidates the current session and clears the session cookie
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: User Logout
       tags:
       - auth
   /packs:
@@ -1274,6 +1351,63 @@ paths:
       security:
       - CookieAuth: []
       summary: Update pack
+      tags:
+      - packs
+  /packs/by/{id}:
+    get:
+      description: Returns a paginated list of public packs created by a specific
+        user
+      parameters:
+      - description: Creator user ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        required: true
+        type: integer
+      - in: query
+        name: orderBy
+        required: true
+        type: string
+      - enum:
+        - ASC
+        - DESC
+        in: query
+        name: orderDir
+        required: true
+        type: string
+      - in: query
+        minimum: 1
+        name: page
+        required: true
+        type: integer
+      - in: query
+        maxLength: 30
+        name: search
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SearchResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get packs created by user
       tags:
       - packs
   /packs/previews:
@@ -1597,6 +1731,58 @@ paths:
       security:
       - CookieAuth: []
       summary: Leave room
+      tags:
+      - rooms
+  /rooms/history:
+    get:
+      description: Returns a paginated list of past rooms the authenticated user has
+        participated in
+      parameters:
+      - in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        required: true
+        type: integer
+      - in: query
+        name: orderBy
+        required: true
+        type: string
+      - enum:
+        - ASC
+        - DESC
+        in: query
+        name: orderDir
+        required: true
+        type: string
+      - in: query
+        minimum: 1
+        name: page
+        required: true
+        type: integer
+      - in: query
+        maxLength: 30
+        name: search
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SearchResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get room history
       tags:
       - rooms
   /user:

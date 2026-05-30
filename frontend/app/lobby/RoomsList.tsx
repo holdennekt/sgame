@@ -25,14 +25,21 @@ export default function RoomsList({
   if (!rooms.length) {
     return (
       <div className="flex-auto flex flex-col justify-center items-center gap-2 opacity-50">
-        <p className="text-sm text-on-surface-muted">No rooms yet. Create one!</p>
+        <p className="text-sm text-on-surface-muted">
+          No rooms yet. Create one!
+        </p>
       </div>
     );
   }
 
   return (
     <div ref={scrollRef} className="flex-auto min-h-0 overflow-y-auto">
-      <div style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          position: "relative",
+        }}
+      >
         {virtualizer.getVirtualItems().map((virtualItem) => (
           <div
             key={virtualItem.key}

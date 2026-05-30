@@ -48,11 +48,15 @@ export default function ProfilePage({
     isOpen: false,
   });
 
-  const tabs: Tab[] = isOwn && !user.isGuest ? ["packs", "history"] : user.isGuest ? [] : ["packs"];
+  const tabs: Tab[] =
+    isOwn && !user.isGuest
+      ? ["packs", "history"]
+      : user.isGuest
+      ? []
+      : ["packs"];
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-5 sm:py-8 flex flex-col gap-5 sm:gap-6">
-
       {/* Profile header */}
       {editing ? (
         <div className="border border-border rounded-lg p-5 bg-surface">

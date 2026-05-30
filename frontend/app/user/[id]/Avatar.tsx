@@ -67,7 +67,11 @@ export function AvatarPicker({
         onClick={() => !uploading && fileInputRef.current?.click()}
       >
         {preview ? (
-          <img src={preview} alt="avatar" className="w-full h-full object-cover" />
+          <img
+            src={preview}
+            alt="avatar"
+            className="w-full h-full object-cover"
+          />
         ) : (
           <FiUser size={36} className="text-on-surface-muted" />
         )}
@@ -83,7 +87,10 @@ export function AvatarPicker({
         <button
           type="button"
           title="Remove photo"
-          onClick={() => { setPreview(null); onChange(""); }}
+          onClick={() => {
+            setPreview(null);
+            onChange("");
+          }}
           className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-surface-raised border border-border flex items-center justify-center text-on-surface-muted hover:text-danger hover:border-danger transition-colors duration-150"
         >
           <FiX size={10} />

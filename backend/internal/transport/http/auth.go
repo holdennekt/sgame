@@ -85,6 +85,13 @@ func (c *AuthController) register(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.AuthResponse{UserId: userId})
 }
 
+// @Summary      User Logout
+// @Description  Invalidates the current session and clears the session cookie
+// @Tags         auth
+// @Success      204  "No Content"
+// @Failure      500  {object}  dto.ErrorResponse "Internal Server Error"
+// @Security     CookieAuth
+// @Router       /logout [delete]
 func (c *AuthController) logout(ctx *gin.Context) {
 	sessionId, err := ctx.Cookie(SESSION_ID_COOKIE_NAME)
 	if err != nil {
@@ -96,6 +103,17 @@ func (c *AuthController) logout(ctx *gin.Context) {
 	ctx.Status(http.StatusNoContent)
 }
 
+// @Summary      Guest Login
+// @Description  Creates a temporary guest session using a display name, sets an HttpOnly cookie
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body dto.GuestLoginRequest true "Guest login data"
+// @Success      200  {object}  dto.AuthResponse "Successfully logged in as guest"
+// @Header       200  {string}  Set-Cookie "session_id=abc...; HttpOnly; Path=/"
+// @Failure      400  {object}  dto.ErrorResponse "Invalid input data"
+// @Failure      500  {object}  dto.ErrorResponse "Internal Server Error"
+// @Router       /guest [post]
 func (c *AuthController) guest(ctx *gin.Context) {
 	var req dto.GuestLoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {

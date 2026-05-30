@@ -18,7 +18,15 @@ import { FaLock, FaGlobe } from "react-icons/fa6";
 import { FiTrash2 } from "react-icons/fi";
 import { IoIosSearch, IoIosAdd } from "react-icons/io";
 
-function PackCard({ pack, onPlay, onDelete }: { pack: HiddenPack; onPlay: () => void; onDelete: () => Promise<void> }) {
+function PackCard({
+  pack,
+  onPlay,
+  onDelete,
+}: {
+  pack: HiddenPack;
+  onPlay: () => void;
+  onDelete: () => Promise<void>;
+}) {
   const user = useRequiredUser();
   const isOwn = user.id === pack.createdBy.id;
 
@@ -36,12 +44,19 @@ function PackCard({ pack, onPlay, onDelete }: { pack: HiddenPack; onPlay: () => 
                 {pack.name}
               </Link>
             ) : (
-              <span className="text-base font-semibold text-on-surface truncate" title={pack.name}>
+              <span
+                className="text-base font-semibold text-on-surface truncate"
+                title={pack.name}
+              >
                 {pack.name}
               </span>
             )}
             <span className="shrink-0 text-on-surface-muted">
-              {pack.type === "public" ? <FaGlobe size={11} /> : <FaLock size={11} />}
+              {pack.type === "public" ? (
+                <FaGlobe size={11} />
+              ) : (
+                <FaLock size={11} />
+              )}
             </span>
           </div>
           <p className="text-xs text-on-surface-muted mt-0.5">
@@ -61,7 +76,10 @@ function PackCard({ pack, onPlay, onDelete }: { pack: HiddenPack; onPlay: () => 
 
         <div className="flex flex-col gap-0.5">
           {pack.rounds.map((round, ri) => (
-            <div key={ri} className="flex items-center gap-x-1.5 text-[12px] text-on-surface-muted flex-wrap">
+            <div
+              key={ri}
+              className="flex items-center gap-x-1.5 text-[12px] text-on-surface-muted flex-wrap"
+            >
               <span className="font-medium text-on-surface">{round.name}</span>
               {round.categories.map((c, ci) => (
                 <React.Fragment key={ci}>
@@ -119,22 +137,32 @@ export default function PacksList() {
   const user = useRequiredUser();
   const [filter, setFilter] = useState("");
   const [debouncedFilter, setDebouncedFilter] = useState("");
-  const [newRoomModal, setNewRoomModal] = useState<{ isOpen: boolean; pack?: PackPreview }>({
+  const [newRoomModal, setNewRoomModal] = useState<{
+    isOpen: boolean;
+    pack?: PackPreview;
+  }>({
     isOpen: false,
   });
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending, refetch } =
-    useInfiniteQuery<SearchResponse<HiddenPack>>({
-      queryKey: ["packs", debouncedFilter],
-      queryFn: async ({ pageParam }) => {
-        const result = await getPacks(debouncedFilter, pageParam as number);
-        if (isError(result)) throw new Error(result.error);
-        return result;
-      },
-      initialPageParam: 1,
-      getNextPageParam: (lastPage) => lastPage.hasNext ? lastPage.page + 1 : undefined,
-    });
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isPending,
+    refetch,
+  } = useInfiniteQuery<SearchResponse<HiddenPack>>({
+    queryKey: ["packs", debouncedFilter],
+    queryFn: async ({ pageParam }) => {
+      const result = await getPacks(debouncedFilter, pageParam as number);
+      if (isError(result)) throw new Error(result.error);
+      return result;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasNext ? lastPage.page + 1 : undefined,
+  });
 
   const debounceFilter = useDebouncedCallback((value: string) => {
     setDebouncedFilter(value);
@@ -145,7 +173,10 @@ export default function PacksList() {
   const handleDelete = async (packId: string) => {
     if (!confirm("Delete this pack?")) return;
     const result = await deletePack(packId);
-    if (isError(result)) { toast.error(result.error, { containerId: "packs" }); return; }
+    if (isError(result)) {
+      toast.error(result.error, { containerId: "packs" });
+      return;
+    }
     refetch();
   };
 
@@ -162,10 +193,20 @@ export default function PacksList() {
 
   useEffect(() => {
     if (!lastVirtualItem) return;
-    if (lastVirtualItem.index >= packs.length - 1 && hasNextPage && !isFetchingNextPage) {
+    if (
+      lastVirtualItem.index >= packs.length - 1 &&
+      hasNextPage &&
+      !isFetchingNextPage
+    ) {
       fetchNextPage();
     }
-  }, [lastVirtualItem?.index, packs.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [
+    lastVirtualItem?.index,
+    packs.length,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  ]);
 
   return (
     <>
@@ -204,7 +245,12 @@ export default function PacksList() {
                 <p className="text-sm">Loading…</p>
               </div>
             ) : packs.length ? (
-              <div style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>
+              <div
+                style={{
+                  height: `${virtualizer.getTotalSize()}px`,
+                  position: "relative",
+                }}
+              >
                 {virtualItems.map((virtualItem) => (
                   <div
                     key={virtualItem.key}
@@ -221,10 +267,15 @@ export default function PacksList() {
                   >
                     <PackCard
                       pack={packs[virtualItem.index]}
-                      onPlay={() => setNewRoomModal({
-                        isOpen: true,
-                        pack: { id: packs[virtualItem.index].id, name: packs[virtualItem.index].name },
-                      })}
+                      onPlay={() =>
+                        setNewRoomModal({
+                          isOpen: true,
+                          pack: {
+                            id: packs[virtualItem.index].id,
+                            name: packs[virtualItem.index].name,
+                          },
+                        })
+                      }
                       onDelete={() => handleDelete(packs[virtualItem.index].id)}
                     />
                   </div>
@@ -236,7 +287,9 @@ export default function PacksList() {
               </div>
             )}
             {isFetchingNextPage && (
-              <p className="py-2 text-center text-xs text-on-surface-muted">Loading…</p>
+              <p className="py-2 text-center text-xs text-on-surface-muted">
+                Loading…
+              </p>
             )}
           </div>
         </div>
@@ -247,7 +300,11 @@ export default function PacksList() {
         close={() => setNewRoomModal({ isOpen: false })}
         fixedPack={newRoomModal.pack}
       />
-      <ToastContainer containerId="packs" position="bottom-left" theme="colored" />
+      <ToastContainer
+        containerId="packs"
+        position="bottom-left"
+        theme="colored"
+      />
     </>
   );
 }

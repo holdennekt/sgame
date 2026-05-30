@@ -44,7 +44,7 @@ export default function CategoryEditor({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5, delay: 100, tolerance: 5 },
-    }),
+    })
   );
 
   const renameCategory = (name: string) => {
@@ -131,7 +131,7 @@ export default function CategoryEditor({
       pack.rounds[roundIndex].categories[categoryIndex].questions = arrayMove(
         questions,
         oldIndex,
-        newIndex,
+        newIndex
       ).map((q, i) => ({ ...q, index: i }));
       return { ...pack };
     });

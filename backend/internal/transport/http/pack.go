@@ -250,6 +250,17 @@ func (c *PackController) signURL(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.SignURLResponse{URL: signed.URL, FormData: signed.FormData, GetUrl: getUrl})
 }
 
+// @Summary      Get packs created by user
+// @Description  Returns a paginated list of public packs created by a specific user
+// @Tags         packs
+// @Produce      json
+// @Param        id    path      string            true   "Creator user ID"
+// @Param        query query     dto.SearchRequest false  "Pagination and search parameters"
+// @Success      200  {object}  dto.SearchResponse
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs/by/{id} [get]
 func (c *PackController) getCreatedBy(ctx *gin.Context) {
 	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 	createdBy := ctx.Param("id")

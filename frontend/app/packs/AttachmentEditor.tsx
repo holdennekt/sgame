@@ -1,7 +1,12 @@
 import { AttachmentFormData } from "@/types/pack";
 import { useRef } from "react";
 import { IoIosLink, IoIosClose } from "react-icons/io";
-import { FiUploadCloud, FiFile, FiExternalLink, FiPaperclip } from "react-icons/fi";
+import {
+  FiUploadCloud,
+  FiFile,
+  FiExternalLink,
+  FiPaperclip,
+} from "react-icons/fi";
 
 const labelCls = "block text-xs font-medium text-on-surface-muted";
 
@@ -14,9 +19,17 @@ function AttachmentPreview({ attachment }: { attachment: AttachmentFormData }) {
         rel="noopener noreferrer"
         className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-surface-raised hover:border-primary group transition-colors duration-150"
       >
-        <FiFile size={15} className="shrink-0 text-on-surface-muted group-hover:text-primary transition-colors duration-150" />
-        <span className="flex-1 min-w-0 text-xs text-on-surface truncate">{attachment.key}</span>
-        <FiExternalLink size={12} className="shrink-0 text-on-surface-muted group-hover:text-primary transition-colors duration-150" />
+        <FiFile
+          size={15}
+          className="shrink-0 text-on-surface-muted group-hover:text-primary transition-colors duration-150"
+        />
+        <span className="flex-1 min-w-0 text-xs text-on-surface truncate">
+          {attachment.key}
+        </span>
+        <FiExternalLink
+          size={12}
+          className="shrink-0 text-on-surface-muted group-hover:text-primary transition-colors duration-150"
+        />
       </a>
     );
   }
@@ -28,9 +41,17 @@ function AttachmentPreview({ attachment }: { attachment: AttachmentFormData }) {
         rel="noopener noreferrer"
         className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-surface-raised hover:border-primary group transition-colors duration-150"
       >
-        <IoIosLink size={15} className="shrink-0 text-on-surface-muted group-hover:text-primary transition-colors duration-150" />
-        <span className="flex-1 min-w-0 text-xs text-on-surface truncate">{attachment.url}</span>
-        <FiExternalLink size={12} className="shrink-0 text-on-surface-muted group-hover:text-primary transition-colors duration-150" />
+        <IoIosLink
+          size={15}
+          className="shrink-0 text-on-surface-muted group-hover:text-primary transition-colors duration-150"
+        />
+        <span className="flex-1 min-w-0 text-xs text-on-surface truncate">
+          {attachment.url}
+        </span>
+        <FiExternalLink
+          size={12}
+          className="shrink-0 text-on-surface-muted group-hover:text-primary transition-colors duration-150"
+        />
       </a>
     );
   }
@@ -38,20 +59,31 @@ function AttachmentPreview({ attachment }: { attachment: AttachmentFormData }) {
     return (
       <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-surface-raised">
         <FiFile size={15} className="shrink-0 text-on-surface-muted" />
-        <span className="flex-1 min-w-0 text-xs text-on-surface truncate">{attachment.file.name}</span>
+        <span className="flex-1 min-w-0 text-xs text-on-surface truncate">
+          {attachment.file.name}
+        </span>
       </div>
     );
   }
   return (
     <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-dashed border-border">
-      <FiPaperclip size={13} className="shrink-0 text-on-surface-muted opacity-40" />
-      <span className="text-xs text-on-surface-muted opacity-40">No attachment</span>
+      <FiPaperclip
+        size={13}
+        className="shrink-0 text-on-surface-muted opacity-40"
+      />
+      <span className="text-xs text-on-surface-muted opacity-40">
+        No attachment
+      </span>
     </div>
   );
 }
 
 const tabs = ["existing", "file", "url"] as const;
-const tabLabel: Record<typeof tabs[number], string> = { existing: "Existing", file: "File", url: "URL" };
+const tabLabel: Record<typeof tabs[number], string> = {
+  existing: "Existing",
+  file: "File",
+  url: "URL",
+};
 
 export default function AttachmentEditor({
   attachment,
@@ -77,7 +109,11 @@ export default function AttachmentEditor({
   const switchTab = (t: typeof tabs[number]) => {
     if (t === "existing") {
       if (attachment.type !== "existing") return;
-      saveAttachment({ type: "existing", key: attachment.key, url: attachment.url });
+      saveAttachment({
+        type: "existing",
+        key: attachment.key,
+        url: attachment.url,
+      });
     } else {
       saveAttachment({ type: t });
     }
@@ -89,7 +125,7 @@ export default function AttachmentEditor({
 
       {/* Tab switcher */}
       <div className="flex rounded-lg border border-border overflow-hidden">
-        {tabs.map(t => {
+        {tabs.map((t) => {
           const active = attachment.type === t;
           const disabled = t === "existing" && attachment.type !== "existing";
           return (
@@ -99,9 +135,10 @@ export default function AttachmentEditor({
               disabled={disabled}
               onClick={() => switchTab(t)}
               className={`flex-1 py-1.5 text-xs font-medium transition-colors duration-150
-                ${active
-                  ? "bg-primary text-on-primary"
-                  : disabled
+                ${
+                  active
+                    ? "bg-primary text-on-primary"
+                    : disabled
                     ? "bg-surface text-on-surface-muted opacity-40 cursor-not-allowed"
                     : "bg-surface text-on-surface-muted hover:bg-surface-raised hover:text-on-surface"
                 }
@@ -123,7 +160,9 @@ export default function AttachmentEditor({
           {attachment.file ? (
             <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-surface-raised">
               <FiFile size={15} className="shrink-0 text-primary" />
-              <span className="flex-1 min-w-0 text-xs text-on-surface truncate">{attachment.file.name}</span>
+              <span className="flex-1 min-w-0 text-xs text-on-surface truncate">
+                {attachment.file.name}
+              </span>
               <button
                 type="button"
                 onClick={() => saveAttachment({ type: "file" })}
@@ -136,9 +175,14 @@ export default function AttachmentEditor({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              onDragOver={e => { e.preventDefault(); dragRef.current = true; }}
-              onDragLeave={() => { dragRef.current = false; }}
-              onDrop={e => {
+              onDragOver={(e) => {
+                e.preventDefault();
+                dragRef.current = true;
+              }}
+              onDragLeave={() => {
+                dragRef.current = false;
+              }}
+              onDrop={(e) => {
                 e.preventDefault();
                 const file = e.dataTransfer.files?.[0];
                 if (file) saveAttachment({ type: "file", file });
@@ -147,8 +191,11 @@ export default function AttachmentEditor({
             >
               <FiUploadCloud size={20} />
               <span className="text-xs text-center leading-relaxed">
-                Click or drag to upload<br />
-                <span className="text-[10px] opacity-60">image, audio, video</span>
+                Click or drag to upload
+                <br />
+                <span className="text-[10px] opacity-60">
+                  image, audio, video
+                </span>
               </span>
             </button>
           )}
@@ -157,7 +204,7 @@ export default function AttachmentEditor({
             type="file"
             accept="image/*, audio/*, video/*"
             className="hidden"
-            onChange={e => {
+            onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) saveAttachment({ type: "file", file });
             }}
@@ -175,7 +222,9 @@ export default function AttachmentEditor({
             type="url"
             placeholder="https://example.com/video.mp4"
             value={attachment.url ?? ""}
-            onChange={e => saveAttachment({ type: "url", url: e.target.value })}
+            onChange={(e) =>
+              saveAttachment({ type: "url", url: e.target.value })
+            }
           />
         </div>
       )}

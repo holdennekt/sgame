@@ -195,7 +195,7 @@ export default function QuestionModal({
                         className="w-4 h-4 inline-flex items-center justify-center rounded-full text-on-surface-muted hover:bg-primary hover:text-on-primary transition-colors duration-150"
                         onClick={() =>
                           setAnswers((answers) =>
-                            answers.filter((_, i) => i !== index),
+                            answers.filter((_, i) => i !== index)
                           )
                         }
                       >

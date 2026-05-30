@@ -40,7 +40,10 @@ const config: Config = {
   plugins: [
     plugin(({ addVariant }) => {
       addVariant("hover", "@media (hover: hover) { &:hover }");
-      addVariant("group-hover", "@media (hover: hover) { :merge(.group):hover & }");
+      addVariant(
+        "group-hover",
+        "@media (hover: hover) { :merge(.group):hover & }"
+      );
     }),
   ],
 };

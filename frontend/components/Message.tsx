@@ -13,7 +13,7 @@ const dummyChatMessage: ChatMessage = {
 
 export const isChatMessage = (obj: unknown): obj is ChatMessage => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyChatMessage).every(key => Object.hasOwn(obj, key));
+  return Object.keys(dummyChatMessage).every((key) => Object.hasOwn(obj, key));
 };
 
 export default function Message({
@@ -29,7 +29,7 @@ export default function Message({
 }) {
   const initials = message.from.name
     .split(" ")
-    .map(word => word[0].toUpperCase())
+    .map((word) => word[0].toUpperCase())
     .join("");
 
   const avatar = message.from.avatar ? (
@@ -53,7 +53,11 @@ export default function Message({
       }`}
     >
       {!isOwn && (isNextUserSame ? spacer : avatar)}
-      <div className={`flex flex-col max-w-[72%]${isOwn ? " items-end" : " items-start"}`}>
+      <div
+        className={`flex flex-col max-w-[72%]${
+          isOwn ? " items-end" : " items-start"
+        }`}
+      >
         <div
           className={`text-sm break-words px-3 py-1.5 ${
             isOwn
@@ -61,8 +65,9 @@ export default function Message({
               : "bg-surface-raised text-on-surface rounded-t-2xl rounded-br-2xl rounded-bl-md"
           }`}
         >
-          {!isOwn && !isPrevUserSame && (
-            message.from.isGuest ? (
+          {!isOwn &&
+            !isPrevUserSame &&
+            (message.from.isGuest ? (
               <span className="block text-xs font-semibold text-primary mb-0.5">
                 {message.from.name}
               </span>
@@ -74,8 +79,7 @@ export default function Message({
               >
                 {message.from.name}
               </Link>
-            )
-          )}
+            ))}
           {message.text}
         </div>
       </div>

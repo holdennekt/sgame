@@ -13,7 +13,9 @@ export function useWebSocket(path: string, toastContainerId: string) {
 
     const connect = () => {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      wsConn.current = new WebSocket(`${protocol}//${window.location.host}${path}`);
+      wsConn.current = new WebSocket(
+        `${protocol}//${window.location.host}${path}`
+      );
 
       wsConn.current.onmessage = (ev: MessageEvent<string>) => {
         const message: WsMessage = JSON.parse(ev.data);

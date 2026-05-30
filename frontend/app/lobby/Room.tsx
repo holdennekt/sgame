@@ -4,7 +4,6 @@ import { RoomLobby } from "@/types/room";
 import { FaLock, FaGlobe } from "react-icons/fa6";
 import { getAvatar } from "@/components/UserAvatar";
 
-
 export default function RoomLobbyCard({
   room,
   openPasswordModal,
@@ -24,11 +23,18 @@ export default function RoomLobbyCard({
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <p className="text-sm font-semibold truncate text-on-surface" title={room.name}>
+          <p
+            className="text-sm font-semibold truncate text-on-surface"
+            title={room.name}
+          >
             {room.name}
           </p>
           <span className="shrink-0 text-on-surface-muted">
-            {room.type === "public" ? <FaGlobe size={11} /> : <FaLock size={11} />}
+            {room.type === "public" ? (
+              <FaGlobe size={11} />
+            ) : (
+              <FaLock size={11} />
+            )}
           </span>
         </div>
         <span className="text-xs shrink-0 text-on-surface-muted tabular-nums">
@@ -65,7 +71,11 @@ export default function RoomLobbyCard({
 
       {/* Footer */}
       <div className="flex items-center justify-between">
-        <span className={`text-xs font-medium ${isPlaying ? "text-secondary" : "text-yellow-500"}`}>
+        <span
+          className={`text-xs font-medium ${
+            isPlaying ? "text-secondary" : "text-yellow-500"
+          }`}
+        >
           {room.status}
         </span>
         {room.type === "public" ? (

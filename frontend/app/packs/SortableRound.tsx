@@ -33,14 +33,22 @@ export default function SortableRound({
   onDelete: () => void;
   onAddRound: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id, disabled: readOnly });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, disabled: readOnly });
 
   return (
     <div
       ref={setNodeRef}
       style={{
-        transform: CSS.Transform.toString(transform ? { ...transform, x: 0 } : null),
+        transform: CSS.Transform.toString(
+          transform ? { ...transform, x: 0 } : null
+        ),
         transition: transform ? transition : undefined,
       }}
       className={isDragging ? "opacity-50 relative z-50" : ""}
@@ -54,7 +62,9 @@ export default function SortableRound({
         >
           <ChevronDown
             size={12}
-            className={`transition-transform duration-150${round.expanded ? "" : " -rotate-90"}`}
+            className={`transition-transform duration-150${
+              round.expanded ? "" : " -rotate-90"
+            }`}
           />
         </button>
         <input
@@ -66,10 +76,20 @@ export default function SortableRound({
         />
         {!readOnly && (
           <div className="absolute right-0 flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:group-hover:bg-surface-raised transition-opacity shrink-0 rounded-sm">
-            <button type="button" title="Add round" className={iconBtnCls} onClick={onAddRound}>
+            <button
+              type="button"
+              title="Add round"
+              className={iconBtnCls}
+              onClick={onAddRound}
+            >
               <IoIosAdd size={13} />
             </button>
-            <button type="button" title="Duplicate round" className={iconBtnCls} onClick={onDuplicate}>
+            <button
+              type="button"
+              title="Duplicate round"
+              className={iconBtnCls}
+              onClick={onDuplicate}
+            >
               <FiCopy size={11} />
             </button>
             <button
@@ -81,7 +101,11 @@ export default function SortableRound({
             >
               <RiDraggable size={13} />
             </button>
-            <button type="button" className={dangerIconBtnCls} onClick={onDelete}>
+            <button
+              type="button"
+              className={dangerIconBtnCls}
+              onClick={onDelete}
+            >
               <FaTrashCan size={10} />
             </button>
           </div>

@@ -13,7 +13,8 @@ import { useLobby } from "@/hooks/useLobby";
 type Tab = "rooms" | "chat";
 
 export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
-  const { rooms, chatMessages, lastError, sendChatMessage } = useLobby(initialRooms);
+  const { rooms, chatMessages, lastError, sendChatMessage } =
+    useLobby(initialRooms);
 
   const [searchInput, setSearchInput] = useState("");
   const [isNewRoomModalOpen, setIsNewRoomModalOpen] = useState(false);
@@ -42,9 +43,9 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
   const filteredRooms = useMemo(
     () =>
       rooms.filter((room) =>
-        room.name.toLowerCase().includes(searchInput.trim().toLowerCase()),
+        room.name.toLowerCase().includes(searchInput.trim().toLowerCase())
       ),
-    [rooms, searchInput],
+    [rooms, searchInput]
   );
 
   return (
@@ -59,7 +60,10 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
                 ? "text-primary border-primary"
                 : "text-on-surface-muted border-transparent"
             }`}
-            onClick={() => { setMobileTab(tab); if (tab === "chat") setUnreadCount(0); }}
+            onClick={() => {
+              setMobileTab(tab);
+              if (tab === "chat") setUnreadCount(0);
+            }}
           >
             {tab}
             {tab === "chat" && unreadCount > 0 && mobileTab !== "chat" && (
@@ -129,7 +133,11 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
         close={() => setPasswordModal({ ...passwordModal, isOpen: false })}
         roomId={passwordModal.roomId}
       />
-      <ToastContainer containerId="lobby" position="bottom-left" theme="colored" />
+      <ToastContainer
+        containerId="lobby"
+        position="bottom-left"
+        theme="colored"
+      />
     </>
   );
 }

@@ -8,11 +8,14 @@ export default function GameBottomSection() {
   const user = useRequiredUser();
   const {
     room,
-    placeBet, placeFinalRoundBet, submitFinalRoundAnswer,
-    answerButton, submitAnswer,
+    placeBet,
+    placeFinalRoundBet,
+    submitFinalRoundAnswer,
+    answerButton,
+    submitAnswer,
   } = useRoomContext();
 
-  const player = room.players.find((p) => p.id === user.id) as Player | undefined;
+  const player = room.players.find((p) => p.id === user.id);
   if (!player) return null;
 
   const allowedToAnswer = room.allowedToAnswer?.includes(user.id) ?? false;

@@ -24,7 +24,9 @@ export default function Error({
             <FiAlertTriangle size={22} />
           </div>
           <div className="flex flex-col gap-1">
-            <h2 className="text-base font-semibold text-on-surface">Something went wrong</h2>
+            <h2 className="text-base font-semibold text-on-surface">
+              Something went wrong
+            </h2>
             {error.message && (
               <p className="text-sm text-on-surface-muted">{error.message}</p>
             )}

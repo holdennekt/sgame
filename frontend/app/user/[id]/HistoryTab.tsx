@@ -25,12 +25,16 @@ export default function HistoryTab() {
     });
 
   const onIntersect = useRef<() => void>(() => {});
-  onIntersect.current = () => { if (hasNextPage) fetchNextPage(); };
+  onIntersect.current = () => {
+    if (hasNextPage) fetchNextPage();
+  };
 
   useEffect(() => {
     const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) onIntersect.current(); },
-      { rootMargin: "100px" },
+      ([entry]) => {
+        if (entry.isIntersecting) onIntersect.current();
+      },
+      { rootMargin: "100px" }
     );
     if (sentinelRef.current) obs.observe(sentinelRef.current);
     return () => obs.disconnect();

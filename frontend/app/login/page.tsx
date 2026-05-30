@@ -7,14 +7,17 @@ import Link from "next/link";
 import { login, loginAsGuest } from "../actions";
 import { isError } from "@/middleware";
 
-const inputClass = "h-9 w-full px-2.5 rounded-lg border border-border bg-background text-on-background text-sm outline-none placeholder:text-on-surface-muted focus-ring transition-[border-color] duration-150";
-const btnPrimary = "inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150";
-const btnSecondary = "inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-surface-raised text-on-surface border border-border hover:bg-border transition-colors duration-150";
+const inputClass =
+  "h-9 w-full px-2.5 rounded-lg border border-border bg-background text-on-background text-sm outline-none placeholder:text-on-surface-muted focus-ring transition-[border-color] duration-150";
+const btnPrimary =
+  "inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150";
+const btnSecondary =
+  "inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-surface-raised text-on-surface border border-border hover:bg-border transition-colors duration-150";
 
 export default function Page() {
   const [guestName, setGuestName] = useState("");
 
-  const onSubmit: FormEventHandler<HTMLFormElement> = async e => {
+  const onSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const result = await login({
@@ -28,7 +31,7 @@ export default function Page() {
     window.location.href = "/lobby";
   };
 
-  const onGuestSubmit: FormEventHandler<HTMLFormElement> = async e => {
+  const onGuestSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
     const result = await loginAsGuest(guestName.trim());
     if (isError(result)) {
@@ -47,7 +50,9 @@ export default function Page() {
             <h2 className="text-2xl font-bold mb-1 text-on-background">
               Welcome back
             </h2>
-            <p className="text-sm mb-6 text-on-surface-muted">Sign in to your account</p>
+            <p className="text-sm mb-6 text-on-surface-muted">
+              Sign in to your account
+            </p>
 
             <form onSubmit={onSubmit} className="flex flex-col gap-4">
               <label className="flex flex-col gap-1">
@@ -92,14 +97,16 @@ export default function Page() {
           </div>
 
           <div className="bg-surface border border-border rounded-md shadow p-6">
-            <p className="text-sm font-medium text-on-surface mb-3">Continue as guest</p>
+            <p className="text-sm font-medium text-on-surface mb-3">
+              Continue as guest
+            </p>
             <form onSubmit={onGuestSubmit} className="flex gap-2">
               <input
                 className={inputClass}
                 type="text"
                 placeholder="Your name"
                 value={guestName}
-                onChange={e => setGuestName(e.target.value)}
+                onChange={(e) => setGuestName(e.target.value)}
                 minLength={1}
                 maxLength={50}
                 required
@@ -112,7 +119,11 @@ export default function Page() {
         </div>
       </main>
 
-      <ToastContainer containerId="login" position="bottom-left" theme="colored" />
+      <ToastContainer
+        containerId="login"
+        position="bottom-left"
+        theme="colored"
+      />
     </>
   );
 }

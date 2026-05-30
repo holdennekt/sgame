@@ -3,9 +3,16 @@ import { useRouter } from "next/navigation";
 import { ChatMessage, isChatMessage } from "@/components/Message";
 import { isError } from "@/middleware";
 import {
-  isRoomHost, isRoomPlayer, RoomHost, RoomPlayer,
-  RoundDemo, QuestionDemo, CorrectAnswerDemo,
-  isRoundDemo, isQuestionDemo, isCorrectAnswerDemo,
+  isRoomHost,
+  isRoomPlayer,
+  RoomHost,
+  RoomPlayer,
+  RoundDemo,
+  QuestionDemo,
+  CorrectAnswerDemo,
+  isRoundDemo,
+  isQuestionDemo,
+  isCorrectAnswerDemo,
 } from "@/types/room";
 import { leaveRoom } from "@/app/actions";
 import { useWebSocket } from "./useWebSocket";
@@ -14,13 +21,20 @@ export function useRoom(initialRoom: RoomHost | RoomPlayer, userId: string) {
   const router = useRouter();
   const [room, setRoom] = useState(initialRoom);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [lastError, setLastError] = useState<{ msg: string; count: number } | null>(null);
+  const [lastError, setLastError] = useState<{
+    msg: string;
+    count: number;
+  } | null>(null);
   const [roundDemo, setRoundDemo] = useState<RoundDemo | null>(null);
   const [questionDemo, setQuestionDemo] = useState<QuestionDemo | null>(null);
-  const [correctAnswerDemo, setCorrectAnswerDemo] = useState<CorrectAnswerDemo | null>(null);
+  const [correctAnswerDemo, setCorrectAnswerDemo] =
+    useState<CorrectAnswerDemo | null>(null);
   const delayedRoundDemoRef = useRef<RoundDemo | null>(null);
 
-  const { wsConn, handlers } = useWebSocket(`/api/ws/room/${initialRoom.id}`, "room");
+  const { wsConn, handlers } = useWebSocket(
+    `/api/ws/room/${initialRoom.id}`,
+    "room"
+  );
 
   const setError = (msg: string) =>
     setLastError((prev) => ({ msg, count: (prev?.count ?? 0) + 1 }));
@@ -50,7 +64,10 @@ export function useRoom(initialRoom: RoomHost | RoomPlayer, userId: string) {
   handlers.set("room_deleted", () => router.push("/"));
   handlers.set("round_demo", (payload) => {
     if (!isRoundDemo(payload)) return;
-    if (correctAnswerDemo) { delayedRoundDemoRef.current = payload; return; }
+    if (correctAnswerDemo) {
+      delayedRoundDemoRef.current = payload;
+      return;
+    }
     setRoundDemo(payload);
   });
   handlers.set("question_demo", (payload) => {
@@ -67,17 +84,24 @@ export function useRoom(initialRoom: RoomHost | RoomPlayer, userId: string) {
   const sendChatMessage = (text: string) => send("chat", { text });
   const startGame = () => send("start_game");
   const togglePause = () => send(room.pausedState.paused ? "unpause" : "pause");
-  const selectQuestion = (q: { category: string; index: number }) => send("select_question", q);
+  const selectQuestion = (q: { category: string; index: number }) =>
+    send("select_question", q);
   const submitAnswer = () => send("submit_answer");
   const passQuestion = (passTo: string) => send("pass_question", { passTo });
   const placeBet = (amount: number) => send("place_bet", { amount });
-  const placeFinalRoundBet = (amount: number) => send("place_final_round_bet", { amount });
-  const submitFinalRoundAnswer = (answer: string) => send("submit_final_round_answer", { answer });
-  const removeFinalRoundCategory = (category: string) => send("remove_final_round_category", { category });
-  const validateAnswer = (isCorrect: boolean) => send("validate_answer", { isCorrect });
-  const validateFinalRoundAnswer = (isCorrect: boolean) => send("validate_final_round_answer", { isCorrect });
+  const placeFinalRoundBet = (amount: number) =>
+    send("place_final_round_bet", { amount });
+  const submitFinalRoundAnswer = (answer: string) =>
+    send("submit_final_round_answer", { answer });
+  const removeFinalRoundCategory = (category: string) =>
+    send("remove_final_round_category", { category });
+  const validateAnswer = (isCorrect: boolean) =>
+    send("validate_answer", { isCorrect });
+  const validateFinalRoundAnswer = (isCorrect: boolean) =>
+    send("validate_final_round_answer", { isCorrect });
   const skipQuestion = () => send("skip_question");
-  const changeScore = (playerId: string, score: number) => send("change_score", { playerId, score });
+  const changeScore = (playerId: string, score: number) =>
+    send("change_score", { playerId, score });
 
   const leave = async () => {
     try {

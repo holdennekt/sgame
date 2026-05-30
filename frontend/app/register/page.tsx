@@ -7,12 +7,15 @@ import Link from "next/link";
 import { register } from "../actions";
 import { isError } from "@/middleware";
 
-const inputClass = "h-9 w-full px-2.5 rounded-lg border border-border bg-background text-on-background text-sm outline-none placeholder:text-on-surface-muted focus-ring transition-[border-color] duration-150";
-const btnPrimary = "inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150";
-const btnSecondary = "inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-surface-raised text-on-surface border border-border hover:bg-border transition-colors duration-150";
+const inputClass =
+  "h-9 w-full px-2.5 rounded-lg border border-border bg-background text-on-background text-sm outline-none placeholder:text-on-surface-muted focus-ring transition-[border-color] duration-150";
+const btnPrimary =
+  "inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150";
+const btnSecondary =
+  "inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium cursor-pointer bg-surface-raised text-on-surface border border-border hover:bg-border transition-colors duration-150";
 
 export default function Page() {
-  const onSubmit: FormEventHandler<HTMLFormElement> = async e => {
+  const onSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const result = await register({
@@ -34,13 +37,13 @@ export default function Page() {
           <h2 className="text-2xl font-bold mb-1 text-on-background">
             Create account
           </h2>
-          <p className="text-sm mb-6 text-on-surface-muted">Join SGame and start playing</p>
+          <p className="text-sm mb-6 text-on-surface-muted">
+            Join SGame and start playing
+          </p>
 
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-on-surface">
-                Login
-              </span>
+              <span className="text-sm font-medium text-on-surface">Login</span>
               <input
                 className={inputClass}
                 type="text"
@@ -79,7 +82,11 @@ export default function Page() {
         </div>
       </main>
 
-      <ToastContainer containerId="register" position="bottom-left" theme="colored" />
+      <ToastContainer
+        containerId="register"
+        position="bottom-left"
+        theme="colored"
+      />
     </>
   );
 }

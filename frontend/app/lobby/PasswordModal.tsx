@@ -26,9 +26,7 @@ export default function PasswordModal({
       }}
       closeByClickingOutside
     >
-      <h3 className="text-base/7 font-medium">
-        Enter password
-      </h3>
+      <h3 className="text-base/7 font-medium">Enter password</h3>
 
       <div className="w-48 flex flex-col gap-2 flex-1">
         <input
@@ -36,8 +34,8 @@ export default function PasswordModal({
           type="text"
           placeholder="Password"
           value={password}
-          onChange={e => setPassword(e.target.value)}
-          onKeyDown={e => {
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => {
             if (e.code === "Enter") router.push(roomLink);
           }}
         />

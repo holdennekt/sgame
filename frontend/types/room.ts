@@ -1,4 +1,13 @@
-import { PackPreview, HiddenQuestion, HiddenFinalRoundQuestion, FinalRoundQuestion, Question, QuestionType, PrivacyType, Comment } from "./pack";
+import {
+  PackPreview,
+  HiddenQuestion,
+  HiddenFinalRoundQuestion,
+  FinalRoundQuestion,
+  Question,
+  QuestionType,
+  PrivacyType,
+  Comment,
+} from "./pack";
 import { Host, Player } from "./user";
 
 export interface GameHistoryEntry {
@@ -79,7 +88,7 @@ const dummyRoom: Room = {
 
 export const isRoom = (obj: unknown): obj is Room => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyRoom).every(key => Object.hasOwn(obj, key));
+  return Object.keys(dummyRoom).every((key) => Object.hasOwn(obj, key));
 };
 
 export type RoomState =
@@ -120,8 +129,8 @@ export type CurrentRoundQuestions = CategoryQuestions[];
 
 export interface CurrentQuestion extends Question {
   attachmentRevealEndsAt: string;
-	attachmentRevealLastProgress: number;
-	textRevealLastProgress: number;
+  attachmentRevealLastProgress: number;
+  textRevealLastProgress: number;
   timerStartsAt: string;
   timerEndsAt: string;
   timerLastProgress: number;
@@ -173,7 +182,7 @@ const dummyRoomLobby: RoomLobby = {
 
 export const isRoomLobby = (obj: unknown): obj is RoomLobby => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyRoomLobby).every(key => Object.hasOwn(obj, key));
+  return Object.keys(dummyRoomLobby).every((key) => Object.hasOwn(obj, key));
 };
 
 export interface RoomHost {
@@ -222,7 +231,7 @@ const dummyRoomHost: RoomHost = {
 
 export const isRoomHost = (obj: unknown): obj is RoomHost => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyRoomHost).every(key => Object.hasOwn(obj, key));
+  return Object.keys(dummyRoomHost).every((key) => Object.hasOwn(obj, key));
 };
 
 export interface RoomPlayer {
@@ -271,15 +280,15 @@ const dummyRoomPlayer: RoomPlayer = {
 
 export const isRoomPlayer = (obj: unknown): obj is RoomPlayer => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyRoomPlayer).every(key => Object.hasOwn(obj, key));
+  return Object.keys(dummyRoomPlayer).every((key) => Object.hasOwn(obj, key));
 };
 
 export interface HiddenCurrentQuestion extends HiddenQuestion {
   type: QuestionType;
   text: string;
   attachmentRevealEndsAt: string;
-	attachmentRevealLastProgress: number;
-	textRevealLastProgress: number;
+  attachmentRevealLastProgress: number;
+  textRevealLastProgress: number;
   timerStartsAt: string;
   timerEndsAt: string;
   timerLastProgress: number;
@@ -301,11 +310,14 @@ export type RoundDemo = {
   categories: string[];
 };
 
-const dummyRoundDemo: RoundDemo = { name: "round 1", categories: ["1", "2", "3"] };
+const dummyRoundDemo: RoundDemo = {
+  name: "round 1",
+  categories: ["1", "2", "3"],
+};
 
 export const isRoundDemo = (obj: unknown): obj is RoundDemo => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyRoundDemo).every(key => Object.hasOwn(obj, key));
+  return Object.keys(dummyRoundDemo).every((key) => Object.hasOwn(obj, key));
 };
 
 export type QuestionDemo = {
@@ -315,11 +327,16 @@ export type QuestionDemo = {
   duration: number;
 };
 
-const dummyQuestionDemo: QuestionDemo = { category: "", value: 0, type: "regular", duration: 0 };
+const dummyQuestionDemo: QuestionDemo = {
+  category: "",
+  value: 0,
+  type: "regular",
+  duration: 0,
+};
 
 export const isQuestionDemo = (obj: unknown): obj is QuestionDemo => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyQuestionDemo).every(key => Object.hasOwn(obj, key));
+  return Object.keys(dummyQuestionDemo).every((key) => Object.hasOwn(obj, key));
 };
 
 export type CorrectAnswerDemo = {
@@ -328,9 +345,15 @@ export type CorrectAnswerDemo = {
   duration: number;
 };
 
-const dummyCorrectAnswerDemo: CorrectAnswerDemo = { answers: [], comment: null, duration: 0 };
+const dummyCorrectAnswerDemo: CorrectAnswerDemo = {
+  answers: [],
+  comment: null,
+  duration: 0,
+};
 
 export const isCorrectAnswerDemo = (obj: unknown): obj is CorrectAnswerDemo => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyCorrectAnswerDemo).every(key => Object.hasOwn(obj, key));
+  return Object.keys(dummyCorrectAnswerDemo).every((key) =>
+    Object.hasOwn(obj, key)
+  );
 };

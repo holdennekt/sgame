@@ -17,7 +17,9 @@ export default function FinalRoundBoardPanel({
           key={category}
           type="button"
           disabled={!available || !canRemoveCategory}
-          onClick={() => available && canRemoveCategory && removeCategory(category)}
+          onClick={() =>
+            available && canRemoveCategory && removeCategory(category)
+          }
           className={`group w-full max-w-sm flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all duration-150 ${
             available
               ? canRemoveCategory
@@ -28,7 +30,10 @@ export default function FinalRoundBoardPanel({
         >
           <span className="flex-1 text-center">{category}</span>
           {available && canRemoveCategory && (
-            <FiX size={13} className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            <FiX
+              size={13}
+              className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            />
           )}
         </button>
       ))}

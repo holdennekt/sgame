@@ -28,10 +28,16 @@ export function PackCard({
               {pack.name}
             </Link>
           ) : (
-            <span className="font-medium text-on-surface truncate">{pack.name}</span>
+            <span className="font-medium text-on-surface truncate">
+              {pack.name}
+            </span>
           )}
           <span className="text-on-surface-muted shrink-0">
-            {pack.type === "public" ? <FaGlobe size={10} /> : <FaLock size={10} />}
+            {pack.type === "public" ? (
+              <FaGlobe size={10} />
+            ) : (
+              <FaLock size={10} />
+            )}
           </span>
         </div>
         <p className="text-xs text-on-surface-muted mt-0.5">

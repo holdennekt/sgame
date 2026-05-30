@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useUser } from "@/contexts/UserContext";
 
-export default function Navbar({ openNewTab = false }: { openNewTab?: boolean }) {
+export default function Navbar({
+  openNewTab = false,
+}: {
+  openNewTab?: boolean;
+}) {
   const user = useUser();
   const target = openNewTab ? "_blank" : "_self";
 

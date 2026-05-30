@@ -47,7 +47,7 @@ export default function PackEditor({
   readOnly = false,
 }: {
   savePack: (
-    pack: CreatePackRequest,
+    pack: CreatePackRequest
   ) => Promise<{ id: string } | { error: string }>;
   initialPack: Omit<Pack, "id" | "createdBy">;
   readOnly?: boolean;
@@ -126,7 +126,7 @@ export default function PackEditor({
     if (readOnly) return;
     localStorage.setItem(
       draftKey,
-      JSON.stringify(pack, (_, v) => (v instanceof File ? undefined : v)),
+      JSON.stringify(pack, (_, v) => (v instanceof File ? undefined : v))
     );
   }, [pack]);
 
@@ -134,7 +134,7 @@ export default function PackEditor({
     e.preventDefault();
     try {
       const result = await savePack(
-        await convertPackFormDataToRequest(pack, signURL),
+        await convertPackFormDataToRequest(pack, signURL)
       );
       if (isError(result)) {
         toast.error(result.error, { containerId: "editor" });
@@ -322,7 +322,9 @@ export default function PackEditor({
               >
                 <ChevronDown
                   size={12}
-                  className={`text-on-surface-muted transition-transform duration-150${pack.finalRound.expanded ? "" : " -rotate-90"}`}
+                  className={`text-on-surface-muted transition-transform duration-150${
+                    pack.finalRound.expanded ? "" : " -rotate-90"
+                  }`}
                 />
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-on-surface-muted">
                   Final Round
@@ -342,7 +344,7 @@ export default function PackEditor({
                             category: cat,
                             saveCategory: changeFinalRoundCategory.bind(
                               null,
-                              i,
+                              i
                             ),
                           })
                         }

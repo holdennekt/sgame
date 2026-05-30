@@ -26,17 +26,27 @@ export default function SortableCategory({
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id, disabled: readOnly });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, disabled: readOnly });
 
   return (
     <div
       ref={setNodeRef}
       style={{
-        transform: CSS.Transform.toString(transform ? { ...transform, x: 0 } : null),
+        transform: CSS.Transform.toString(
+          transform ? { ...transform, x: 0 } : null
+        ),
         transition: transform ? transition : undefined,
       }}
-      className={`group relative flex items-center ${isDragging ? "opacity-50 z-50" : ""}`}
+      className={`group relative flex items-center ${
+        isDragging ? "opacity-50 z-50" : ""
+      }`}
     >
       <button
         type="button"
@@ -51,7 +61,12 @@ export default function SortableCategory({
       </button>
       {!readOnly && (
         <div className="absolute right-0 flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:group-hover:bg-surface-raised transition-opacity shrink-0 rounded-sm">
-          <button type="button" title="Duplicate category" className={iconBtnCls} onClick={onDuplicate}>
+          <button
+            type="button"
+            title="Duplicate category"
+            className={iconBtnCls}
+            onClick={onDuplicate}
+          >
             <FiCopy size={10} />
           </button>
           <button

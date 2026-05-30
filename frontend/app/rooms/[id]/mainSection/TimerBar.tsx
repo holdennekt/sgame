@@ -17,7 +17,10 @@ export default function TimerBar({
     if (paused || initProgress <= 0) return;
 
     const remaining = endsAt - Date.now();
-    if (remaining <= 0) { setProgress(0); return; }
+    if (remaining <= 0) {
+      setProgress(0);
+      return;
+    }
 
     const totalDuration = remaining / initProgress;
     const start = performance.now() - (totalDuration - remaining);
@@ -37,7 +40,8 @@ export default function TimerBar({
   }, [endsAt, initProgress, paused]);
 
   return (
-    <div className="absolute top-0 left-0 h-1 bg-primary transition-none rounded-full"
+    <div
+      className="absolute top-0 left-0 h-1 bg-primary transition-none rounded-full"
       style={{ width: `${progress * 100}%` }}
     />
   );

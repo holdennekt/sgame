@@ -3,7 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 export const SESSION_ID_COOKIE_NAME = "sessionId";
 export const USER_HEADER_NAME = "user";
 
-export type User = { id: string; name: string; avatar: string | null; isGuest?: boolean };
+export type User = {
+  id: string;
+  name: string;
+  avatar: string | null;
+  isGuest?: boolean;
+};
 
 export type ErrorBody = { error: string };
 export const isError = (obj: unknown): obj is ErrorBody =>
@@ -19,7 +24,7 @@ export const config = {
 
 export async function middleware(request: NextRequest) {
   const sessionId = request.cookies.get(SESSION_ID_COOKIE_NAME)?.value;
-  
+
   const path = request.nextUrl.pathname;
 
   if (unprotectedPages.some((prefix) => path.startsWith(prefix))) {
@@ -44,7 +49,10 @@ export async function middleware(request: NextRequest) {
   }
 
   const clonedRequest = request.clone();
-  clonedRequest.headers.set(USER_HEADER_NAME, encodeURIComponent(await resp.text()));
+  clonedRequest.headers.set(
+    USER_HEADER_NAME,
+    encodeURIComponent(await resp.text())
+  );
   return NextResponse.rewrite(request.url.toString(), {
     request: clonedRequest,
   });

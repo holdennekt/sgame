@@ -32,8 +32,14 @@ export default function SortableQuestion({
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id, disabled: readOnly });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, disabled: readOnly });
 
   const hasAttachment =
     question.attachment.type === "existing" ||
@@ -44,10 +50,14 @@ export default function SortableQuestion({
     <div
       ref={setNodeRef}
       style={{
-        transform: CSS.Transform.toString(transform ? { ...transform, x: 0 } : null),
+        transform: CSS.Transform.toString(
+          transform ? { ...transform, x: 0 } : null
+        ),
         transition: transform ? transition : undefined,
       }}
-      className={`group relative flex items-center gap-2 px-4 py-3 rounded-md border border-border hover:bg-surface-raised hover:border-primary transition-colors duration-150 select-none ${isDragging ? "opacity-50 z-50" : ""}`}
+      className={`group relative flex items-center gap-2 px-4 py-3 rounded-md border border-border hover:bg-surface-raised hover:border-primary transition-colors duration-150 select-none ${
+        isDragging ? "opacity-50 z-50" : ""
+      }`}
     >
       {!readOnly && (
         <button
@@ -60,33 +70,44 @@ export default function SortableQuestion({
           <RiDraggable size={14} />
         </button>
       )}
-      <div className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer" onClick={onOpen}>
+      <div
+        className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
+        onClick={onOpen}
+      >
         <span
-          className={`font-black text-primary w-12 shrink-0 leading-none tabular-nums text-center ${question.value >= 1000 ? "text-lg" : "text-2xl"}`}
+          className={`font-black text-primary w-12 shrink-0 leading-none tabular-nums text-center ${
+            question.value >= 1000 ? "text-lg" : "text-2xl"
+          }`}
         >
           {question.value || "—"}
         </span>
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           <p className="text-sm text-on-surface truncate">
-            {question.text || <em className="text-on-surface-muted opacity-50">No text</em>}
+            {question.text || (
+              <em className="text-on-surface-muted opacity-50">No text</em>
+            )}
           </p>
-          <div className="flex items-center gap-1.5 text-[10px] text-on-surface-muted">
+          <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-on-surface-muted">
             <span className="px-1.5 py-0.5 rounded-full bg-surface-raised font-medium border border-border">
               {typeLabel[question.type] ?? question.type}
             </span>
-            {[
-              question.answers.length > 0 &&
-                `${question.answers.length} answer${question.answers.length !== 1 ? "s" : ""}`,
-              hasAttachment && "attachment",
-              question.comment && "comment",
-            ]
-              .filter(Boolean)
-              .map((item, i) => (
-                <React.Fragment key={i}>
-                  <span>·</span>
-                  <span>{item}</span>
-                </React.Fragment>
-              ))}
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                question.answers.length > 0 &&
+                  `${question.answers.length} answer${
+                    question.answers.length !== 1 ? "s" : ""
+                  }`,
+                hasAttachment && "attachment",
+                question.comment.text && "comment",
+              ]
+                .filter(Boolean)
+                .map((item, i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 && <span>·</span>}
+                    <span>{item}</span>
+                  </React.Fragment>
+                ))}
+            </div>
           </div>
         </div>
       </div>
@@ -96,14 +117,20 @@ export default function SortableQuestion({
             type="button"
             className={iconBtnCls}
             title="Duplicate question"
-            onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate();
+            }}
           >
             <FiCopy size={12} />
           </button>
           <button
             type="button"
             className={dangerIconBtnCls}
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
           >
             <FaTrashCan size={12} />
           </button>
