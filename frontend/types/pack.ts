@@ -22,6 +22,11 @@ export interface CategoryFormData {
   questions: QuestionFormData[];
 }
 
+export interface CommentFormData {
+  text: string;
+  attachment: AttachmentFormData;
+}
+
 export interface QuestionFormData {
   index: number;
   value: number;
@@ -29,7 +34,7 @@ export interface QuestionFormData {
   text: string;
   attachment: AttachmentFormData;
   answers: string[];
-  comment: string | null;
+  comment: CommentFormData;
 }
 
 export type AttachmentFormData =
@@ -51,7 +56,7 @@ export interface FinalRoundQuestionFormData {
   text: string;
   attachment: AttachmentFormData;
   answers: string[];
-  comment: string | null;
+  comment: CommentFormData;
 }
 
 export interface CreatePackRequest {
@@ -71,6 +76,11 @@ export interface CreateCategoryRequest {
   questions: CreateQuestionRequest[];
 }
 
+export interface CreateCommentRequest {
+  text: string | null;
+  attachment: CreateAttachmentRequest | null;
+}
+
 export interface CreateQuestionRequest {
   index: number;
   value: number;
@@ -78,7 +88,7 @@ export interface CreateQuestionRequest {
   text: string;
   attachment: CreateAttachmentRequest | null;
   answers: string[];
-  comment: string | null;
+  comment: CreateCommentRequest | null;
 }
 
 export interface CreateAttachmentRequest {
@@ -99,7 +109,7 @@ export interface CreateFinalRoundQuestionRequest {
   text: string;
   attachment: CreateAttachmentRequest | null;
   answers: string[];
-  comment: string | null;
+  comment: CreateCommentRequest | null;
 }
 
 export interface CreatePackResponse {
@@ -170,16 +180,26 @@ export const isAttachment = (obj: unknown): obj is Attachment => {
   return Object.keys(dummyAttachment).every((key) => Object.hasOwn(obj, key));
 };
 
-export interface QuestionCorrectAnswer {
-  answers: string[];
-  comment: string | null;
+export interface Comment {
+  text: string | null;
+  attachment: Attachment | null;
 }
+
+const dummyComment: Comment = {
+  text: null,
+  attachment: null,
+};
+
+export const isComment = (obj: unknown): obj is Comment => {
+  if (typeof obj !== "object" || obj === null) return false;
+  return Object.keys(dummyComment).every((key) => Object.hasOwn(obj, key));
+};
 
 export interface Question extends HiddenQuestion {
   type: QuestionType;
   text: string;
   answers: string[];
-  comment: string | null;
+  comment: Comment | null;
 }
 
 const dummyQuestion: Question = {
@@ -212,7 +232,7 @@ export interface FinalRoundCategory extends HiddenFinalRoundCategory {
 
 export interface FinalRoundQuestion extends HiddenFinalRoundQuestion {
   answers: string[];
-  comment: string | null;
+  comment: Comment | null;
 }
 
 export interface HiddenPack {
@@ -287,11 +307,9 @@ function convertQuestionToFormData(question: Question): QuestionFormData {
     value: question.value,
     type: question.type,
     text: question.text,
-    attachment: convertAttachmentToFormData(
-      isQuestion(question) ? question.attachment : null,
-    ),
+    attachment: convertAttachmentToFormData(question.attachment),
     answers: question.answers,
-    comment: question.comment,
+    comment: convertCommentToFormData(question.comment),
   };
 }
 
@@ -300,6 +318,15 @@ function convertAttachmentToFormData(
 ): AttachmentFormData {
   if (!attachment) return { type: "file" };
   return { type: "existing", key: attachment.key, url: attachment.url };
+}
+
+function convertCommentToFormData(comment: Comment | null): CommentFormData {
+  return {
+    text: comment?.text ?? "",
+    attachment: convertAttachmentToFormData(
+      comment ? comment.attachment : null,
+    ),
+  };
 }
 
 function convertFinalRoundToFormData(
@@ -319,14 +346,19 @@ function convertFinalRoundCategoryToFormData(
     question: {
       ...category.question,
       attachment: convertAttachmentToFormData(category.question.attachment),
+      comment: convertCommentToFormData(category.question.comment),
     },
   };
 }
 
 export async function convertPackFormDataToRequest(
   formData: PackFormData,
-  signURL: (params: { filename: string; public: boolean }) => Promise<
-    { url: string; formData: Record<string, string>; getUrl?: string } | { error: string }
+  signURL: (params: {
+    filename: string;
+    public: boolean;
+  }) => Promise<
+    | { url: string; formData: Record<string, string>; getUrl?: string }
+    | { error: string }
   >,
 ): Promise<CreatePackRequest> {
   const isPublic = formData.type === "public";
@@ -338,14 +370,29 @@ export async function convertPackFormDataToRequest(
         round.categories.map(async (category) => ({
           name: category.name,
           questions: await Promise.all(
-            category.questions.map(async (question) => ({
-              ...question,
-              attachment: await convertAttachment(
-                question.attachment,
+            category.questions.map(async (question) => {
+              const commentText = question.comment.text || null;
+              const commentAttachment = await convertAttachment(
+                question.comment.attachment,
                 isPublic,
                 signURL,
-              ),
-            })),
+              );
+              return {
+                ...question,
+                comment:
+                  commentText || commentAttachment
+                    ? {
+                        text: commentText,
+                        attachment: commentAttachment,
+                      }
+                    : null,
+                attachment: await convertAttachment(
+                  question.attachment,
+                  isPublic,
+                  signURL,
+                ),
+              };
+            }),
           ),
         })),
       ),
@@ -354,17 +401,32 @@ export async function convertPackFormDataToRequest(
 
   const finalRound = {
     categories: await Promise.all(
-      formData.finalRound.categories.map(async ({ name, question }) => ({
-        name,
-        question: {
-          ...question,
-          attachment: await convertAttachment(
-            question.attachment,
-            isPublic,
-            signURL,
-          ),
-        },
-      })),
+      formData.finalRound.categories.map(async ({ name, question }) => {
+        const commentText = question.comment.text || null;
+        const commentAttachment = await convertAttachment(
+          question.comment.attachment,
+          isPublic,
+          signURL,
+        );
+        return {
+          name,
+          question: {
+            ...question,
+            comment:
+              commentText || commentAttachment
+                ? {
+                    text: commentText,
+                    attachment: commentAttachment,
+                  }
+                : null,
+            attachment: await convertAttachment(
+              question.attachment,
+              isPublic,
+              signURL,
+            ),
+          },
+        };
+      }),
     ),
   };
 
@@ -379,8 +441,12 @@ export async function convertPackFormDataToRequest(
 async function convertAttachment(
   attachment: AttachmentFormData,
   isPublic: boolean,
-  signURL: (params: { filename: string; public: boolean }) => Promise<
-    { url: string; formData: Record<string, string>; getUrl?: string } | { error: string }
+  signURL: (params: {
+    filename: string;
+    public: boolean;
+  }) => Promise<
+    | { url: string; formData: Record<string, string>; getUrl?: string }
+    | { error: string }
   >,
 ): Promise<CreateAttachmentRequest | null> {
   switch (attachment.type) {

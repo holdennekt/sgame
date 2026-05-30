@@ -9,21 +9,9 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
-const CorrectAnswerDemoDuration = 5
-
-type CorrectAnswerDemoPayload struct {
-	Answers  []string `json:"answers"`
-	Comment  *string  `json:"comment"`
-	Duration int      `json:"duration"`
-}
-
-func NewCorrectAnswerDemoMessage(toQuestionCorrectAnswerer domain.ToQuestionCorrectAnswerer) message.Message {
-	questionCorrectAnswer := toQuestionCorrectAnswerer.ToQuestionCorrectAnswer()
-	payload, _ := json.Marshal(CorrectAnswerDemoPayload{
-		Answers:  questionCorrectAnswer.Answers,
-		Comment:  questionCorrectAnswer.Comment,
-		Duration: CorrectAnswerDemoDuration,
-	})
+func NewCorrectAnswerDemoMessage(toQuestionCorrectAnswerDemoer domain.ToQuestionCorrectAnswerDemoer, getAttachmentUrl func(key string) (string, error)) message.Message {
+	questionCorrectAnswerDemo := toQuestionCorrectAnswerDemoer.ToQuestionCorrectAnswerDemo(getAttachmentUrl)
+	payload, _ := json.Marshal(questionCorrectAnswerDemo)
 	return message.Message{
 		Event:   domain.CorrectAnswerDemo,
 		Payload: payload,

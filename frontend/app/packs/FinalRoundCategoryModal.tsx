@@ -31,6 +31,9 @@ export default function FinalRoundCategoryModal({
   const [text, setText] = useState(category.question.text);
   const [answers, setAnswers] = useState(category.question.answers);
   const [comment, setComment] = useState(category.question.comment);
+  const [editCommentAttachment, setEditCommentAttachment] = useState(
+    category.question.comment?.attachment ?? { type: "file" as const },
+  );
   const [attachment, setAttachment] = useState(category.question.attachment);
   const [editAttachment, setEditAttachment] = useState(category.question.attachment);
   const [answerInput, setAnswerInput] = useState("");
@@ -44,6 +47,7 @@ export default function FinalRoundCategoryModal({
     setAnswerInput("");
     setAnswers(category.question.answers);
     setComment(category.question.comment);
+    setEditCommentAttachment(category.question.comment?.attachment ?? { type: "file" });
     setAttachment(category.question.attachment);
     setEditAttachment(category.question.attachment);
     setError(null);
@@ -64,9 +68,18 @@ export default function FinalRoundCategoryModal({
       return setError("Attachment URL is too long");
     if (!answers.length)
       return setError("At least 1 answer is required");
-    if (comment && comment.length > 200)
+    const hasCommentAttachment =
+      editCommentAttachment.type === "existing" ||
+      (editCommentAttachment.type === "file" && !!editCommentAttachment.file) ||
+      (editCommentAttachment.type === "url" && !!editCommentAttachment.url);
+    const commentText = comment?.text ?? "";
+    if (commentText.length > 200)
       return setError("Comment must be less than 200 characters long");
-    saveCategory({ name, question: { text, attachment: editAttachment, answers, comment } });
+    const finalComment =
+      commentText || hasCommentAttachment
+        ? { text: commentText, attachment: editCommentAttachment }
+        : null;
+    saveCategory({ name, question: { text, attachment: editAttachment, answers, comment: finalComment } });
     close();
   };
 
@@ -159,9 +172,24 @@ export default function FinalRoundCategoryModal({
             <textarea
               className={textareaCls}
               placeholder="Explanation (optional)"
-              value={comment ?? ""}
-              onChange={e => setComment(e.target.value || null)}
+              value={comment?.text ?? ""}
+              onChange={(e) =>
+                setComment((prev) =>
+                  e.target.value
+                    ? { text: e.target.value, attachment: prev?.attachment ?? { type: "file" } }
+                    : null,
+                )
+              }
               maxLength={200}
+              readOnly={readOnly}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className={labelCls}>Comment attachment</span>
+            <AttachmentEditor
+              attachment={editCommentAttachment}
+              editAttachment={editCommentAttachment}
+              setEditAttachment={setEditCommentAttachment}
               readOnly={readOnly}
             />
           </div>

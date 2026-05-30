@@ -55,13 +55,11 @@ const tabLabel: Record<typeof tabs[number], string> = { existing: "Existing", fi
 
 export default function AttachmentEditor({
   attachment,
-  editAttachment,
-  setEditAttachment,
+  saveAttachment,
   readOnly,
 }: {
   attachment: AttachmentFormData;
-  editAttachment: AttachmentFormData;
-  setEditAttachment: React.Dispatch<React.SetStateAction<AttachmentFormData>>;
+  saveAttachment: (attachment: AttachmentFormData) => void;
   readOnly: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -79,9 +77,9 @@ export default function AttachmentEditor({
   const switchTab = (t: typeof tabs[number]) => {
     if (t === "existing") {
       if (attachment.type !== "existing") return;
-      setEditAttachment({ type: "existing", key: attachment.key, url: attachment.url });
+      saveAttachment({ type: "existing", key: attachment.key, url: attachment.url });
     } else {
-      setEditAttachment({ type: t });
+      saveAttachment({ type: t });
     }
   };
 
@@ -92,7 +90,7 @@ export default function AttachmentEditor({
       {/* Tab switcher */}
       <div className="flex rounded-lg border border-border overflow-hidden">
         {tabs.map(t => {
-          const active = editAttachment.type === t;
+          const active = attachment.type === t;
           const disabled = t === "existing" && attachment.type !== "existing";
           return (
             <button
@@ -116,19 +114,19 @@ export default function AttachmentEditor({
       </div>
 
       {/* Tab content */}
-      {editAttachment.type === "existing" && (
-        <AttachmentPreview attachment={editAttachment} />
+      {attachment.type === "existing" && (
+        <AttachmentPreview attachment={attachment} />
       )}
 
-      {editAttachment.type === "file" && (
+      {attachment.type === "file" && (
         <div>
-          {editAttachment.file ? (
+          {attachment.file ? (
             <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-surface-raised">
               <FiFile size={15} className="shrink-0 text-primary" />
-              <span className="flex-1 min-w-0 text-xs text-on-surface truncate">{editAttachment.file.name}</span>
+              <span className="flex-1 min-w-0 text-xs text-on-surface truncate">{attachment.file.name}</span>
               <button
                 type="button"
-                onClick={() => setEditAttachment({ type: "file" })}
+                onClick={() => saveAttachment({ type: "file" })}
                 className="shrink-0 text-on-surface-muted hover:text-on-surface transition-colors duration-150"
               >
                 <IoIosClose size={16} />
@@ -143,7 +141,7 @@ export default function AttachmentEditor({
               onDrop={e => {
                 e.preventDefault();
                 const file = e.dataTransfer.files?.[0];
-                if (file) setEditAttachment({ type: "file", file });
+                if (file) saveAttachment({ type: "file", file });
               }}
               className="w-full flex flex-col items-center gap-2 px-3 py-5 rounded-lg border-2 border-dashed border-border hover:border-primary hover:bg-surface-raised text-on-surface-muted hover:text-on-surface transition-colors duration-150"
             >
@@ -161,13 +159,13 @@ export default function AttachmentEditor({
             className="hidden"
             onChange={e => {
               const file = e.target.files?.[0];
-              if (file) setEditAttachment({ type: "file", file });
+              if (file) saveAttachment({ type: "file", file });
             }}
           />
         </div>
       )}
 
-      {editAttachment.type === "url" && (
+      {attachment.type === "url" && (
         <div className="flex items-center rounded-lg border border-border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary transition-[border-color] duration-150">
           <div className="pl-3 pr-1 text-on-surface-muted shrink-0">
             <IoIosLink size={15} />
@@ -176,8 +174,8 @@ export default function AttachmentEditor({
             className="flex-1 min-w-0 h-9 pr-2.5 bg-transparent text-sm text-on-background outline-none placeholder:text-on-surface-muted"
             type="url"
             placeholder="https://example.com/video.mp4"
-            value={editAttachment.url ?? ""}
-            onChange={e => setEditAttachment({ type: "url", url: e.target.value })}
+            value={attachment.url ?? ""}
+            onChange={e => saveAttachment({ type: "url", url: e.target.value })}
           />
         </div>
       )}

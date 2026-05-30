@@ -1,4 +1,4 @@
-import { PackPreview, HiddenQuestion, HiddenFinalRoundQuestion, FinalRoundQuestion, Question, QuestionType, PrivacyType } from "./pack";
+import { PackPreview, HiddenQuestion, HiddenFinalRoundQuestion, FinalRoundQuestion, Question, QuestionType, PrivacyType, Comment } from "./pack";
 import { Host, Player } from "./user";
 
 export interface GameHistoryEntry {
@@ -324,7 +324,7 @@ export const isQuestionDemo = (obj: unknown): obj is QuestionDemo => {
 
 export type CorrectAnswerDemo = {
   answers: string[];
-  comment: string | null;
+  comment: Comment | null;
   duration: number;
 };
 

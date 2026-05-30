@@ -47,15 +47,6 @@ export default function ValidateAnswerModal({
           </ul>
         </div>
 
-        {question?.comment && (
-          <div className="rounded-lg border border-border px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-on-surface-muted mb-1">
-              Comment
-            </p>
-            <p className="text-sm text-on-surface-muted">{question.comment}</p>
-          </div>
-        )}
-
         <div className="flex gap-2 pt-1">
           <button
             className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg py-2 px-3 text-sm font-medium border border-border text-danger hover:bg-surface-raised transition-colors duration-150"

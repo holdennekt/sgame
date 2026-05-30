@@ -145,11 +145,13 @@ export default function RevealingQuestionPanel({
           </div>
         )}
 
-        <p
-          className={`shrink-0 text-center font-semibold whitespace-pre-wrap ${textSize(text.length)}`}
-        >
-          {currentText}
-        </p>
+        {text && (
+          <p
+            className={`shrink-0 text-center font-semibold whitespace-pre-wrap ${textSize(text.length)} min-h-[1em]`}
+          >
+            {currentText}
+          </p>
+        )}
       </div>
     </div>
   );

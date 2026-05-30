@@ -78,6 +78,13 @@ func (c *channel) Recieve(ctx context.Context) <-chan message.Message {
 
 			rdsMsg := streams[0].Messages[0]
 
+			lastId = rdsMsg.ID
+			if c.persistent {
+				if err := c.client.Set(ctx, c.name+LAST_ID_POSTFIX, lastId, 0).Err(); err != nil {
+					log.Println("Failed to save lastId:", err)
+				}
+			}
+
 			var msg message.Message
 			if payload, ok := rdsMsg.Values["payload"].(string); ok {
 				if err := json.Unmarshal([]byte(payload), &msg); err != nil {
@@ -85,12 +92,6 @@ func (c *channel) Recieve(ctx context.Context) <-chan message.Message {
 					continue
 				}
 				out <- msg
-				lastId = rdsMsg.ID
-				if c.persistent {
-					if err := c.client.Set(ctx, c.name+LAST_ID_POSTFIX, lastId, 0).Err(); err != nil {
-						log.Println("Failed to save lastId:", err)
-					}
-				}
 			}
 		}
 	}()

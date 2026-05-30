@@ -13,7 +13,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
-func HandleValidateFinalRoundAnswerMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string, user domain.User, msg message.Message) error {
+func HandleValidateFinalRoundAnswerMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, getAttachmentUrl func(key string) (string, error), roomId string, user domain.User, msg message.Message) error {
 	var vap ValidateAnswerPayload
 	if err := json.Unmarshal(msg.Payload, &vap); err != nil {
 		return err
@@ -36,7 +36,7 @@ func HandleValidateFinalRoundAnswerMessage(ctx context.Context, server realtime.
 			log.Println(err)
 		}
 
-		correctAnswerDemoMessage := outgoing.NewCorrectAnswerDemoMessage(newRoom.FinalRoundState.Question)
+		correctAnswerDemoMessage := outgoing.NewCorrectAnswerDemoMessage(newRoom.FinalRoundState.Question, getAttachmentUrl)
 		if err := server.Send(ctx, correctAnswerDemoMessage); err != nil {
 			log.Println(err)
 		}

@@ -49,12 +49,17 @@ type CreateQuestionRequest struct {
 	Text       string                   `json:"text" binding:"required_without=Attachment,max=400"`
 	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"omitnil"`
 	Answers    []string                 `json:"answers" binding:"min=1,max=10,dive,min=1,max=200"`
-	Comment    *string                  `json:"comment,omitempty" binding:"omitnil,max=400"`
+	Comment    *CreateCommentRequest    `json:"comment,omitempty" binding:"omitnil"`
 }
 
 type CreateAttachmentRequest struct {
 	Key string `json:"key" binding:"required_without=URL,excluded_with=URL"`
 	URL string `json:"url" binding:"required_without=Key,excluded_with=Key"`
+}
+
+type CreateCommentRequest struct {
+	Text       *string                  `json:"text" binding:"omitnil,max=400"`
+	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"omitnil"`
 }
 
 type CreateFinalRoundRequest struct {
@@ -70,7 +75,7 @@ type CreateFinalRoundQuestionRequest struct {
 	Text       string                   `json:"text" binding:"required,max=200"`
 	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"omitnil"`
 	Answers    []string                 `json:"answers" binding:"min=1,max=10,dive,min=1,max=50"`
-	Comment    *string                  `json:"comment,omitempty" binding:"omitnil,max=200"`
+	Comment    *CreateCommentRequest    `json:"comment,omitempty" binding:"omitnil"`
 }
 
 type CreatePackResponse struct {

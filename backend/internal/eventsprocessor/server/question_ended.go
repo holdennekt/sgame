@@ -46,7 +46,7 @@ func HandleQuestionEndedMessage(ctx context.Context, server realtime.Channel, in
 		return err
 	}
 
-	correctAnswerDemoMessage := outgoing.NewCorrectAnswerDemoMessage(qep.Question)
+	correctAnswerDemoMessage := outgoing.NewCorrectAnswerDemoMessage(qep.Question, getAttachmentUrl)
 	if err := server.Send(ctx, correctAnswerDemoMessage); err != nil {
 		return err
 	}

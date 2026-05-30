@@ -2,6 +2,7 @@ import { useRoomContext } from "@/contexts/RoomContext";
 import { useRequiredUser } from "@/contexts/UserContext";
 import { RoomHost, RoomPlayer } from "@/types/room";
 import BoardPanel from "./BoardPanel";
+import CorrectAnswerDemoPanel from "./CorrectAnswerDemoPanel";
 import FinalRoundBoardPanel from "./FinalRoundBoardPanel";
 import QuestionPanel from "./QuestionPanel";
 import RevealingQuestionPanel from "./RevealingQuestionPanel";
@@ -34,12 +35,7 @@ export default function GameTopSection() {
       />
     );
   if (correctAnswerDemo)
-    return (
-      <TextPanel
-        topText={correctAnswerDemo.answers.join(", ")}
-        bottomText={correctAnswerDemo.comment}
-      />
-    );
+    return <CorrectAnswerDemoPanel correctAnswerDemo={correctAnswerDemo} />;
   if (roundDemo)
     return <RoundDemoPanel roundDemo={roundDemo} onFinish={onRoundDemoDone} />;
 

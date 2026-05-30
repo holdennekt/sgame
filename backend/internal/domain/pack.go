@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"log"
 	"slices"
 	"time"
 
@@ -51,6 +52,11 @@ type Attachment struct {
 	Duration float64  `json:"duration" bson:"duration"`
 }
 
+type Comment struct {
+	Text       *string     `json:"text" bson:"text"`
+	Attachment *Attachment `json:"attachment" bson:"attachment"`
+}
+
 type QuestionType string
 
 const (
@@ -59,13 +65,16 @@ const (
 	CatInBag QuestionType = "catInBag"
 )
 
-type ToQuestionCorrectAnswerer interface {
-	ToQuestionCorrectAnswer() QuestionCorrectAnswer
+type ToQuestionCorrectAnswerDemoer interface {
+	ToQuestionCorrectAnswerDemo(getAttachmentUrl func(key string) (string, error)) QuestionCorrectAnswerDemo
 }
 
-type QuestionCorrectAnswer struct {
-	Answers []string
-	Comment *string
+const CorrectAnswerDemoDuration = 5
+
+type QuestionCorrectAnswerDemo struct {
+	Answers  []string `json:"answers"`
+	Comment  *Comment `json:"comment"`
+	Duration float64  `json:"duration"`
 }
 
 type Question struct {
@@ -73,7 +82,7 @@ type Question struct {
 	Type           QuestionType `json:"type" bson:"type"`
 	Text           string       `json:"text" bson:"text"`
 	Answers        []string     `json:"answers" bson:"answers"`
-	Comment        *string      `json:"comment" bson:"comment"`
+	Comment        *Comment     `json:"comment" bson:"comment"`
 }
 
 func (q Question) GetMediaRevealingDuration() time.Duration {
@@ -91,11 +100,23 @@ func (q Question) GetTextRevealingDuration() time.Duration {
 	)
 }
 
-func (q Question) ToQuestionCorrectAnswer() QuestionCorrectAnswer {
-	return QuestionCorrectAnswer{
-		Answers: q.Answers,
-		Comment: q.Comment,
+func (q Question) ToQuestionCorrectAnswerDemo(getAttachmentUrl func(key string) (string, error)) QuestionCorrectAnswerDemo {
+	demo := QuestionCorrectAnswerDemo{
+		Answers:  q.Answers,
+		Comment:  q.Comment,
+		Duration: CorrectAnswerDemoDuration,
 	}
+	if q.Comment != nil && q.Comment.Attachment != nil {
+		u, err := getAttachmentUrl(q.Comment.Attachment.Key)
+		if err != nil {
+			log.Println(err)
+		}
+		demo.Comment.Attachment.URL = u
+		if q.Comment.Attachment.Duration > CorrectAnswerDemoDuration {
+			demo.Duration = q.Comment.Attachment.Duration
+		}
+	}
+	return demo
 }
 
 func (q Question) IsCurrent(room *Room) bool {
@@ -116,14 +137,26 @@ type FinalRoundCategory struct {
 type FinalRoundQuestion struct {
 	HiddenFinalRoundQuestion `bson:"inline"`
 	Answers                  []string `json:"answers" bson:"answers"`
-	Comment                  *string  `json:"comment" bson:"comment"`
+	Comment                  *Comment `json:"comment" bson:"comment"`
 }
 
-func (frq FinalRoundQuestion) ToQuestionCorrectAnswer() QuestionCorrectAnswer {
-	return QuestionCorrectAnswer{
-		Answers: frq.Answers,
-		Comment: frq.Comment,
+func (frq FinalRoundQuestion) ToQuestionCorrectAnswerDemo(getAttachmentUrl func(key string) (string, error)) QuestionCorrectAnswerDemo {
+	demo := QuestionCorrectAnswerDemo{
+		Answers:  frq.Answers,
+		Comment:  frq.Comment,
+		Duration: CorrectAnswerDemoDuration,
 	}
+	if frq.Comment != nil && frq.Comment.Attachment != nil {
+		u, err := getAttachmentUrl(frq.Comment.Attachment.Key)
+		if err != nil {
+			log.Println(err)
+		}
+		demo.Comment.Attachment.URL = u
+		if frq.Comment.Attachment.Duration > CorrectAnswerDemoDuration {
+			demo.Duration = frq.Comment.Attachment.Duration
+		}
+	}
+	return demo
 }
 
 type HiddenPack struct {

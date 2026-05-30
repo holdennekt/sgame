@@ -42,7 +42,9 @@ export default function CategoryEditor({
   readOnly?: boolean;
 }) {
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5, delay: 100, tolerance: 5 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5, delay: 100, tolerance: 5 },
+    }),
   );
 
   const renameCategory = (name: string) => {
@@ -64,7 +66,7 @@ export default function CategoryEditor({
         attachment: { type: "file" },
         type: "regular",
         answers: [],
-        comment: null,
+        comment: { text: "", attachment: { type: "file" } },
       },
       saveQuestion: (q) =>
         setPack((pack) => {
@@ -79,11 +81,17 @@ export default function CategoryEditor({
 
   const duplicateQuestion = (qi: number) => {
     setPack((pack) => {
-      const questions = pack.rounds[roundIndex].categories[categoryIndex].questions;
+      const questions =
+        pack.rounds[roundIndex].categories[categoryIndex].questions;
       const src = questions[qi];
-      const copy = { ...src, answers: [...src.answers], attachment: { ...src.attachment } };
+      const copy = {
+        ...src,
+        answers: [...src.answers],
+        attachment: { ...src.attachment },
+      };
       questions.splice(qi + 1, 0, copy);
-      pack.rounds[roundIndex].categories[categoryIndex].questions = questions.map((q, i) => ({ ...q, index: i }));
+      pack.rounds[roundIndex].categories[categoryIndex].questions =
+        questions.map((q, i) => ({ ...q, index: i }));
       return { ...pack };
     });
   };

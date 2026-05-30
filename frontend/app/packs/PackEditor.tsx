@@ -54,7 +54,7 @@ export default function PackEditor({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const draftKey = `pack_draft:${pathname.split('/').at(-1)}`;
+  const draftKey = `pack_draft:${pathname.split("/").at(-1)}`;
 
   const initialFormData = useMemo<PackFormData | undefined>(() => {
     if (readOnly) return;
@@ -99,7 +99,7 @@ export default function PackEditor({
       attachment: { type: "file" },
       type: "regular",
       answers: [],
-      comment: null,
+      comment: { text: "", attachment: { type: "file" } },
     },
     saveQuestion: () => {},
   });
@@ -116,7 +116,7 @@ export default function PackEditor({
         text: "",
         attachment: { type: "file" },
         answers: [],
-        comment: null,
+        comment: { text: "", attachment: { type: "file" } },
       },
     },
     saveCategory: () => {},
@@ -374,7 +374,10 @@ export default function PackEditor({
                               text: "",
                               attachment: { type: "file" },
                               answers: [],
-                              comment: null,
+                              comment: {
+                                text: "",
+                                attachment: { type: "file" },
+                              },
                             },
                           },
                           saveCategory: addFinalRoundCategory,

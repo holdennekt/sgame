@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
 export default function TimerBar({
-  endsAt,
   initProgress,
+  endsAt,
   paused,
 }: {
-  endsAt: number;
   initProgress: number;
+  endsAt: number;
   paused?: boolean;
 }) {
   const [progress, setProgress] = useState(initProgress);

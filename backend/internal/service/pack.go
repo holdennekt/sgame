@@ -255,22 +255,36 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 					Type:    q.Type,
 					Text:    q.Text,
 					Answers: q.Answers,
-					Comment: q.Comment,
 				}
 
 				if q.Attachment != nil {
-					attachment, err := s.createDomainAttachment(ctx, *q.Attachment, dto.Type == domain.Public)
+					attachment, err := s.createDomainAttachment(ctx, *q.Attachment, dto.Type)
 					if err != nil {
 						return nil, err
 					}
 					question.Attachment = attachment
 				}
+
+				if q.Comment != nil {
+					question.Comment = &domain.Comment{
+						Text: q.Comment.Text,
+					}
+					if q.Comment.Attachment != nil {
+						attachment, err := s.createDomainAttachment(ctx, *q.Attachment, dto.Type)
+						if err != nil {
+							return nil, err
+						}
+						question.Comment.Attachment = attachment
+					}
+				}
+
 				category.Questions = append(category.Questions, question)
 			}
 			round.Categories = append(round.Categories, category)
 		}
 		rounds = append(rounds, round)
 	}
+
 	finalRound := domain.FinalRound{
 		Categories: []domain.FinalRoundCategory{},
 	}
@@ -284,16 +298,30 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 					Text: c.Question.Text,
 				},
 				Answers: c.Question.Answers,
-				Comment: c.Question.Comment,
 			},
 		}
+
 		if c.Question.Attachment != nil {
-			attachment, err := s.createDomainAttachment(ctx, *c.Question.Attachment, dto.Type == domain.Public)
+			attachment, err := s.createDomainAttachment(ctx, *c.Question.Attachment, dto.Type)
 			if err != nil {
 				return nil, err
 			}
 			category.Question.Attachment = attachment
 		}
+
+		if c.Question.Comment != nil {
+			category.Question.Comment = &domain.Comment{
+				Text: c.Question.Comment.Text,
+			}
+			if c.Question.Comment.Attachment != nil {
+				attachment, err := s.createDomainAttachment(ctx, *c.Question.Comment.Attachment, dto.Type)
+				if err != nil {
+					return nil, err
+				}
+				category.Question.Comment.Attachment = attachment
+			}
+		}
+
 		finalRound.Categories = append(finalRound.Categories, category)
 	}
 
@@ -340,40 +368,36 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 					Type:    q.Type,
 					Text:    q.Text,
 					Answers: q.Answers,
-					Comment: q.Comment,
 				}
 
 				if q.Attachment != nil {
-					keyUUID := q.Attachment.Key[strings.Index(q.Attachment.Key, "/"):]
-					oldKey := string(oldPack.Type) + keyUUID
-					oldAttachment := oldPack.GetAttachment(oldKey)
-					if oldAttachment != nil {
-						newKey := string(dto.Type) + keyUUID
-						if oldKey != newKey {
-							if err := s.storage.Move(ctx, oldKey, newKey); err != nil {
-								return nil, err
-							}
-						}
-						question.Attachment = oldAttachment
-						question.Attachment.Key = newKey
-					} else {
-						attachment, err := s.createDomainAttachment(
-							ctx,
-							*q.Attachment,
-							dto.Type == domain.Public,
-						)
+					attachment, err := s.upsertDomainAttachment(ctx, oldPack, *q.Attachment, dto.Type)
+					if err != nil {
+						return nil, err
+					}
+					question.Attachment = attachment
+				}
+
+				if q.Comment != nil {
+					question.Comment = &domain.Comment{
+						Text: q.Comment.Text,
+					}
+					if q.Comment.Attachment != nil {
+						attachment, err := s.upsertDomainAttachment(ctx, oldPack, *q.Comment.Attachment, dto.Type)
 						if err != nil {
 							return nil, err
 						}
-						question.Attachment = attachment
+						question.Comment.Attachment = attachment
 					}
 				}
+
 				category.Questions = append(category.Questions, question)
 			}
 			round.Categories = append(round.Categories, category)
 		}
 		rounds = append(rounds, round)
 	}
+
 	finalRound := domain.FinalRound{
 		Categories: []domain.FinalRoundCategory{},
 	}
@@ -387,34 +411,30 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 					Text: c.Question.Text,
 				},
 				Answers: c.Question.Answers,
-				Comment: c.Question.Comment,
 			},
 		}
+
 		if c.Question.Attachment != nil {
-			keyUUID := c.Question.Attachment.Key[strings.Index(c.Question.Attachment.Key, "/"):]
-			oldKey := string(oldPack.Type) + keyUUID
-			oldAttachment := oldPack.GetAttachment(oldKey)
-			if oldAttachment != nil {
-				newKey := string(dto.Type) + keyUUID
-				if oldKey != newKey {
-					if err := s.storage.Move(ctx, oldKey, newKey); err != nil {
-						return nil, err
-					}
-				}
-				category.Question.Attachment = oldAttachment
-				category.Question.Attachment.Key = newKey
-			} else {
-				attachment, err := s.createDomainAttachment(
-					ctx,
-					*c.Question.Attachment,
-					dto.Type == domain.Public,
-				)
+			attachment, err := s.upsertDomainAttachment(ctx, oldPack, *c.Question.Attachment, dto.Type)
+			if err != nil {
+				return nil, err
+			}
+			category.Question.Attachment = attachment
+		}
+
+		if c.Question.Comment != nil {
+			category.Question.Comment = &domain.Comment{
+				Text: c.Question.Comment.Text,
+			}
+			if c.Question.Comment.Attachment != nil {
+				attachment, err := s.upsertDomainAttachment(ctx, oldPack, *c.Question.Comment.Attachment, dto.Type)
 				if err != nil {
 					return nil, err
 				}
-				category.Question.Attachment = attachment
+				category.Question.Comment.Attachment = attachment
 			}
 		}
+
 		finalRound.Categories = append(finalRound.Categories, category)
 	}
 
@@ -430,12 +450,12 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 	}, nil
 }
 
-func (s *PackService) createDomainAttachment(ctx context.Context, dto dto.CreateAttachmentRequest, public bool) (*domain.Attachment, error) {
+func (s *PackService) createDomainAttachment(ctx context.Context, dto dto.CreateAttachmentRequest, privacyType domain.PrivacyType) (*domain.Attachment, error) {
 	attachment := &domain.Attachment{
 		Key: dto.Key,
 	}
 	if dto.URL != "" {
-		key, err := s.generateKeyFromURL(dto.URL, public)
+		key, err := s.generateKeyFromURL(dto.URL, privacyType == domain.Public)
 		if err != nil {
 			return nil, err
 		}
@@ -481,6 +501,34 @@ func (s *PackService) createDomainAttachment(ctx context.Context, dto dto.Create
 		attachment.Duration = DEFAULT_ATTACHMENT_DURATION
 	}
 
+	return attachment, nil
+}
+
+func (s *PackService) upsertDomainAttachment(ctx context.Context, oldPack *domain.Pack, newAttachmentRequest dto.CreateAttachmentRequest, newPrivacyType domain.PrivacyType) (*domain.Attachment, error) {
+	var attachment *domain.Attachment
+
+	oldAttachment := oldPack.GetAttachment(newAttachmentRequest.Key)
+	if oldAttachment != nil {
+		keyUUID := newAttachmentRequest.Key[strings.Index(newAttachmentRequest.Key, "/"):]
+		newKey := string(newPrivacyType) + keyUUID
+		if oldAttachment.Key != newKey {
+			if err := s.storage.Move(ctx, oldAttachment.Key, newKey); err != nil {
+				return nil, err
+			}
+		}
+		attachment = oldAttachment
+		attachment.Key = newKey
+	} else {
+		var err error
+		attachment, err = s.createDomainAttachment(
+			ctx,
+			newAttachmentRequest,
+			newPrivacyType,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return attachment, nil
 }
 

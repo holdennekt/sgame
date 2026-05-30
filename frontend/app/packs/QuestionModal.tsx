@@ -32,12 +32,12 @@ export default function QuestionModal({
   readOnly?: boolean;
 }) {
   const [value, setValue] = useState(question.value);
-  const [text, setText] = useState(question.text);
   const [type, setType] = useState(question.type);
+  const [text, setText] = useState(question.text);
+  const [attachment, setAttachment] = useState(question.attachment);
   const [answers, setAnswers] = useState(question.answers);
   const [comment, setComment] = useState(question.comment);
-  const [attachment, setAttachment] = useState(question.attachment);
-  const [editAttachment, setEditAttachment] = useState(question.attachment);
+
   const [answerInput, setAnswerInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -45,13 +45,13 @@ export default function QuestionModal({
 
   useLayoutEffect(() => {
     setValue(question.value);
-    setText(question.text);
     setType(question.type);
-    setAnswerInput("");
+    setText(question.text);
+    setAttachment(question.attachment);
     setAnswers(question.answers);
     setComment(question.comment);
-    setAttachment(question.attachment);
-    setEditAttachment(question.attachment);
+
+    setAnswerInput("");
     setError(null);
   }, [question]);
 
@@ -59,7 +59,7 @@ export default function QuestionModal({
     if (!isOpen) return;
     autoResize(textRef.current);
     autoResize(commentRef.current);
-  }, [isOpen, text, comment]);
+  }, [isOpen, text, comment.text]);
 
   const onSave = () => {
     const numValue = Number(value);
@@ -74,25 +74,33 @@ export default function QuestionModal({
       return setError("Text must be under 500 characters long");
     if (
       !text.length &&
-      ((editAttachment.type === "file" && !editAttachment.file) ||
-        (editAttachment.type === "url" && !editAttachment.url))
+      ((attachment.type === "file" && !attachment.file) ||
+        (attachment.type === "url" && !attachment.url))
     )
       return setError("Text is required without attachment");
     if (
-      editAttachment.type === "url" &&
-      editAttachment?.url &&
-      editAttachment?.url.length > 2000
+      attachment.type === "url" &&
+      attachment.url &&
+      attachment.url.length > 2000
     )
       return setError("Attachment URL is too long");
     if (!answers.length) return setError("At least 1 answer is required");
-    if (answers.some((answer) => answer.length > 200)) return setError("Answer must be under 200 characters long");
-    if (comment && comment.length > 200)
-      return setError("Comment must be less than 200 characters long");
+    if (answers.some((answer) => answer.length > 200))
+      return setError("Answer must be under 200 characters long");
+    if (comment.text.length > 400)
+      return setError("Comment text must be under 400 characters long");
+    if (
+      comment.attachment.type === "url" &&
+      comment.attachment.url &&
+      comment.attachment.url.length > 2000
+    )
+      return setError("Comment attachment URL is too long");
+
     saveQuestion({
       value: numValue,
-      text,
-      attachment: editAttachment,
       type,
+      text,
+      attachment,
       answers,
       comment,
     });
@@ -131,20 +139,6 @@ export default function QuestionModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className={labelCls}>Question text</span>
-            <textarea
-              ref={textRef}
-              className={textareaCls}
-              placeholder="Enter question text..."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              maxLength={200}
-              required
-              readOnly={readOnly}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
             <span className={labelCls}>Type</span>
             <div className="relative">
               <select
@@ -163,6 +157,28 @@ export default function QuestionModal({
             </div>
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <span className={labelCls}>Question text</span>
+            <textarea
+              ref={textRef}
+              className={textareaCls}
+              placeholder="Enter question text..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              maxLength={200}
+              required
+              readOnly={readOnly}
+            />
+          </div>
+
+          <AttachmentEditor
+            attachment={attachment}
+            saveAttachment={setAttachment}
+            readOnly={readOnly}
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 w-52">
           <div className="flex flex-col gap-1.5">
             <span className={labelCls}>Answers</span>
             {answers.length > 0 && (
@@ -215,27 +231,37 @@ export default function QuestionModal({
               </div>
             )}
           </div>
-        </div>
 
-        <div className="flex flex-col gap-3 w-52">
           <div className="flex flex-col gap-1.5">
             <span className={labelCls}>Comment</span>
-            <textarea
-              ref={commentRef}
-              className={textareaCls}
-              placeholder="Explanation (optional)"
-              value={comment ?? ""}
-              onChange={(e) => setComment(e.target.value || null)}
-              maxLength={200}
-              readOnly={readOnly}
-            />
+            <div className="rounded-lg border border-border overflow-hidden">
+              <div className="px-3 py-2.5 flex flex-col gap-2.5">
+                <div className="flex flex-col gap-1">
+                  <span className={labelCls}>Text</span>
+                  <textarea
+                    ref={commentRef}
+                    className={textareaCls}
+                    placeholder="Explanation (optional)"
+                    value={comment.text}
+                    onChange={(e) =>
+                      setComment((prev) => ({ ...prev, text: e.target.value }))
+                    }
+                    maxLength={400}
+                    readOnly={readOnly}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <AttachmentEditor
+                    attachment={comment.attachment}
+                    saveAttachment={(attachment) =>
+                      setComment((prev) => ({ ...prev, attachment }))
+                    }
+                    readOnly={readOnly}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-          <AttachmentEditor
-            attachment={attachment}
-            editAttachment={editAttachment}
-            setEditAttachment={setEditAttachment}
-            readOnly={readOnly}
-          />
         </div>
       </div>
 

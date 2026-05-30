@@ -22,8 +22,6 @@ export function useRoom(initialRoom: RoomHost | RoomPlayer, userId: string) {
 
   const { wsConn, handlers } = useWebSocket(`/api/ws/room/${initialRoom.id}`, "room");
 
-  const isHost = room.host?.id === userId;
-
   const setError = (msg: string) =>
     setLastError((prev) => ({ msg, count: (prev?.count ?? 0) + 1 }));
 
