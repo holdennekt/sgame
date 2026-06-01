@@ -38,7 +38,7 @@ type CreateRoundRequest struct {
 }
 
 type CreateCategoryRequest struct {
-	Name      string                  `json:"name" binding:"min=1,max=25"`
+	Name      string                  `json:"name" binding:"min=1,max=50"`
 	Questions []CreateQuestionRequest `json:"questions" binding:"min=1,max=20,dive"`
 }
 

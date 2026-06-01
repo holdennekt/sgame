@@ -102,13 +102,16 @@ export default function RoomPage({
                 </p>
                 <div className="flex items-center gap-1 text-xs text-on-surface-muted min-w-0">
                   <span className="shrink-0">Pack:</span>
-                  <Link
+                  {/* <Link
                     className="text-primary underline underline-offset-2 hover:text-primary-hover truncate"
                     href={`/packs/${room.packPreview.id}`}
                     target="_blank"
                   >
                     {room.packPreview.name}
-                  </Link>
+                  </Link> */}
+                  <p className="text-primary underline underline-offset-2 hover:text-primary-hover truncate">
+                    {room.packPreview.name}
+                  </p>
                 </div>
               </div>
               <div
