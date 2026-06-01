@@ -33,20 +33,20 @@ func (cpr CreatePackRequest) AttachmentKeys() map[string]struct{} {
 }
 
 type CreateRoundRequest struct {
-	Name       string                  `json:"name" binding:"min=1,max=50"`
-	Categories []CreateCategoryRequest `json:"categories" binding:"min=1,max=10,unique=Name,same_length=Questions,dive"`
+	Name       string                  `json:"name" binding:"min=1,max=100"`
+	Categories []CreateCategoryRequest `json:"categories" binding:"min=1,max=15,unique=Name,same_length=Questions,dive"`
 }
 
 type CreateCategoryRequest struct {
 	Name      string                  `json:"name" binding:"min=1,max=25"`
-	Questions []CreateQuestionRequest `json:"questions" binding:"min=1,max=10,dive"`
+	Questions []CreateQuestionRequest `json:"questions" binding:"min=1,max=20,dive"`
 }
 
 type CreateQuestionRequest struct {
 	Index      int                      `json:"index" binding:"min=0,max=9"`
 	Value      int                      `json:"value" binding:"max=10000"`
 	Type       domain.QuestionType      `json:"type" binding:"oneof=regular catInBag auction"`
-	Text       string                   `json:"text" binding:"required_without=Attachment,max=400"`
+	Text       string                   `json:"text" binding:"required_without=Attachment,max=1000"`
 	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"omitnil"`
 	Answers    []string                 `json:"answers" binding:"min=1,max=10,dive,min=1,max=200"`
 	Comment    *CreateCommentRequest    `json:"comment,omitempty" binding:"omitnil"`

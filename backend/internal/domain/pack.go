@@ -94,7 +94,7 @@ func (q Question) GetMediaRevealingDuration() time.Duration {
 }
 
 func (q Question) GetTextRevealingDuration() time.Duration {
-	const ReadingSymbolsPerSecond float64 = 20
+	const ReadingSymbolsPerSecond float64 = 40
 	return time.Duration(
 		float64(len(q.Text)) / ReadingSymbolsPerSecond * float64(time.Second),
 	)
