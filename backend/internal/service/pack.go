@@ -270,7 +270,7 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 						Text: q.Comment.Text,
 					}
 					if q.Comment.Attachment != nil {
-						attachment, err := s.createDomainAttachment(ctx, *q.Attachment, dto.Type)
+						attachment, err := s.createDomainAttachment(ctx, *q.Comment.Attachment, dto.Type)
 						if err != nil {
 							return nil, err
 						}
