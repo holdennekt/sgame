@@ -18,9 +18,10 @@ const (
 	OWNER_POSTFIX    = ":owner"
 	INTERNAL_POSTFIX = ":internal"
 
-	TimeToBet        = 60 * time.Second
-	TimeToPass       = 60 * time.Second
-	MaxPauseDuration = time.Hour
+	ExtraQuestionThinkingTime = time.Second
+	TimeToBet                 = 60 * time.Second
+	TimeToPass                = 60 * time.Second
+	MaxPauseDuration          = time.Hour
 )
 
 type Room struct {
@@ -381,7 +382,7 @@ func (r *Room) continueRegularQuestion() {
 		r.CurrentQuestion.TimerStartsAt = r.CurrentQuestion.TimerStartsAt.Add(answerDuration)
 		r.State = RevealingQuestion
 	} else {
-		r.CurrentQuestion.TimerEndsAt = r.CurrentQuestion.TimerEndsAt.Add(answerDuration)
+		r.CurrentQuestion.TimerEndsAt = r.CurrentQuestion.TimerEndsAt.Add(answerDuration).Add(ExtraQuestionThinkingTime)
 		r.State = ShowingQuestion
 	}
 	r.AnsweringPlayer = nil
