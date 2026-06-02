@@ -4,7 +4,7 @@ import { RoundDemo } from "@/types/room";
 export default function RoundDemoPanel({
   roundDemo,
   onFinish,
-  speedCharsPerSec = 5,
+  speedCharsPerSec = 20,
   pauseBefore = 2000,
   pauseAfter = 2000,
 }: {

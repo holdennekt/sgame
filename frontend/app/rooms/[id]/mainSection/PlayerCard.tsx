@@ -13,6 +13,8 @@ export default function PlayerCard({ player }: { player: Player }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isYellow =
     (room.state === "selecting_question" && player.id === room.currentPlayer) ||
+    (room.state === "selecting_final_round_category" &&
+      player.id === room.currentPlayer) ||
     (room.state === "passing" &&
       player.id !== room.currentPlayer &&
       player.isConnected) ||
