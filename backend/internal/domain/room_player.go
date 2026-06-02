@@ -22,7 +22,7 @@ type RoomPlayer struct {
 type HiddenCurrentQuestion struct {
 	HiddenQuestion
 	Type                         QuestionType `json:"type"`
-	Text                         string       `json:"text"`
+	Text                         *string       `json:"text"`
 	AttachmentRevealEndsAt       time.Time    `json:"attachmentRevealEndsAt"`
 	AttachmentRevealLastProgress float64      `json:"attachmentRevealLastProgress"`
 	TextRevealLastProgress       float64      `json:"textRevealLastProgress"`

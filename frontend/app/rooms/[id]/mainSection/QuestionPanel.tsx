@@ -4,7 +4,15 @@ import { FaMusic } from "react-icons/fa6";
 import TimerBar from "./TimerBar";
 
 const textSize = (len: number) =>
-  len < 80 ? "text-3xl" : len < 180 ? "text-xl" : "text-base";
+  len < 80
+    ? "text-3xl"
+    : len < 180
+    ? "text-xl"
+    : len < 400
+    ? "text-base"
+    : len < 700
+    ? "text-sm"
+    : "text-xs";
 
 export default function QuestionPanel({
   attachment,
@@ -16,7 +24,7 @@ export default function QuestionPanel({
 }: {
   attachment: Attachment | null;
   attachmentLastProgress: number;
-  text: string;
+  text: string | null;
   textLastProgress: number;
   questionType: QuestionType | "final";
   timeBar: {
@@ -38,7 +46,9 @@ export default function QuestionPanel({
     }
   }, []);
 
-  const visibleText = text.slice(0, Math.floor(text.length * textLastProgress));
+  const visibleText = text
+    ? text.slice(0, Math.floor(text.length * textLastProgress))
+    : "";
 
   return (
     <div className="relative h-full">

@@ -37,6 +37,7 @@ export default function NewRoomModal({
   const [answerThinkingTime, setAnswerThinkingTime] = useState(10);
   const [questionThinkingTimeFinal, setQuestionThinkingTimeFinal] =
     useState(60);
+  const [readingSymbolsPerSecond, setReadingSymbolsPerSecond] = useState(30);
 
   useEffect(() => {
     if (fixedPack) setPack(fixedPack);
@@ -75,6 +76,7 @@ export default function NewRoomModal({
         questionThinkingTime,
         answerThinkingTime,
         questionThinkingTimeFinal,
+        readingSymbolsPerSecond,
         falseStartAllowed: data.falseStartAllowed === "on",
       },
     };
@@ -216,6 +218,14 @@ export default function NewRoomModal({
                   max: 60,
                   onChange: setQuestionThinkingTimeFinal,
                   unit: "s",
+                },
+                {
+                  label: "Reading Speed",
+                  value: readingSymbolsPerSecond,
+                  min: 10,
+                  max: 100,
+                  onChange: setReadingSymbolsPerSecond,
+                  unit: " ch/s",
                 },
               ] as const
             ).map(({ label, value, min, max, onChange, unit }) => (

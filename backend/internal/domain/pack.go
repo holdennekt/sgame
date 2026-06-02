@@ -80,7 +80,7 @@ type QuestionCorrectAnswerDemo struct {
 type Question struct {
 	HiddenQuestion `bson:"inline"`
 	Type           QuestionType `json:"type" bson:"type"`
-	Text           string       `json:"text" bson:"text"`
+	Text           *string      `json:"text" bson:"text"`
 	Answers        []string     `json:"answers" bson:"answers"`
 	Comment        *Comment     `json:"comment" bson:"comment"`
 }
@@ -93,10 +93,12 @@ func (q Question) GetMediaRevealingDuration() time.Duration {
 	return attachmentDuration
 }
 
-func (q Question) GetTextRevealingDuration() time.Duration {
-	const ReadingSymbolsPerSecond float64 = 40
+func (q Question) GetTextRevealingDuration(symbolsPerSecond int) time.Duration {
+	if q.Text == nil {
+		return 0
+	}
 	return time.Duration(
-		float64(len(q.Text)) / ReadingSymbolsPerSecond * float64(time.Second),
+		float64(len(*q.Text)) / float64(symbolsPerSecond) * float64(time.Second),
 	)
 }
 
@@ -194,7 +196,7 @@ type HiddenFinalRoundCategory struct {
 }
 
 type HiddenFinalRoundQuestion struct {
-	Text       string      `json:"text" bson:"text"`
+	Text       *string     `json:"text" bson:"text"`
 	Attachment *Attachment `json:"attachment" bson:"attachment"`
 }
 

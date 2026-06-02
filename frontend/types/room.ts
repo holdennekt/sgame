@@ -59,6 +59,7 @@ const dummyRoom: Room = {
     questionThinkingTime: 10,
     answerThinkingTime: 5,
     questionThinkingTimeFinal: 60,
+    readingSymbolsPerSecond: 30,
     falseStartAllowed: true,
   },
   packPreview: { id: "", name: "" },
@@ -112,6 +113,7 @@ export interface RoomOptions {
   questionThinkingTime: number;
   answerThinkingTime: number;
   questionThinkingTimeFinal: number;
+  readingSymbolsPerSecond: number;
   falseStartAllowed: boolean;
 }
 
@@ -285,7 +287,7 @@ export const isRoomPlayer = (obj: unknown): obj is RoomPlayer => {
 
 export interface HiddenCurrentQuestion extends HiddenQuestion {
   type: QuestionType;
-  text: string;
+  text: string | null;
   attachmentRevealEndsAt: string;
   attachmentRevealLastProgress: number;
   textRevealLastProgress: number;

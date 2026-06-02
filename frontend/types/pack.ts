@@ -85,7 +85,7 @@ export interface CreateQuestionRequest {
   index: number;
   value: number;
   type: QuestionType;
-  text: string;
+  text: string | null;
   attachment: CreateAttachmentRequest | null;
   answers: string[];
   comment: CreateCommentRequest | null;
@@ -106,7 +106,7 @@ export interface CreateFinalRoundCategoryRequest {
 }
 
 export interface CreateFinalRoundQuestionRequest {
-  text: string;
+  text: string | null;
   attachment: CreateAttachmentRequest | null;
   answers: string[];
   comment: CreateCommentRequest | null;
@@ -197,7 +197,7 @@ export const isComment = (obj: unknown): obj is Comment => {
 
 export interface Question extends HiddenQuestion {
   type: QuestionType;
-  text: string;
+  text: string | null;
   answers: string[];
   comment: Comment | null;
 }
@@ -268,12 +268,12 @@ export interface HiddenFinalRoundCategory {
 }
 
 export interface HiddenFinalRoundQuestion {
-  text: string;
+  text: string | null;
   attachment: Attachment | null;
 }
 
 export function convertPackToFormData(
-  pack: Omit<Pack, "id" | "createdBy">,
+  pack: Omit<Pack, "id" | "createdBy">
 ): PackFormData {
   const rounds = pack.rounds.map(convertRoundToFormData);
   if (rounds[0].categories.length) rounds[0].categories[0].selected = true;
@@ -306,7 +306,7 @@ function convertQuestionToFormData(question: Question): QuestionFormData {
     index: question.index,
     value: question.value,
     type: question.type,
-    text: question.text,
+    text: question.text ?? "",
     attachment: convertAttachmentToFormData(question.attachment),
     answers: question.answers,
     comment: convertCommentToFormData(question.comment),
@@ -314,7 +314,7 @@ function convertQuestionToFormData(question: Question): QuestionFormData {
 }
 
 function convertAttachmentToFormData(
-  attachment: Attachment | null,
+  attachment: Attachment | null
 ): AttachmentFormData {
   if (!attachment) return { type: "file" };
   return { type: "existing", key: attachment.key, url: attachment.url };
@@ -324,13 +324,13 @@ function convertCommentToFormData(comment: Comment | null): CommentFormData {
   return {
     text: comment?.text ?? "",
     attachment: convertAttachmentToFormData(
-      comment ? comment.attachment : null,
+      comment ? comment.attachment : null
     ),
   };
 }
 
 function convertFinalRoundToFormData(
-  finalRound: FinalRound,
+  finalRound: FinalRound
 ): FinalRoundFormData {
   return {
     expanded: true,
@@ -339,12 +339,13 @@ function convertFinalRoundToFormData(
 }
 
 function convertFinalRoundCategoryToFormData(
-  category: FinalRoundCategory,
+  category: FinalRoundCategory
 ): FinalRoundCategoryFormData {
   return {
     name: category.name,
     question: {
       ...category.question,
+      text: category.question.text ?? "",
       attachment: convertAttachmentToFormData(category.question.attachment),
       comment: convertCommentToFormData(category.question.comment),
     },
@@ -359,7 +360,7 @@ export async function convertPackFormDataToRequest(
   }) => Promise<
     | { url: string; formData: Record<string, string>; getUrl?: string }
     | { error: string }
-  >,
+  >
 ): Promise<CreatePackRequest> {
   const isPublic = formData.type === "public";
 
@@ -375,10 +376,11 @@ export async function convertPackFormDataToRequest(
               const commentAttachment = await convertAttachment(
                 question.comment.attachment,
                 isPublic,
-                signURL,
+                signURL
               );
               return {
                 ...question,
+                text: question.text || null,
                 comment:
                   commentText || commentAttachment
                     ? {
@@ -389,14 +391,14 @@ export async function convertPackFormDataToRequest(
                 attachment: await convertAttachment(
                   question.attachment,
                   isPublic,
-                  signURL,
+                  signURL
                 ),
               };
-            }),
+            })
           ),
-        })),
+        }))
       ),
-    })),
+    }))
   );
 
   const finalRound = {
@@ -406,12 +408,13 @@ export async function convertPackFormDataToRequest(
         const commentAttachment = await convertAttachment(
           question.comment.attachment,
           isPublic,
-          signURL,
+          signURL
         );
         return {
           name,
           question: {
             ...question,
+            text: question.text || null,
             comment:
               commentText || commentAttachment
                 ? {
@@ -422,11 +425,11 @@ export async function convertPackFormDataToRequest(
             attachment: await convertAttachment(
               question.attachment,
               isPublic,
-              signURL,
+              signURL
             ),
           },
         };
-      }),
+      })
     ),
   };
 
@@ -447,7 +450,7 @@ async function convertAttachment(
   }) => Promise<
     | { url: string; formData: Record<string, string>; getUrl?: string }
     | { error: string }
-  >,
+  >
 ): Promise<CreateAttachmentRequest | null> {
   switch (attachment.type) {
     case "file": {

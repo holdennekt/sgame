@@ -46,8 +46,8 @@ type CreateQuestionRequest struct {
 	Index      int                      `json:"index" binding:"min=0,max=9"`
 	Value      int                      `json:"value" binding:"max=10000"`
 	Type       domain.QuestionType      `json:"type" binding:"oneof=regular catInBag auction"`
-	Text       string                   `json:"text" binding:"required_without=Attachment,max=1000"`
-	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"omitnil"`
+	Text       *string                  `json:"text,omitempty" binding:"required_without=Attachment,max=1000"`
+	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"required_without=Text"`
 	Answers    []string                 `json:"answers" binding:"min=1,max=10,dive,min=1,max=200"`
 	Comment    *CreateCommentRequest    `json:"comment,omitempty" binding:"omitnil"`
 }
@@ -72,8 +72,8 @@ type CreateFinalRoundCategoryRequest struct {
 }
 
 type CreateFinalRoundQuestionRequest struct {
-	Text       string                   `json:"text" binding:"required,max=200"`
-	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"omitnil"`
+	Text       *string                  `json:"text,omitempty" binding:"required_without=Attachment,max=1000"`
+	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"required_without=Text"`
 	Answers    []string                 `json:"answers" binding:"min=1,max=10,dive,min=1,max=50"`
 	Comment    *CreateCommentRequest    `json:"comment,omitempty" binding:"omitnil"`
 }

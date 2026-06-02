@@ -3,7 +3,15 @@ import { useEffect, useRef, useState } from "react";
 import { FaMusic } from "react-icons/fa6";
 
 const textSize = (len: number) =>
-  len < 80 ? "text-3xl" : len < 180 ? "text-xl" : "text-base";
+  len < 80
+    ? "text-3xl"
+    : len < 180
+    ? "text-xl"
+    : len < 400
+    ? "text-base"
+    : len < 700
+    ? "text-sm"
+    : "text-xs";
 
 export default function RevealingQuestionPanel({
   attachment,
@@ -17,13 +25,13 @@ export default function RevealingQuestionPanel({
   attachment: Attachment | null;
   attachmentEndsAt: string;
   attachmentLastProgress: number;
-  text: string;
+  text: string | null;
   textEndsAt: string;
   textLastProgress: number;
   paused?: boolean;
 }) {
   const [currentText, setCurrentText] = useState(
-    text.slice(0, Math.floor(text.length * textLastProgress))
+    text ? text.slice(0, Math.floor(text.length * textLastProgress)) : ""
   );
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
   const textIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -35,6 +43,7 @@ export default function RevealingQuestionPanel({
   const stableAttachment = stableAttachmentRef.current;
 
   const startTextReveal = () => {
+    if (!text) return;
     if (textIntervalRef.current) {
       clearInterval(textIntervalRef.current);
     }

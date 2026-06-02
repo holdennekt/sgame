@@ -48,6 +48,7 @@ type RoomOptions struct {
 	MaxPlayers                int         `json:"maxPlayers" bson:"maxPlayers" binding:"min=1,max=10"`
 	Type                      PrivacyType `json:"type" bson:"type" binding:"oneof=public private"`
 	Password                  *string     `json:"password" bson:"password" binding:"omitnil,min=4,max=16"`
+	ReadingSymbolsPerSecond   int         `json:"readingSymbolsPerSecond" bson:"readingSymbolsPerSecond" binding:"min=10,max=50"`
 	QuestionThinkingTime      int         `json:"questionThinkingTime" bson:"questionThinkingTime" binding:"min=1,max=30"`
 	AnswerThinkingTime        int         `json:"answerThinkingTime" bson:"answerThinkingTime" binding:"min=1,max=30"`
 	QuestionThinkingTimeFinal int         `json:"questionThinkingTimeFinal" bson:"questionThinkingTimeFinal" binding:"min=1,max=120"`
@@ -266,7 +267,7 @@ func (r *Room) revealRegularQuestion(allowedToAnswer []string) {
 	if r.CurrentQuestion.Attachment != nil {
 		r.CurrentQuestion.AttachmentRevealEndsAt = time.Now().Add(mediaRevealingDuration)
 	}
-	textRevealDuration := r.CurrentQuestion.GetTextRevealingDuration()
+	textRevealDuration := r.CurrentQuestion.GetTextRevealingDuration(r.Options.ReadingSymbolsPerSecond)
 	r.CurrentQuestion.TimerStartsAt = time.Now().Add(mediaRevealingDuration).Add(textRevealDuration)
 	r.State = RevealingQuestion
 }
@@ -285,7 +286,7 @@ func (r *Room) StartRegularQuestion() {
 func (r *Room) startNonRegularQuestion(allowedToAnswer string) {
 	r.CurrentPlayer = &allowedToAnswer
 	now := time.Now()
-	revealingDuration := r.CurrentQuestion.GetMediaRevealingDuration() + r.CurrentQuestion.GetTextRevealingDuration()
+	revealingDuration := r.CurrentQuestion.GetMediaRevealingDuration() + r.CurrentQuestion.GetTextRevealingDuration(r.Options.ReadingSymbolsPerSecond)
 	r.CurrentQuestion.TextRevealLastProgress = 1
 	thinkingDuration := time.Duration(r.Options.AnswerThinkingTime) * time.Second
 	r.AnsweringPlayer = &AnsweringPlayer{
@@ -297,6 +298,8 @@ func (r *Room) startNonRegularQuestion(allowedToAnswer string) {
 }
 
 func (r *Room) SubmitAnswer(userId string) error {
+	now := time.Now()
+
 	if r.State != RevealingQuestion && r.State != ShowingQuestion {
 		return custerr.NewConflictErr("can not submit answer now")
 	}
@@ -307,17 +310,24 @@ func (r *Room) SubmitAnswer(userId string) error {
 		return custerr.NewConflictErr("can not submit answer now")
 	}
 
-	now := time.Now()
-	if r.State == RevealingQuestion {
-		if r.CurrentQuestion.Attachment != nil && now.Before(r.CurrentQuestion.AttachmentRevealEndsAt) {
-			mediaDurationRemained := r.CurrentQuestion.AttachmentRevealEndsAt.Sub(now)
-			r.CurrentQuestion.AttachmentRevealLastProgress = 1 - (float64(mediaDurationRemained) /
-				float64(r.CurrentQuestion.GetMediaRevealingDuration()))
+	switch r.State {
+	case RevealingQuestion:
+		if r.CurrentQuestion.Attachment != nil {
+			fullDuration := float64(r.CurrentQuestion.GetMediaRevealingDuration())
+			remainedDuration := math.Max(0, float64(r.CurrentQuestion.AttachmentRevealEndsAt.Sub(now)))
+			r.CurrentQuestion.AttachmentRevealLastProgress = 1 - remainedDuration/fullDuration
 		}
-		textDurationRemained := r.CurrentQuestion.TimerStartsAt.Sub(now)
-		r.CurrentQuestion.TextRevealLastProgress = math.Max(0, 1-(float64(textDurationRemained)/
-			float64(r.CurrentQuestion.GetTextRevealingDuration())))
+		if r.CurrentQuestion.Text != nil {
+			fullDuration := float64(r.CurrentQuestion.GetTextRevealingDuration(r.Options.ReadingSymbolsPerSecond))
+			remainedDuration := math.Min(fullDuration, float64(r.CurrentQuestion.TimerStartsAt.Sub(now)))
+			r.CurrentQuestion.TextRevealLastProgress = 1 - remainedDuration/fullDuration
+		}
+	case ShowingQuestion:
+		fullDuration := float64((time.Duration(r.Options.QuestionThinkingTime) * time.Second))
+		remainedDuration := float64(r.CurrentQuestion.TimerEndsAt.Sub(now))
+		r.CurrentQuestion.TimerLastProgress = remainedDuration / fullDuration
 	}
+
 	thinkingDuration := time.Duration(r.Options.AnswerThinkingTime) * time.Second
 	r.AnsweringPlayer = &AnsweringPlayer{
 		Id:            userId,
@@ -367,20 +377,11 @@ func (r *Room) continueRegularQuestion() {
 	if r.AnsweringPlayer.TimerStartsAt.Before(r.CurrentQuestion.TimerStartsAt) {
 		if r.CurrentQuestion.Attachment != nil && r.AnsweringPlayer.TimerStartsAt.Before(r.CurrentQuestion.AttachmentRevealEndsAt) {
 			r.CurrentQuestion.AttachmentRevealEndsAt = r.CurrentQuestion.AttachmentRevealEndsAt.Add(answerDuration)
-			mediaDurationRemained := r.CurrentQuestion.AttachmentRevealEndsAt.Sub(now)
-			r.CurrentQuestion.AttachmentRevealLastProgress = 1 - (float64(mediaDurationRemained) /
-				float64(r.CurrentQuestion.GetMediaRevealingDuration()))
 		}
 		r.CurrentQuestion.TimerStartsAt = r.CurrentQuestion.TimerStartsAt.Add(answerDuration)
-		textDurationRemained := r.CurrentQuestion.TimerStartsAt.Sub(now)
-		r.CurrentQuestion.TextRevealLastProgress = 1 - (float64(textDurationRemained) /
-			float64(r.CurrentQuestion.GetTextRevealingDuration()))
 		r.State = RevealingQuestion
 	} else {
 		r.CurrentQuestion.TimerEndsAt = r.CurrentQuestion.TimerEndsAt.Add(answerDuration)
-		questionDurationRemained := r.CurrentQuestion.TimerEndsAt.Sub(now)
-		r.CurrentQuestion.TimerLastProgress = float64(questionDurationRemained) /
-			float64((time.Duration(r.Options.QuestionThinkingTime) * time.Second))
 		r.State = ShowingQuestion
 	}
 	r.AnsweringPlayer = nil
@@ -762,20 +763,9 @@ func (r *Room) ChangeScore(userId string, playerId string, score int) error {
 	return nil
 }
 
-func (r *Room) EndGame() {
-	// TODO: maybe some cleanup
-	r.CurrentPlayer = nil
-	if r.FinalRoundState != nil && r.FinalRoundState.TimerEndsAt != nil {
-		r.FinalRoundState.TimerEndsAt = nil
-	}
-	for pi := range r.Players {
-		newBetAmount := 0
-		r.Players[pi].BetAmount = &newBetAmount
-	}
-	r.State = GameOver
-}
-
 func (r *Room) Pause(userId string) error {
+	now := time.Now()
+
 	if !r.IsUserHost(userId) {
 		return custerr.NewForbiddenErr("not allowed to pause")
 	}
@@ -792,24 +782,25 @@ func (r *Room) Pause(userId string) error {
 	) {
 		return custerr.NewConflictErr("can not pause now")
 	}
-	now := time.Now()
+
 	switch r.State {
-	case ShowingQuestion:
-		remaining := r.CurrentQuestion.TimerEndsAt.Sub(now)
-		total := time.Duration(r.Options.QuestionThinkingTime) * time.Second
-		r.CurrentQuestion.TimerLastProgress = math.Max(0, float64(remaining)/float64(total))
 	case RevealingQuestion:
-		if r.CurrentQuestion.Attachment != nil && now.Before(r.CurrentQuestion.AttachmentRevealEndsAt) {
-			mediaDurationRemained := r.CurrentQuestion.AttachmentRevealEndsAt.Sub(now)
-			r.CurrentQuestion.AttachmentRevealLastProgress = 1 - float64(mediaDurationRemained)/
-				float64(r.CurrentQuestion.GetMediaRevealingDuration())
+		if r.CurrentQuestion.Attachment != nil {
+			fullDuration := float64(r.CurrentQuestion.GetMediaRevealingDuration())
+			remainedDuration := math.Max(0, float64(r.CurrentQuestion.AttachmentRevealEndsAt.Sub(now)))
+			r.CurrentQuestion.AttachmentRevealLastProgress = 1 - remainedDuration/fullDuration
 		}
-		if now.Before(r.CurrentQuestion.TimerStartsAt) {
-			textDurationRemained := r.CurrentQuestion.TimerStartsAt.Sub(now)
-			r.CurrentQuestion.TextRevealLastProgress = math.Max(0, 1-float64(textDurationRemained)/
-				float64(r.CurrentQuestion.GetTextRevealingDuration()))
+		if r.CurrentQuestion.Text != nil {
+			fullDuration := float64(r.CurrentQuestion.GetTextRevealingDuration(r.Options.ReadingSymbolsPerSecond))
+			remainedDuration := math.Min(fullDuration, float64(r.CurrentQuestion.TimerStartsAt.Sub(now)))
+			r.CurrentQuestion.TextRevealLastProgress = 1 - remainedDuration/fullDuration
 		}
+	case ShowingQuestion:
+		fullDuration := float64(time.Duration(r.Options.QuestionThinkingTime) * time.Second)
+		remainedDuration := float64(r.CurrentQuestion.TimerEndsAt.Sub(now))
+		r.CurrentQuestion.TimerLastProgress = remainedDuration / fullDuration
 	}
+
 	r.PausedState.Paused = true
 	r.PausedState.PausedAt = &now
 	return nil
@@ -882,4 +873,17 @@ func (r *Room) UnpauseSystem(pausedAt time.Time) error {
 		r.FinalRoundState.TimerEndsAt = &newTimerEndsAt
 	}
 	return nil
+}
+
+func (r *Room) EndGame() {
+	// TODO: maybe some cleanup
+	r.CurrentPlayer = nil
+	if r.FinalRoundState != nil && r.FinalRoundState.TimerEndsAt != nil {
+		r.FinalRoundState.TimerEndsAt = nil
+	}
+	for pi := range r.Players {
+		newBetAmount := 0
+		r.Players[pi].BetAmount = &newBetAmount
+	}
+	r.State = GameOver
 }
