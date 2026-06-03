@@ -31,7 +31,7 @@ export default function CorrectAnswerDemoPanel({
       )}
 
       {comment?.attachment && (
-        <div className="w-full flex-1 min-h-0 flex justify-center">
+        <div className="w-full flex-1 min-h-0 flex justify-center items-center">
           {comment.attachment.type === "image" && (
             <img
               src={comment.attachment.url}

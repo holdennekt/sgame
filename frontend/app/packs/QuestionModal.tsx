@@ -186,7 +186,7 @@ export default function QuestionModal({
                 {answers.map((answer, index) => (
                   <span
                     key={index}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-raised text-on-surface text-xs border border-border"
+                    className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-surface-raised text-on-surface text-xs border border-border"
                   >
                     {answer}
                     {!readOnly && (
@@ -266,16 +266,16 @@ export default function QuestionModal({
       </div>
 
       {!readOnly && (
-        <div className="mt-4 flex items-center justify-between gap-4">
-          <button
-            type="button"
-            className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
-            onClick={close}
-          >
-            Cancel
-          </button>
-          <div className="flex items-center gap-2">
-            {error && <p className="text-xs text-danger">{error}</p>}
+        <div className="mt-2 w-0 min-w-full">
+          {error && <p className="mb-2 text-xs text-danger">{error}</p>}
+          <div className="flex items-center justify-between gap-4">
+            <button
+              type="button"
+              className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
+              onClick={close}
+            >
+              Cancel
+            </button>
             <button
               type="button"
               className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150 shrink-0"

@@ -205,6 +205,7 @@ export interface Question extends HiddenQuestion {
 const dummyQuestion: Question = {
   index: 0,
   value: 0,
+  category: "",
   text: "",
   attachment: null,
   type: "regular",
@@ -256,6 +257,7 @@ export interface HiddenCategory {
 export interface HiddenQuestion {
   index: number;
   value: number;
+  category: string;
   attachment: Attachment | null;
 }
 
@@ -268,6 +270,7 @@ export interface HiddenFinalRoundCategory {
 }
 
 export interface HiddenFinalRoundQuestion {
+  category: string;
   text: string | null;
   attachment: Attachment | null;
 }

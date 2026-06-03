@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, useRef } from "react";
 import Modal from "./Modal";
 import { useDebounce } from "use-debounce";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { createRoom, getPacksPreviews } from "@/app/actions";
-import { toast } from "react-toastify";
 import { isError } from "@/middleware";
 import { PackPreview, PrivacyType } from "@/types/pack";
 import { CreateRoomRequest } from "@/types/room";
@@ -38,6 +37,10 @@ export default function NewRoomModal({
   const [questionThinkingTimeFinal, setQuestionThinkingTimeFinal] =
     useState(60);
   const [readingSymbolsPerSecond, setReadingSymbolsPerSecond] = useState(30);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (fixedPack) setPack(fixedPack);
@@ -45,7 +48,7 @@ export default function NewRoomModal({
 
   const [debouncedPackSearch] = useDebounce(
     fixedPack ? "" : pack.id ? "" : pack.name.trim(),
-    400
+    250
   );
 
   const { data: packs = [] } = useQuery<PackPreview[]>({
@@ -58,8 +61,54 @@ export default function NewRoomModal({
     enabled: debouncedPackSearch.length > 0,
   });
 
+  useEffect(() => {
+    setHighlightedIndex(-1);
+    setDropdownOpen(packs.length > 0);
+  }, [packs]);
+
   const onPackInputChange = (packFilter: string) => {
     setPack({ id: "", name: packFilter });
+    setHighlightedIndex(-1);
+  };
+
+  const selectPack = (p: PackPreview) => {
+    setPack(p);
+    setHighlightedIndex(-1);
+    setDropdownOpen(false);
+  };
+
+  const onPackKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setDropdownOpen(false);
+      setHighlightedIndex(-1);
+      return;
+    }
+    if (!packs.length || !dropdownOpen) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const next =
+        highlightedIndex < packs.length - 1
+          ? highlightedIndex + 1
+          : highlightedIndex;
+      setHighlightedIndex(next);
+      scrollDropdownItem(next);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const next = highlightedIndex > 0 ? highlightedIndex - 1 : 0;
+      setHighlightedIndex(next);
+      scrollDropdownItem(next);
+    } else if (e.key === "Enter" && highlightedIndex >= 0) {
+      e.preventDefault();
+      selectPack(packs[highlightedIndex]);
+    }
+  };
+
+  const scrollDropdownItem = (index: number) => {
+    const item = dropdownRef.current?.children[index] as
+      | HTMLElement
+      | undefined;
+    item?.scrollIntoView({ block: "nearest" });
   };
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -81,12 +130,38 @@ export default function NewRoomModal({
       },
     };
 
-    close();
-    const result = await createRoom(params);
-    if (isError(result)) {
-      toast.error(result.error, { containerId: "lobby" });
+    const name = data.name as string;
+    if (!name.trim()) {
+      setError("Room name is required");
       return;
     }
+    if (name.length > 50) {
+      setError("Room name must be 50 characters or less");
+      return;
+    }
+    if (!pack.id) {
+      setError("Please select a pack from the list");
+      return;
+    }
+    const password = data.password as string | undefined;
+    if (privacyType === "private") {
+      if (!password) {
+        setError("Password is required for private rooms");
+        return;
+      }
+      if (password.length < 4 || password.length > 16) {
+        setError("Password must be 4–16 characters");
+        return;
+      }
+    }
+
+    const result = await createRoom(params);
+    if (isError(result)) {
+      setError(result.error);
+      return;
+    }
+    setError(null);
+    close();
     const pwd = params.options.password;
     const url = `/rooms/${result.id}${pwd ? `?password=${pwd}` : ""}`;
     router.push(url);
@@ -97,7 +172,7 @@ export default function NewRoomModal({
       <h3 className="text-base font-semibold text-on-surface mb-5">
         Create new room
       </h3>
-      <form method="dialog" action="" onSubmit={onSubmit}>
+      <form method="dialog" action="" onSubmit={onSubmit} noValidate>
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Left column */}
           <div className="flex flex-col gap-3 w-52">
@@ -108,9 +183,6 @@ export default function NewRoomModal({
                 type="text"
                 placeholder="Name"
                 name="name"
-                minLength={1}
-                maxLength={50}
-                required
               />
             </div>
 
@@ -122,24 +194,29 @@ export default function NewRoomModal({
                 placeholder="Search packs..."
                 value={pack.name}
                 onChange={(e) => onPackInputChange(e.target.value)}
-                required
+                onKeyDown={onPackKeyDown}
                 readOnly={!!fixedPack}
               />
-              {packs.length > 0 && (
-                <div className="absolute z-10 w-full max-h-32 overflow-y-auto rounded-lg top-full mt-0.5 bg-surface-raised border border-border shadow-md">
-                  {packs.map((pack, index) => (
+              {packs.length > 0 && dropdownOpen && (
+                <div
+                  ref={dropdownRef}
+                  className="absolute z-10 w-full max-h-32 overflow-y-auto rounded-lg top-full mt-0.5 bg-surface-raised border border-border shadow-md"
+                >
+                  {packs.map((p, index) => (
                     <div
                       key={index}
-                      className={`px-3 py-2 cursor-pointer text-sm truncate hover:bg-primary hover:text-on-primary transition-colors duration-100${
+                      className={`px-3 py-2 cursor-pointer text-sm truncate transition-colors duration-100${
                         index < packs.length - 1
                           ? " border-b border-border"
                           : ""
+                      }${
+                        index === highlightedIndex
+                          ? " bg-primary text-on-primary"
+                          : " hover:bg-primary hover:text-on-primary"
                       }`}
-                      onClick={() => {
-                        setPack(pack);
-                      }}
+                      onClick={() => selectPack(p)}
                     >
-                      {pack.name}
+                      {p.name}
                     </div>
                   ))}
                 </div>
@@ -172,10 +249,7 @@ export default function NewRoomModal({
                   className={inputCls}
                   type="text"
                   placeholder="Password"
-                  minLength={4}
-                  maxLength={16}
                   name="password"
-                  required
                 />
               </div>
             )}
@@ -260,7 +334,8 @@ export default function NewRoomModal({
           </div>
         </div>
 
-        <div className="mt-5 flex justify-end">
+        <div className="mt-5 flex items-center justify-between gap-3">
+          {error && <p className="text-xs text-danger">{error}</p>}
           <button
             className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150"
             type="submit"

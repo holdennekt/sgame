@@ -64,6 +64,8 @@ export default function GameTopSection() {
           textEndsAt={room.currentQuestion!.timerStartsAt}
           textLastProgress={room.currentQuestion!.textRevealLastProgress}
           paused={room.pausedState.paused}
+          category={room.currentQuestion!.category}
+          value={room.currentQuestion!.value}
         />
       );
 
@@ -82,6 +84,8 @@ export default function GameTopSection() {
             endsAt: new Date(room.currentQuestion!.timerEndsAt).getTime(),
             paused: room.pausedState.paused,
           }}
+          category={room.currentQuestion!.category}
+          value={room.currentQuestion!.value}
         />
       );
 
@@ -100,6 +104,8 @@ export default function GameTopSection() {
             endsAt: new Date(room.answeringPlayer!.timerEndsAt).getTime(),
             paused: room.pausedState.paused,
           }}
+          category={room.currentQuestion!.category}
+          value={room.currentQuestion!.value}
         />
       );
 
@@ -154,6 +160,7 @@ export default function GameTopSection() {
             endsAt: new Date(room.finalRoundState!.timerEndsAt!).getTime(),
             paused: room.pausedState.paused,
           }}
+          category={room.finalRoundState!.question!.category}
         />
       );
 
@@ -169,6 +176,7 @@ export default function GameTopSection() {
             progress: 0,
             endsAt: 0,
           }}
+          category={room.finalRoundState!.question!.category}
         />
       );
 

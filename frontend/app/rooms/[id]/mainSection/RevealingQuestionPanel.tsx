@@ -21,6 +21,8 @@ export default function RevealingQuestionPanel({
   textEndsAt,
   textLastProgress,
   paused,
+  category,
+  value,
 }: {
   attachment: Attachment | null;
   attachmentEndsAt: string;
@@ -29,6 +31,8 @@ export default function RevealingQuestionPanel({
   textEndsAt: string;
   textLastProgress: number;
   paused?: boolean;
+  category: string;
+  value: number;
 }) {
   const [currentText, setCurrentText] = useState(
     text ? text.slice(0, Math.floor(text.length * textLastProgress)) : ""
@@ -114,10 +118,13 @@ export default function RevealingQuestionPanel({
   );
 
   return (
-    <div className="relative h-full">
-      <div className="h-full flex flex-col items-center justify-center p-4 sm:p-6 gap-3 overflow-hidden">
+    <div className="relative h-full flex flex-col">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 gap-3 overflow-hidden">
+        <p className="shrink-0 text-sm font-medium text-on-surface-muted">
+          {category} — {value}
+        </p>
         {attachment && (
-          <div className="w-full flex justify-center flex-1 min-h-0">
+          <div className="w-full flex justify-center items-center flex-1 min-h-0">
             {attachment.type === "video" && (
               <video
                 ref={mediaRef as React.RefObject<HTMLVideoElement>}
@@ -133,9 +140,6 @@ export default function RevealingQuestionPanel({
                 <div className="w-14 h-14 rounded-full bg-surface-raised border border-border flex items-center justify-center text-primary animate-pulse">
                   <FaMusic size={22} />
                 </div>
-                <p className="text-xs text-on-surface-muted">
-                  Audio playing...
-                </p>
                 <audio
                   ref={mediaRef as React.RefObject<HTMLAudioElement>}
                   src={attachment.url}

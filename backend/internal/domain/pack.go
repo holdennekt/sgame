@@ -181,7 +181,7 @@ type HiddenCategory struct {
 
 type HiddenQuestion struct {
 	Round      string      `json:"-" bson:"round"`
-	Category   string      `json:"-" bson:"category"`
+	Category   string      `json:"category" bson:"category"`
 	Index      int         `json:"index" bson:"index"`
 	Value      int         `json:"value" bson:"value"`
 	Attachment *Attachment `json:"attachment" bson:"attachment"`
@@ -196,6 +196,7 @@ type HiddenFinalRoundCategory struct {
 }
 
 type HiddenFinalRoundQuestion struct {
+	Category   string      `json:"category" bson:"category"`
 	Text       *string     `json:"text" bson:"text"`
 	Attachment *Attachment `json:"attachment" bson:"attachment"`
 }

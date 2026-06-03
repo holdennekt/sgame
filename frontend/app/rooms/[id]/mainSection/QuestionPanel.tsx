@@ -21,6 +21,8 @@ export default function QuestionPanel({
   textLastProgress,
   questionType,
   timeBar,
+  category,
+  value,
 }: {
   attachment: Attachment | null;
   attachmentLastProgress: number;
@@ -32,6 +34,8 @@ export default function QuestionPanel({
     endsAt: number;
     paused?: boolean;
   };
+  category: string;
+  value?: number;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const loopMedia = questionType !== "regular";
@@ -51,15 +55,19 @@ export default function QuestionPanel({
     : "";
 
   return (
-    <div className="relative h-full">
+    <div className="relative h-full flex flex-col">
       <TimerBar
         initProgress={timeBar.progress}
         endsAt={timeBar.endsAt}
         paused={timeBar.paused}
       />
-      <div className="h-full flex flex-col items-center justify-center p-4 sm:p-6 gap-3 overflow-hidden">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 gap-3 overflow-hidden">
+        <p className="shrink-0 text-sm font-medium text-on-surface-muted">
+          {category}
+          {value ? ` — ${value}` : ""}
+        </p>
         {attachment && (
-          <div className="w-full flex justify-center flex-1 min-h-0">
+          <div className="w-full flex justify-center items-center flex-1 min-h-0">
             {attachment.type === "video" && (
               <video
                 ref={videoRef}

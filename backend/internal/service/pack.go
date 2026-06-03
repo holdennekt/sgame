@@ -295,7 +295,8 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 			},
 			Question: domain.FinalRoundQuestion{
 				HiddenFinalRoundQuestion: domain.HiddenFinalRoundQuestion{
-					Text: c.Question.Text,
+					Category: c.Name,
+					Text:     c.Question.Text,
 				},
 				Answers: c.Question.Answers,
 			},
@@ -408,7 +409,8 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 			},
 			Question: domain.FinalRoundQuestion{
 				HiddenFinalRoundQuestion: domain.HiddenFinalRoundQuestion{
-					Text: c.Question.Text,
+					Category: c.Name,
+					Text:     c.Question.Text,
 				},
 				Answers: c.Question.Answers,
 			},
