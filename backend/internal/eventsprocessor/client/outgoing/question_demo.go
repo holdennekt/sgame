@@ -12,18 +12,20 @@ import (
 const QuestionDemoDuration = 5
 
 type QuestionDemoPayload struct {
-	Category string              `json:"category"`
-	Value    int                 `json:"value"`
-	Type     domain.QuestionType `json:"type"`
-	Duration int                 `json:"duration"`
+	Category        string              `json:"category"`
+	CategoryComment *string             `json:"categoryComment"`
+	Value           int                 `json:"value"`
+	Type            domain.QuestionType `json:"type"`
+	Duration        int                 `json:"duration"`
 }
 
-func NewQuestionDemoMessage(question domain.Question) message.Message {
+func NewQuestionDemoMessage(question domain.Question, categoryComment *string) message.Message {
 	payload, _ := json.Marshal(QuestionDemoPayload{
-		Category: question.Category,
-		Value:    question.Value,
-		Type:     question.Type,
-		Duration: QuestionDemoDuration,
+		Category:        question.Category,
+		CategoryComment: categoryComment,
+		Value:           question.Value,
+		Type:            question.Type,
+		Duration:        QuestionDemoDuration,
 	})
 	return message.Message{
 		Event:   domain.QuestionDemo,

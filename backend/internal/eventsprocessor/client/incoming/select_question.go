@@ -33,7 +33,11 @@ func HandleSelectQuestionMessage(ctx context.Context, server realtime.Channel, i
 	if err != nil {
 		return err
 	}
-	questionDemoMessage := outgoing.NewQuestionDemoMessage(*question)
+	category, err := pack.GetCategory(*room.CurrentRoundName, qsp.Category)
+	if err != nil {
+		return err
+	}
+	questionDemoMessage := outgoing.NewQuestionDemoMessage(*question, category.Comment)
 	if err := server.Send(ctx, questionDemoMessage); err != nil {
 		return err
 	}

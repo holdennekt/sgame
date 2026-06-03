@@ -56,6 +56,9 @@ export default function RoundDemoPanel({
   return (
     <div className="w-full h-full flex flex-col justify-center items-center gap-2 p-10">
       <p className="text-4xl font-semibold">{roundDemo.name}</p>
+      {roundDemo.comment && (
+        <p className="text-base text-on-surface-muted">{roundDemo.comment}</p>
+      )}
       <div
         ref={containerRef}
         className="max-w-full overflow-hidden whitespace-nowrap text-3xl font-medium"

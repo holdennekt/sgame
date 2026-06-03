@@ -50,6 +50,8 @@ definitions:
     type: object
   github_com_holdennekt_sgame_backend_internal_domain.Category:
     properties:
+      comment:
+        type: string
       name:
         type: string
       questions:
@@ -57,6 +59,7 @@ definitions:
           $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Question'
         type: array
     required:
+    - comment
     - name
     - questions
     type: object
@@ -96,6 +99,8 @@ definitions:
         type: number
       bettingEndsAt:
         type: string
+      category:
+        type: string
       comment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment'
       index:
@@ -122,6 +127,7 @@ definitions:
     - attachmentRevealEndsAt
     - attachmentRevealLastProgress
     - bettingEndsAt
+    - category
     - comment
     - index
     - passingEndsAt
@@ -192,6 +198,8 @@ definitions:
         type: array
       attachment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
+      category:
+        type: string
       comment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment'
       text:
@@ -199,6 +207,7 @@ definitions:
     required:
     - answers
     - attachment
+    - category
     - comment
     - text
     type: object
@@ -240,6 +249,8 @@ definitions:
         type: number
       bettingEndsAt:
         type: string
+      category:
+        type: string
       index:
         type: integer
       passingEndsAt:
@@ -263,6 +274,7 @@ definitions:
     - attachmentRevealEndsAt
     - attachmentRevealLastProgress
     - bettingEndsAt
+    - category
     - index
     - passingEndsAt
     - text
@@ -277,10 +289,13 @@ definitions:
     properties:
       attachment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
+      category:
+        type: string
       text:
         type: string
     required:
     - attachment
+    - category
     - text
     type: object
   github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundState:
@@ -415,6 +430,8 @@ definitions:
         type: array
       attachment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
+      category:
+        type: string
       comment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment'
       index:
@@ -428,6 +445,7 @@ definitions:
     required:
     - answers
     - attachment
+    - category
     - comment
     - index
     - text
@@ -616,6 +634,10 @@ definitions:
         maximum: 120
         minimum: 1
         type: integer
+      readingSymbolsPerSecond:
+        maximum: 50
+        minimum: 10
+        type: integer
       type:
         allOf:
         - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
@@ -629,6 +651,7 @@ definitions:
     - password
     - questionThinkingTime
     - questionThinkingTimeFinal
+    - readingSymbolsPerSecond
     - type
     type: object
   github_com_holdennekt_sgame_backend_internal_domain.RoomPlayer:
@@ -717,10 +740,13 @@ definitions:
         items:
           $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Category'
         type: array
+      comment:
+        type: string
       name:
         type: string
     required:
     - categories
+    - comment
     - name
     type: object
   github_com_holdennekt_sgame_backend_internal_domain.User:
@@ -759,14 +785,17 @@ definitions:
     type: object
   github_com_holdennekt_sgame_backend_internal_dto.CreateCategoryRequest:
     properties:
+      comment:
+        maxLength: 200
+        type: string
       name:
-        maxLength: 25
+        maxLength: 50
         minLength: 1
         type: string
       questions:
         items:
           $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateQuestionRequest'
-        maxItems: 10
+        maxItems: 20
         minItems: 1
         type: array
     required:
@@ -808,11 +837,10 @@ definitions:
       comment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCommentRequest'
       text:
-        maxLength: 200
+        maxLength: 1000
         type: string
     required:
     - answers
-    - text
     type: object
   github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundRequest:
     properties:
@@ -878,7 +906,7 @@ definitions:
         minimum: 0
         type: integer
       text:
-        maxLength: 400
+        maxLength: 1000
         type: string
       type:
         allOf:
@@ -893,7 +921,6 @@ definitions:
     required:
     - answers
     - index
-    - text
     - type
     - value
     type: object
@@ -925,12 +952,15 @@ definitions:
       categories:
         items:
           $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCategoryRequest'
-        maxItems: 10
+        maxItems: 15
         minItems: 1
         type: array
         uniqueItems: true
+      comment:
+        maxLength: 200
+        type: string
       name:
-        maxLength: 50
+        maxLength: 100
         minLength: 1
         type: string
     required:

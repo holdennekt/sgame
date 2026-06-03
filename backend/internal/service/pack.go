@@ -248,15 +248,15 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 			for _, q := range c.Questions {
 				question := domain.Question{
 					HiddenQuestion: domain.HiddenQuestion{
-						Round:      r.Name,
-						Category:   c.Name,
-						Index:      q.Index,
-						Value:      q.Value,
-						Attachment: nil,
+						Round:    r.Name,
+						Category: c.Name,
+						Index:    q.Index,
+						Value:    q.Value,
 					},
-					Type:    q.Type,
-					Text:    q.Text,
-					Answers: q.Answers,
+					Type:       q.Type,
+					Text:       q.Text,
+					Attachment: nil,
+					Answers:    q.Answers,
 				}
 
 				if q.Attachment != nil {
@@ -362,15 +362,15 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 			for _, q := range c.Questions {
 				question := domain.Question{
 					HiddenQuestion: domain.HiddenQuestion{
-						Round:      r.Name,
-						Category:   c.Name,
-						Index:      q.Index,
-						Value:      q.Value,
-						Attachment: nil,
+						Round:    r.Name,
+						Category: c.Name,
+						Index:    q.Index,
+						Value:    q.Value,
 					},
-					Type:    q.Type,
-					Text:    q.Text,
-					Answers: q.Answers,
+					Type:       q.Type,
+					Text:       q.Text,
+					Attachment: nil,
+					Answers:    q.Answers,
 				}
 
 				if q.Attachment != nil {

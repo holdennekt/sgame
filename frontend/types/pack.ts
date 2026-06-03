@@ -198,6 +198,7 @@ export const isComment = (obj: unknown): obj is Comment => {
 export interface Question extends HiddenQuestion {
   type: QuestionType;
   text: string | null;
+  attachment: Attachment | null;
   answers: string[];
   comment: Comment | null;
 }
@@ -255,10 +256,9 @@ export interface HiddenCategory {
 }
 
 export interface HiddenQuestion {
+  category: string;
   index: number;
   value: number;
-  category: string;
-  attachment: Attachment | null;
 }
 
 export interface HiddenFinalRound {

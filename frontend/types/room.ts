@@ -7,6 +7,7 @@ import {
   QuestionType,
   PrivacyType,
   Comment,
+  Attachment,
 } from "./pack";
 import { Host, Player } from "./user";
 
@@ -288,6 +289,7 @@ export const isRoomPlayer = (obj: unknown): obj is RoomPlayer => {
 export interface HiddenCurrentQuestion extends HiddenQuestion {
   type: QuestionType;
   text: string | null;
+  attachment: Attachment | null;
   attachmentRevealEndsAt: string;
   attachmentRevealLastProgress: number;
   textRevealLastProgress: number;
@@ -309,11 +311,13 @@ export interface HiddenFinalRoundState {
 
 export type RoundDemo = {
   name: string;
+  comment: string | null;
   categories: string[];
 };
 
 const dummyRoundDemo: RoundDemo = {
   name: "round 1",
+  comment: null,
   categories: ["1", "2", "3"],
 };
 
@@ -324,6 +328,7 @@ export const isRoundDemo = (obj: unknown): obj is RoundDemo => {
 
 export type QuestionDemo = {
   category: string;
+  categoryComment: string | null;
   value: number;
   type: QuestionType;
   duration: number;
@@ -331,6 +336,7 @@ export type QuestionDemo = {
 
 const dummyQuestionDemo: QuestionDemo = {
   category: "",
+  categoryComment: null,
   value: 0,
   type: "regular",
   duration: 0,

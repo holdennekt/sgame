@@ -34,11 +34,13 @@ func (cpr CreatePackRequest) AttachmentKeys() map[string]struct{} {
 
 type CreateRoundRequest struct {
 	Name       string                  `json:"name" binding:"min=1,max=100"`
+	Comment    *string                 `json:"comment,omitempty" binding:"omitnil,max=200"`
 	Categories []CreateCategoryRequest `json:"categories" binding:"min=1,max=15,unique=Name,same_length=Questions,dive"`
 }
 
 type CreateCategoryRequest struct {
 	Name      string                  `json:"name" binding:"min=1,max=50"`
+	Comment   *string                 `json:"comment,omitempty" binding:"omitnil,max=200"`
 	Questions []CreateQuestionRequest `json:"questions" binding:"min=1,max=20,dive"`
 }
 

@@ -1,6 +1,6 @@
 import { Attachment } from "@/types/pack";
 import { useEffect, useRef, useState } from "react";
-import { FaMusic } from "react-icons/fa6";
+import { FaMusic, FaVideo } from "react-icons/fa6";
 
 const textSize = (len: number) =>
   len < 80
@@ -34,6 +34,7 @@ export default function RevealingQuestionPanel({
   category: string;
   value: number;
 }) {
+  const [audioBlocked, setAudioBlocked] = useState(false);
   const [currentText, setCurrentText] = useState(
     text ? text.slice(0, Math.floor(text.length * textLastProgress)) : ""
   );
@@ -91,7 +92,9 @@ export default function RevealingQuestionPanel({
       const mediaDuration =
         stableAttachment.duration ?? mediaRef.current!.duration;
       mediaRef.current!.currentTime = mediaDuration * attachmentLastProgress;
-      const playPromise = mediaRef.current!.play().catch(() => {});
+      const playPromise = mediaRef
+        .current!.play()
+        .catch(() => setAudioBlocked(true));
 
       cleanupFuncs.push(() => {
         playPromise.then(() => {
@@ -116,6 +119,11 @@ export default function RevealingQuestionPanel({
     },
     []
   );
+
+  const handleUnblock = () => {
+    mediaRef.current?.play().catch(() => {});
+    setAudioBlocked(false);
+  };
 
   return (
     <div className="relative h-full flex flex-col">
@@ -168,6 +176,19 @@ export default function RevealingQuestionPanel({
           </p>
         )}
       </div>
+      {attachment && audioBlocked && (
+        <button
+          onClick={handleUnblock}
+          className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-raised border border-border text-xs font-medium text-on-surface-muted hover:text-on-surface transition-colors"
+        >
+          {attachment.type === "video" ? (
+            <FaVideo size={11} />
+          ) : (
+            <FaMusic size={11} />
+          )}
+          Tap to play {attachment.type}
+        </button>
+      )}
     </div>
   );
 }

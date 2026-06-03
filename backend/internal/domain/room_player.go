@@ -22,7 +22,8 @@ type RoomPlayer struct {
 type HiddenCurrentQuestion struct {
 	HiddenQuestion
 	Type                         QuestionType `json:"type"`
-	Text                         *string       `json:"text"`
+	Text                         *string      `json:"text"`
+	Attachment                   *Attachment  `json:"attachment"`
 	AttachmentRevealEndsAt       time.Time    `json:"attachmentRevealEndsAt"`
 	AttachmentRevealLastProgress float64      `json:"attachmentRevealLastProgress"`
 	TextRevealLastProgress       float64      `json:"textRevealLastProgress"`
@@ -47,14 +48,14 @@ func NewPlayerRoom(room *Room) RoomPlayer {
 	if room.CurrentQuestion != nil {
 		currentQuestion = &HiddenCurrentQuestion{
 			HiddenQuestion: HiddenQuestion{
-				Round:      room.CurrentQuestion.Round,
-				Category:   room.CurrentQuestion.Category,
-				Index:      room.CurrentQuestion.Index,
-				Value:      room.CurrentQuestion.Value,
-				Attachment: room.CurrentQuestion.Attachment,
+				Round:    room.CurrentQuestion.Round,
+				Category: room.CurrentQuestion.Category,
+				Index:    room.CurrentQuestion.Index,
+				Value:    room.CurrentQuestion.Value,
 			},
 			Type:                         room.CurrentQuestion.Type,
 			Text:                         room.CurrentQuestion.Text,
+			Attachment:                   room.CurrentQuestion.Attachment,
 			AttachmentRevealEndsAt:       room.CurrentQuestion.AttachmentRevealEndsAt,
 			AttachmentRevealLastProgress: room.CurrentQuestion.AttachmentRevealLastProgress,
 			TextRevealLastProgress:       room.CurrentQuestion.TextRevealLastProgress,

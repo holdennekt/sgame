@@ -32,6 +32,7 @@ export default function GameTopSection() {
             questionDemo.type
           ]
         }
+        commentText={questionDemo.categoryComment}
       />
     );
   if (correctAnswerDemo)

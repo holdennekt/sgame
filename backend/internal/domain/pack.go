@@ -27,11 +27,13 @@ type PackPreview struct {
 
 type Round struct {
 	Name       string     `json:"name" bson:"name"`
+	Comment    *string    `json:"comment" bson:"comment"`
 	Categories []Category `json:"categories" bson:"categories"`
 }
 
 type Category struct {
 	Name      string     `json:"name" bson:"name"`
+	Comment   *string    `json:"comment" bson:"comment"`
 	Questions []Question `json:"questions" bson:"questions"`
 }
 
@@ -81,6 +83,7 @@ type Question struct {
 	HiddenQuestion `bson:"inline"`
 	Type           QuestionType `json:"type" bson:"type"`
 	Text           *string      `json:"text" bson:"text"`
+	Attachment     *Attachment  `json:"attachment" bson:"attachment"`
 	Answers        []string     `json:"answers" bson:"answers"`
 	Comment        *Comment     `json:"comment" bson:"comment"`
 }
@@ -180,11 +183,10 @@ type HiddenCategory struct {
 }
 
 type HiddenQuestion struct {
-	Round      string      `json:"-" bson:"round"`
-	Category   string      `json:"category" bson:"category"`
-	Index      int         `json:"index" bson:"index"`
-	Value      int         `json:"value" bson:"value"`
-	Attachment *Attachment `json:"attachment" bson:"attachment"`
+	Round    string `json:"-" bson:"round"`
+	Category string `json:"category" bson:"category"`
+	Index    int    `json:"index" bson:"index"`
+	Value    int    `json:"value" bson:"value"`
 }
 
 type HiddenFinalRound struct {
@@ -224,6 +226,24 @@ func NewHiddenPack(pack Pack) HiddenPack {
 			Categories: hiddenFinalCategories,
 		},
 	}
+}
+
+func (p *Pack) GetCategory(roundName string, categoryName string) (*Category, error) {
+	roundIndex := slices.IndexFunc(p.Rounds, func(r Round) bool {
+		return r.Name == roundName
+	})
+	if roundIndex == -1 {
+		return nil, custerr.NewNotFoundErr(fmt.Sprintf("no round \"%s\" in pack \"%s\"", roundName, p.Name))
+	}
+	round := p.Rounds[roundIndex]
+
+	categoryIndex := slices.IndexFunc(round.Categories, func(c Category) bool {
+		return c.Name == categoryName
+	})
+	if categoryIndex == -1 {
+		return nil, custerr.NewNotFoundErr(fmt.Sprintf("no category \"%s\" in round \"%s\"", categoryName, roundName))
+	}
+	return &round.Categories[categoryIndex], nil
 }
 
 func (p *Pack) GetQuestion(roundName string, categoryName string, questionIndex int) (*Question, error) {
