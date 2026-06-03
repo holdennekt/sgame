@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/gin-gonic/gin/binding"
@@ -40,7 +41,15 @@ func init() {
 func main() {
 	godotenv.Load()
 
-	opts := options.Client().ApplyURI(envvar.GetEnvVar("MONGO_CONN_STR"))
+	mongoURI := fmt.Sprintf(
+		"mongodb://%s:%s@%s:%s/%s?authSource=admin",
+		envvar.GetEnvVar("MONGO_ROOT_USER"),
+		envvar.GetEnvVar("MONGO_ROOT_PASSWORD"),
+		envvar.GetEnvVar("MONGO_HOST"),
+		envvar.GetEnvVar("MONGO_PORT"),
+		envvar.GetEnvVar("MONGO_NAME"),
+	)
+	opts := options.Client().ApplyURI(mongoURI)
 	conn, err := mongo.Connect(context.Background(), opts)
 	if err != nil {
 		log.Fatal(err)
@@ -67,8 +76,8 @@ func main() {
 	} else {
 		mio, err := minio.New(envvar.GetEnvVar("MINIO_ENDPOINT"), &minio.Options{
 			Creds: credentials.NewStaticV4(
-				envvar.GetEnvVar("MINIO_ACCESS_KEY"),
-				envvar.GetEnvVar("MINIO_SECRET_KEY"),
+				envvar.GetEnvVar("MINIO_ROOT_USER"),
+				envvar.GetEnvVar("MINIO_ROOT_PASSWORD"),
 				"",
 			),
 			Secure: envvar.GetEnvVarBool("MINIO_USE_SSL"),

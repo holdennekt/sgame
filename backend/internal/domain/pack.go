@@ -260,12 +260,22 @@ func (p *Pack) AttachmentKeys() map[string]struct{} {
 				if q.Attachment != nil {
 					set[q.Attachment.Key] = struct{}{}
 				}
+				if q.Comment != nil {
+					if q.Comment.Attachment != nil {
+						set[q.Comment.Attachment.Key] = struct{}{}
+					}
+				}
 			}
 		}
 	}
-	for _, cat := range p.FinalRound.Categories {
-		if cat.Question.Attachment != nil {
-			set[cat.Question.Attachment.Key] = struct{}{}
+	for _, c := range p.FinalRound.Categories {
+		if c.Question.Attachment != nil {
+			set[c.Question.Attachment.Key] = struct{}{}
+		}
+		if c.Question.Comment != nil {
+			if c.Question.Comment.Attachment != nil {
+				set[c.Question.Comment.Attachment.Key] = struct{}{}
+			}
 		}
 	}
 	return set

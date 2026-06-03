@@ -6,8 +6,10 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -489,9 +491,19 @@ func (s *PackService) createDomainAttachment(ctx context.Context, dto dto.Create
 	}
 	defer reader.Close()
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	tmpFile, err := os.CreateTemp("", "sgame-probe-*")
+	if err != nil {
+		return nil, custerr.NewInternalErr(fmt.Errorf("failed to create temp file: %w", err))
+	}
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+	if _, err := io.Copy(tmpFile, reader); err != nil {
+		return nil, custerr.NewInternalErr(fmt.Errorf("failed to buffer file for probing: %w", err))
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	probeData, err := ffprobe.ProbeReader(ctx, reader)
+	probeData, err := ffprobe.ProbeURL(ctx, tmpFile.Name())
 	if err != nil {
 		return nil, custerr.NewInternalErr(fmt.Errorf("failed to analyze media: %w", err))
 	}

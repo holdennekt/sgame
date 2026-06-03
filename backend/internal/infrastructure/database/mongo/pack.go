@@ -154,7 +154,7 @@ func (r *packRepository) GetByChecksum(ctx context.Context, userId string, check
 			"_id":            bson.M{"$ne": ignoreObjId},
 			"$or": []bson.M{
 				{"type": domain.Public},
-				{"createdBy": userId},
+				{"createdBy.id": userId},
 			},
 		},
 	)
@@ -185,7 +185,7 @@ func (r *packRepository) GetPreviews(ctx context.Context, userId string, search 
 		},
 		"$or": []bson.M{
 			{"type": domain.Public},
-			{"createdBy": userId},
+			{"createdBy.id": userId},
 		},
 	}
 	total, err := r.db.Collection(PACKS_COLLECTION).CountDocuments(ctx, filter)
@@ -236,7 +236,7 @@ func (r *packRepository) GetHiddens(ctx context.Context, userId string, search d
 			Options: "i",
 		},
 		"$or": []bson.M{
-			{"type": "public"},
+			{"type": domain.Public},
 			{"createdBy.id": userId},
 		},
 	}

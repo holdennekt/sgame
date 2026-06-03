@@ -18,7 +18,7 @@ services:
     environment:
       PORT: 80
       BACKEND_HOST: backend
-  
+
   backend:
     image: europe-central2-docker.pkg.dev/smart-altar-496311-p4/sgame-images/sgame-backend:latest
     depends_on:
@@ -30,21 +30,24 @@ services:
       APP_ENV: production
       HOST: 0.0.0.0
       PORT: 80
-      MONGO_NAME: ${MONGO_DB_NAME}
-      MONGO_CONN_STR: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DB_NAME}?authSource=admin
+      MONGO_ROOT_USER: ${MONGO_ROOT_USER}
+      MONGO_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_HOST: mongodb
+      MONGO_PORT: 27017
+      MONGO_NAME: ${MONGO_NAME}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_USER: ${REDIS_USERNAME}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_DB: 0
       STORAGE_PROVIDER: gcs
-      GOOGLE_APPLICATION_CREDENTIALS: /app/smart-altar-496311-p4-5cf9bc5fd4e7.json
       BUCKET_NAME: sgame-bucket
+      GOOGLE_APPLICATION_CREDENTIALS: /app/smart-altar-496311-p4-5cf9bc5fd4e7.json
       FRONTEND_URL: https://sgame.sgame.dedyn.io
       USER_AGENT: "SGame/1.0"
     volumes:
       - ./smart-altar-496311-p4-5cf9bc5fd4e7.json:/app/smart-altar-496311-p4-5cf9bc5fd4e7.json
-  
+
   mongodb:
     image: mongo:6.0
     init: true
@@ -57,7 +60,8 @@ services:
     volumes:
       - mongodb_data_container:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      test:
+        ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
       timeout: 5s
       retries: 5

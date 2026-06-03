@@ -23,7 +23,7 @@ services:
     environment:
       PORT: 80
       BACKEND_HOST: backend
-  
+
   backend:
     image: sgame-backend
     build: backend
@@ -36,22 +36,25 @@ services:
       APP_ENV: production
       HOST: 0.0.0.0
       PORT: 80
+      MONGO_ROOT_USER: ${MONGO_ROOT_USER}
+      MONGO_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_HOST: mongodb
+      MONGO_PORT: 27017
       MONGO_NAME: ${MONGO_DB_NAME}
-      MONGO_CONN_STR: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DB_NAME}?authSource=admin
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_USER: ${REDIS_USERNAME}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_DB: 0
       STORAGE_PROVIDER: minio
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-      MINIO_USE_SSL: false
       BUCKET_NAME: attachments
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_USE_SSL: false
       FRONTEND_URL: http://localhost
       USER_AGENT: "SGame/1.0"
-  
+
   mongodb:
     image: mongo:6.0
     init: true
@@ -64,7 +67,8 @@ services:
     volumes:
       - mongodb_data_container:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      test:
+        ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -84,7 +88,7 @@ services:
       start_period: 10s
     volumes:
       - redis_data:/data
-  
+
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     ports:

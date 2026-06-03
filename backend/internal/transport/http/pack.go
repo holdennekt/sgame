@@ -104,6 +104,9 @@ func (c *PackController) getPreviews(ctx *gin.Context) {
 		ctx.Error(err)
 		return
 	}
+	if query.Page == 0 {
+		query.Page = DEFAULT_PAGE
+	}
 	if query.Limit == 0 {
 		query.Limit = DEFAULT_LIMIT
 	}
