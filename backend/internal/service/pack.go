@@ -220,10 +220,30 @@ func (s *PackService) Delete(ctx context.Context, userId, id string) error {
 		return custerr.NewForbiddenErr("can only delete your own packs")
 	}
 
-	for key := range pack.AttachmentKeys() {
-		if err := s.storage.Delete(context.Background(), key); err != nil {
-			log.Printf("failed to cleanup attachment %s: %v", key, err)
+	keys := pack.AttachmentKeys()
+	jobs := make(chan string)
+	done := make(chan struct{}, len(keys))
+
+	for range min(8, len(keys)) {
+		go func() {
+			for k := range jobs {
+				if err := s.storage.Delete(ctx, k); err != nil {
+					log.Printf("failed to cleanup attachment %s: %v", k, err)
+				}
+				done <- struct{}{}
+			}
+		}()
+	}
+
+	go func() {
+		for k := range keys {
+			jobs <- k
 		}
+		close(jobs)
+	}()
+
+	for range len(keys) {
+		<-done
 	}
 
 	return s.packRepository.Delete(ctx, id)
