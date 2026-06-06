@@ -140,7 +140,7 @@ export default function QuestionModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className={labelCls}>Question text</span>
+            <span className={labelCls}>Text</span>
             <textarea
               ref={textRef}
               className={textareaCls}
