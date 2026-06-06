@@ -47,6 +47,8 @@ services:
       USER_AGENT: "SGame/1.0"
     volumes:
       - ./smart-altar-496311-p4-5cf9bc5fd4e7.json:/app/smart-altar-496311-p4-5cf9bc5fd4e7.json
+    tmpfs:
+      - /tmp
 
   mongodb:
     image: mongo:6.0
