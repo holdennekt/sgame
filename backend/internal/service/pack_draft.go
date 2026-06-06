@@ -176,47 +176,28 @@ func (s *PackDraftService) Delete(ctx context.Context, userId, id string) error 
 		return custerr.NewForbiddenErr("cannot delete another user's draft")
 	}
 
-	var linkedPackKeys map[string]struct{}
-	skipCleanup := false
-	if draft.LinkedPackId != nil {
-		linkedPack, err := s.packRepo.GetById(ctx, *draft.LinkedPackId)
-		if err != nil {
-			log.Printf("draft delete: failed to fetch linked pack %s, skipping attachment cleanup: %v", *draft.LinkedPackId, err)
-			skipCleanup = true
-		} else {
+	if err := s.packDraftRepo.Delete(ctx, id); err != nil {
+		return err
+	}
+
+	go func() {
+		var linkedPackKeys map[string]struct{}
+		if draft.LinkedPackId != nil {
+			linkedPack, err := s.packRepo.GetById(context.Background(), *draft.LinkedPackId)
+			if err != nil {
+				log.Printf("draft delete: failed to fetch linked pack %s, skipping attachment cleanup: %v", *draft.LinkedPackId, err)
+				return
+			}
 			linkedPackKeys = linkedPack.AttachmentKeys()
 		}
-	}
-
-	if !skipCleanup {
-		keys := sets.Delta(draft.AttachmentKeys(), linkedPackKeys)
-		jobs := make(chan string)
-		done := make(chan struct{}, len(keys))
-
-		for range min(8, len(keys)) {
-			go func() {
-				for k := range jobs {
-					if err := s.storage.Delete(ctx, k); err != nil {
-						log.Printf("draft delete: failed to cleanup attachment %s: %v", k, err)
-					}
-					done <- struct{}{}
-				}
-			}()
-		}
-
-		go func() {
-			for k := range keys {
-				jobs <- k
+		for key := range sets.Delta(draft.AttachmentKeys(), linkedPackKeys) {
+			if err := s.storage.Delete(context.Background(), key); err != nil {
+				log.Printf("draft delete: failed to cleanup attachment %s: %v", key, err)
 			}
-			close(jobs)
-		}()
-
-		for range len(keys) {
-			<-done
 		}
-	}
+	}()
 
-	return s.packDraftRepo.Delete(ctx, id)
+	return nil
 }
 
 func (s *PackDraftService) Import(ctx context.Context, user domain.User, r io.ReaderAt, size int64) (string, error) {
@@ -377,12 +358,12 @@ func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, o
 		LinkedPackId: oldDraft.LinkedPackId,
 		CreatedBy:    user,
 		Content:      strings.Join(content, ", "),
-		Name:       req.Name,
-		Type:       req.Type,
-		Rounds:     rounds,
-		FinalRound: finalRound,
-		CreatedAt:  oldDraft.CreatedAt,
-		UpdatedAt:  time.Now(),
+		Name:         req.Name,
+		Type:         req.Type,
+		Rounds:       rounds,
+		FinalRound:   finalRound,
+		CreatedAt:    oldDraft.CreatedAt,
+		UpdatedAt:    time.Now(),
 	}, nil
 }
 
