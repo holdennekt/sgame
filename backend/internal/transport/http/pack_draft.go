@@ -1,6 +1,8 @@
 package http
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -127,20 +129,41 @@ func (c *PackDraftController) importSIQ(ctx *gin.Context) {
 	user := ctx.MustGet(USER_CONTEXT_KEY).(domain.User)
 
 	ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, MAX_SIQ_SIZE)
-	fileHeader, err := ctx.FormFile("siq")
+
+	mr, err := ctx.Request.MultipartReader()
 	if err != nil {
-		ctx.Error(err)
+		ctx.Error(custerr.NewBadRequestErr(err.Error()))
 		return
 	}
 
-	file, err := fileHeader.Open()
-	if err != nil {
-		ctx.Error(err)
+	var data []byte
+	for {
+		part, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			ctx.Error(custerr.NewBadRequestErr(err.Error()))
+			return
+		}
+		if part.FormName() != "siq" {
+			io.Copy(io.Discard, part)
+			continue
+		}
+		data, err = io.ReadAll(part)
+		if err != nil {
+			ctx.Error(custerr.NewBadRequestErr(err.Error()))
+			return
+		}
+		break
+	}
+
+	if len(data) == 0 {
+		ctx.Error(custerr.NewBadRequestErr("missing siq file"))
 		return
 	}
-	defer file.Close()
 
-	id, err := c.draftService.Import(ctx, user, file, fileHeader.Size)
+	id, err := c.draftService.Import(ctx, user, bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		ctx.Error(err)
 		return

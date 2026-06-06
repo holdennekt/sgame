@@ -106,10 +106,14 @@ func LoggingMiddleware(ctx *gin.Context) {
 	clientIP := ctx.ClientIP()
 	serverIP := GetServerIP()
 
-	var requestBody []byte
-	if ctx.Request.Body != nil {
-		requestBody, _ = io.ReadAll(ctx.Request.Body)
+	var requestBodyStr string
+	contentType := ctx.Request.Header.Get("Content-Type")
+	if strings.HasPrefix(contentType, "multipart/") {
+		requestBodyStr = "[multipart form data]"
+	} else if ctx.Request.Body != nil {
+		requestBody, _ := io.ReadAll(ctx.Request.Body)
 		ctx.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+		requestBodyStr = truncate(string(requestBody), 512)
 	}
 
 	respBody := &bytes.Buffer{}
@@ -131,7 +135,7 @@ func LoggingMiddleware(ctx *gin.Context) {
 		ctx.Request.URL.Path,
 		clientIP,
 		serverIP,
-		truncate(string(requestBody), 512),
+		requestBodyStr,
 		truncate(responseBody, 512),
 	)
 }

@@ -55,7 +55,7 @@ type CreateQuestionRequest struct {
 	Type       domain.QuestionType      `json:"type" binding:"oneof=regular catInBag auction"`
 	Text       *string                  `json:"text,omitempty" binding:"required_without=Attachment,omitnil,min=1,max=500"`
 	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"required_without=Text"`
-	Answers    []string                 `json:"answers" binding:"min=1,max=10,dive,min=1,max=100"`
+	Answers    []string                 `json:"answers" binding:"min=1,max=10,dive,min=1,max=200"`
 	Comment    *CreateCommentRequest    `json:"comment,omitempty" binding:"omitnil"`
 }
 
