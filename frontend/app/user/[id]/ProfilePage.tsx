@@ -6,7 +6,7 @@ import { useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import { FiEdit2, FiLogOut, FiTrash2 } from "react-icons/fi";
 import { useRouter } from "next/navigation";
-import { logout, deleteUser } from "@/app/actions";
+import { logout, deleteUser } from "@/app/api";
 import { isError } from "@/middleware";
 import { EditForm } from "./EditForm";
 import PacksTab from "./PacksTab";
@@ -34,12 +34,14 @@ export default function ProfilePage({
   const handleDeleteAccount = async () => {
     if (!confirm("Delete your account? This cannot be undone.")) return;
     await logout();
-    const result = await deleteUser(user.id);
-    if (isError(result)) {
-      toast.error(result.error, { containerId: "profile" });
-      return;
+    try {
+      await deleteUser(user.id);
+      router.push("/login");
+    } catch (e) {
+      toast.error(isError(e) ? e.error : "Delete failed", {
+        containerId: "profile",
+      });
     }
-    router.push("/login");
   };
   const [newRoomModal, setNewRoomModal] = useState<{
     isOpen: boolean;

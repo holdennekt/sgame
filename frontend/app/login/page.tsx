@@ -4,7 +4,7 @@ import { toast, ToastContainer } from "react-toastify";
 import Navbar from "../../components/Navbar";
 import { FormEventHandler, useState } from "react";
 import Link from "next/link";
-import { login, loginAsGuest } from "../actions";
+import { login, loginAsGuest } from "@/app/api";
 import { isError } from "@/middleware";
 
 const inputClass =
@@ -20,25 +20,29 @@ export default function Page() {
   const onSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const result = await login({
-      login: formData.get("login") as string,
-      password: formData.get("password") as string,
-    });
-    if (isError(result)) {
-      toast.error(result.error, { containerId: "login" });
-      return;
+    try {
+      await login({
+        login: formData.get("login") as string,
+        password: formData.get("password") as string,
+      });
+      window.location.href = "/lobby";
+    } catch (e) {
+      toast.error(isError(e) ? e.error : "Login failed", {
+        containerId: "login",
+      });
     }
-    window.location.href = "/lobby";
   };
 
   const onGuestSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
-    const result = await loginAsGuest(guestName.trim());
-    if (isError(result)) {
-      toast.error(result.error, { containerId: "login" });
-      return;
+    try {
+      await loginAsGuest(guestName.trim());
+      window.location.href = "/lobby";
+    } catch (e) {
+      toast.error(isError(e) ? e.error : "Login failed", {
+        containerId: "login",
+      });
     }
-    window.location.href = "/lobby";
   };
 
   return (

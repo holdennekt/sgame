@@ -5,7 +5,7 @@ import Modal from "./Modal";
 import { useDebounce } from "use-debounce";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { createRoom, getPacksPreviews } from "@/app/actions";
+import { createRoom, getPacksPreviews } from "@/app/api";
 import { isError } from "@/middleware";
 import { PackPreview, PrivacyType } from "@/types/pack";
 import { CreateRoomRequest } from "@/types/room";
@@ -55,7 +55,6 @@ export default function NewRoomModal({
     queryKey: ["packPreviews", debouncedPackSearch],
     queryFn: async () => {
       const result = await getPacksPreviews(debouncedPackSearch);
-      if (isError(result)) throw new Error(result.error);
       return result.items;
     },
     enabled: debouncedPackSearch.length > 0,
@@ -155,16 +154,16 @@ export default function NewRoomModal({
       }
     }
 
-    const result = await createRoom(params);
-    if (isError(result)) {
-      setError(result.error);
-      return;
+    try {
+      const { id } = await createRoom(params);
+      setError(null);
+      close();
+      const pwd = params.options.password;
+      const url = `/rooms/${id}${pwd ? `?password=${pwd}` : ""}`;
+      router.push(url);
+    } catch (e) {
+      setError(isError(e) ? e.error : "Failed to create room");
     }
-    setError(null);
-    close();
-    const pwd = params.options.password;
-    const url = `/rooms/${result.id}${pwd ? `?password=${pwd}` : ""}`;
-    router.push(url);
   };
 
   return (

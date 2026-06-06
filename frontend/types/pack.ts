@@ -12,13 +12,12 @@ export interface PackFormData {
 
 export interface RoundFormData {
   name: string;
-  expanded: boolean;
   categories: CategoryFormData[];
 }
 
 export interface CategoryFormData {
   name: string;
-  selected: boolean;
+  comment: string;
   questions: QuestionFormData[];
 }
 
@@ -43,7 +42,6 @@ export type AttachmentFormData =
   | { type: "url"; url?: string };
 
 export interface FinalRoundFormData {
-  expanded: boolean;
   categories: FinalRoundCategoryFormData[];
 }
 
@@ -73,6 +71,7 @@ export interface CreateRoundRequest {
 
 export interface CreateCategoryRequest {
   name: string;
+  comment: string | null;
   questions: CreateQuestionRequest[];
 }
 
@@ -116,10 +115,6 @@ export interface CreatePackResponse {
   id: string;
 }
 
-export interface UpdatePackRequest extends CreatePackRequest {
-  id: string;
-}
-
 export interface SignURLRequest {
   filename: string;
   public: boolean;
@@ -138,6 +133,8 @@ export interface Pack {
   type: PrivacyType;
   rounds: Round[];
   finalRound: FinalRound;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PackPreview {
@@ -152,6 +149,7 @@ export interface Round {
 
 export interface Category {
   name: string;
+  comment: string | null;
   questions: Question[];
 }
 
@@ -244,6 +242,8 @@ export interface HiddenPack {
   type: PrivacyType;
   rounds: HiddenRound[];
   finalRound: HiddenFinalRound;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface HiddenRound {
@@ -278,12 +278,10 @@ export interface HiddenFinalRoundQuestion {
 export function convertPackToFormData(
   pack: Omit<Pack, "id" | "createdBy">
 ): PackFormData {
-  const rounds = pack.rounds.map(convertRoundToFormData);
-  if (rounds[0].categories.length) rounds[0].categories[0].selected = true;
   return {
     name: pack.name,
     type: pack.type,
-    rounds,
+    rounds: pack.rounds.map(convertRoundToFormData),
     finalRound: convertFinalRoundToFormData(pack.finalRound),
   };
 }
@@ -291,7 +289,6 @@ export function convertPackToFormData(
 function convertRoundToFormData(round: Round): RoundFormData {
   return {
     name: round.name,
-    expanded: true,
     categories: round.categories.map(convertCategoryToFormData),
   };
 }
@@ -299,7 +296,7 @@ function convertRoundToFormData(round: Round): RoundFormData {
 function convertCategoryToFormData(category: Category): CategoryFormData {
   return {
     name: category.name,
-    selected: false,
+    comment: category.comment ?? "",
     questions: category.questions.map(convertQuestionToFormData),
   };
 }
@@ -336,7 +333,6 @@ function convertFinalRoundToFormData(
   finalRound: FinalRound
 ): FinalRoundFormData {
   return {
-    expanded: true,
     categories: finalRound.categories.map(convertFinalRoundCategoryToFormData),
   };
 }
@@ -373,6 +369,7 @@ export async function convertPackFormDataToRequest(
       categories: await Promise.all(
         round.categories.map(async (category) => ({
           name: category.name,
+          comment: category.comment || null,
           questions: await Promise.all(
             category.questions.map(async (question) => {
               const commentText = question.comment.text || null;

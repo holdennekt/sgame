@@ -12,7 +12,12 @@ export type User = {
 
 export type ErrorBody = { error: string };
 export const isError = (obj: unknown): obj is ErrorBody =>
-  (obj as ErrorBody).error !== undefined;
+  obj != null && (obj as ErrorBody).error !== undefined;
+
+export type ValidationError = { path: string; message: string };
+export type ValidationErrors = { errors: ValidationError[] };
+export const isValidationErrors = (obj: unknown): obj is ValidationErrors =>
+  obj != null && Array.isArray((obj as ValidationErrors).errors);
 
 const unprotectedPages = ["/register", "/login", "/about"];
 

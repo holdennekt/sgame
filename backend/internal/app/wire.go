@@ -25,6 +25,7 @@ var RepoSet = wire.NewSet(
 	mongoDatabase.NewUserRepository,
 	mongoDatabase.NewRoomRepository,
 	mongoDatabase.NewPackRepository,
+	mongoDatabase.NewPackDraftRepository,
 )
 
 var CacheSet = wire.NewSet(
@@ -76,13 +77,16 @@ var ServiceSet = wire.NewSet(
 	service.NewAuthService,
 	service.NewUserService,
 	provideRoomService,
+	service.NewAttachmentService,
 	service.NewPackService,
+	service.NewPackDraftService,
 )
 
 var ControllerSet = wire.NewSet(
 	http.NewAuthController,
 	http.NewUserController,
 	http.NewPackController,
+	http.NewPackDraftController,
 	http.NewRoomController,
 )
 

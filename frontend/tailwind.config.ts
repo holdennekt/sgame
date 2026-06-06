@@ -39,6 +39,7 @@ const config: Config = {
   },
   plugins: [
     plugin(({ addVariant }) => {
+      addVariant("can-hover", "@media (hover: hover)");
       addVariant("hover", "@media (hover: hover) { &:hover }");
       addVariant(
         "group-hover",

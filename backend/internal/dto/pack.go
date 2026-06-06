@@ -21,6 +21,9 @@ func (cpr CreatePackRequest) AttachmentKeys() map[string]struct{} {
 				if q.Attachment != nil {
 					set[q.Attachment.Key] = struct{}{}
 				}
+				if q.Comment != nil && q.Comment.Attachment != nil {
+					set[q.Comment.Attachment.Key] = struct{}{}
+				}
 			}
 		}
 	}
@@ -28,13 +31,15 @@ func (cpr CreatePackRequest) AttachmentKeys() map[string]struct{} {
 		if cat.Question.Attachment != nil {
 			set[cat.Question.Attachment.Key] = struct{}{}
 		}
+		if cat.Question.Comment != nil && cat.Question.Comment.Attachment != nil {
+			set[cat.Question.Comment.Attachment.Key] = struct{}{}
+		}
 	}
 	return set
 }
 
 type CreateRoundRequest struct {
 	Name       string                  `json:"name" binding:"min=1,max=100"`
-	Comment    *string                 `json:"comment,omitempty" binding:"omitnil,max=200"`
 	Categories []CreateCategoryRequest `json:"categories" binding:"min=1,max=15,unique=Name,same_length=Questions,dive"`
 }
 
@@ -48,9 +53,9 @@ type CreateQuestionRequest struct {
 	Index      int                      `json:"index" binding:"min=0,max=9"`
 	Value      int                      `json:"value" binding:"max=10000"`
 	Type       domain.QuestionType      `json:"type" binding:"oneof=regular catInBag auction"`
-	Text       *string                  `json:"text,omitempty" binding:"required_without=Attachment,max=1000"`
+	Text       *string                  `json:"text,omitempty" binding:"required_without=Attachment,omitnil,min=1,max=500"`
 	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"required_without=Text"`
-	Answers    []string                 `json:"answers" binding:"min=1,max=10,dive,min=1,max=200"`
+	Answers    []string                 `json:"answers" binding:"min=1,max=10,dive,min=1,max=100"`
 	Comment    *CreateCommentRequest    `json:"comment,omitempty" binding:"omitnil"`
 }
 
@@ -60,7 +65,7 @@ type CreateAttachmentRequest struct {
 }
 
 type CreateCommentRequest struct {
-	Text       *string                  `json:"text" binding:"omitnil,max=400"`
+	Text       *string                  `json:"text" binding:"omitnil,max=500"`
 	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"omitnil"`
 }
 
@@ -74,14 +79,23 @@ type CreateFinalRoundCategoryRequest struct {
 }
 
 type CreateFinalRoundQuestionRequest struct {
-	Text       *string                  `json:"text,omitempty" binding:"required_without=Attachment,max=1000"`
+	Text       *string                  `json:"text,omitempty" binding:"required_without=Attachment,omitnil,max=1000"`
 	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"required_without=Text"`
-	Answers    []string                 `json:"answers" binding:"min=1,max=10,dive,min=1,max=50"`
+	Answers    []string                 `json:"answers" binding:"required,min=1,max=10,dive,min=1,max=50"`
 	Comment    *CreateCommentRequest    `json:"comment,omitempty" binding:"omitnil"`
 }
 
 type CreatePackResponse struct {
 	Id string `json:"id" example:"507f1f77bcf86cd799439011"`
+}
+
+type ValidationError struct {
+	Path    string `json:"path"`
+	Message string `json:"message"`
+}
+
+type ValidationErrorResponse struct {
+	Errors []ValidationError `json:"errors"`
 }
 
 type UpdatePackRequest struct {

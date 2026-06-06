@@ -54,6 +54,13 @@ export default function CategoryEditor({
     });
   };
 
+  const updateComment = (comment: string) => {
+    setPack((pack) => {
+      pack.rounds[roundIndex].categories[categoryIndex].comment = comment;
+      return { ...pack };
+    });
+  };
+
   const addQuestion = () => {
     const qi =
       pack.rounds[roundIndex].categories[categoryIndex].questions.length;
@@ -141,13 +148,21 @@ export default function CategoryEditor({
 
   return (
     <div className="h-full flex flex-col gap-3">
-      {/* Category name */}
-      <div className="shrink-0">
+      {/* Category name + comment */}
+      <div className="shrink-0 flex flex-col gap-1.5">
         <input
           className="w-full h-9 px-2.5 bg-background border border-border text-on-background rounded-lg text-sm font-semibold outline-none focus-ring placeholder:text-on-surface-muted transition-[border-color] duration-150"
           placeholder="Category name"
           value={category.name}
           onChange={(e) => renameCategory(e.target.value)}
+          readOnly={readOnly}
+        />
+        <textarea
+          className="w-full px-2.5 py-1.5 bg-background border border-border text-on-background rounded-lg text-sm outline-none focus-ring placeholder:text-on-surface-muted transition-[border-color] duration-150 resize-none"
+          placeholder="Category comment (optional)"
+          rows={2}
+          value={category.comment}
+          onChange={(e) => updateComment(e.target.value)}
           readOnly={readOnly}
         />
       </div>

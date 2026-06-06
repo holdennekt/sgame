@@ -11,7 +11,6 @@ import (
 
 type RoundDemoPayload struct {
 	Name       string   `json:"name"`
-	Comment    *string  `json:"comment"`
 	Categories []string `json:"categories"`
 }
 
@@ -22,7 +21,6 @@ func NewRoundDemoMessage(round domain.Round) message.Message {
 	}
 	payload, _ := json.Marshal(RoundDemoPayload{
 		Name:       round.Name,
-		Comment:    round.Comment,
 		Categories: categories,
 	})
 	return message.Message{

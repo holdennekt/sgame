@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   PointerSensor,
   useSensor,
@@ -6,24 +6,25 @@ import {
   DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
-import {
-  convertPackToFormData,
-  FinalRoundCategoryFormData,
-  Pack,
-  PackFormData,
-} from "@/types/pack";
+import { FinalRoundCategoryFormData, PackFormData } from "@/types/pack";
 
-export function usePack(
-  initialPack: Omit<Pack, "id" | "createdBy">,
-  initialFormData?: PackFormData
-) {
-  const [pack, setPack] = useState<PackFormData>(
-    initialFormData ?? convertPackToFormData(initialPack)
+export function usePack(initialPack: PackFormData) {
+  const [pack, setPack] = useState(initialPack);
+
+  const [expandedRounds, setExpandedRounds] = useState<boolean[]>(() =>
+    initialPack.rounds.map(() => true)
   );
-
-  useEffect(() => {
-    setPack(initialFormData ?? convertPackToFormData(initialPack));
-  }, [initialFormData]);
+  const [finalRoundExpanded, setFinalRoundExpanded] = useState(true);
+  const [selectedRI, setSelectedRI] = useState(() =>
+    initialPack.rounds.length > 0 && initialPack.rounds[0].categories.length > 0
+      ? 0
+      : -1
+  );
+  const [selectedCI, setSelectedCI] = useState(() =>
+    initialPack.rounds.length > 0 && initialPack.rounds[0].categories.length > 0
+      ? 0
+      : -1
+  );
 
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -33,26 +34,20 @@ export function usePack(
     })
   );
 
-  const [selectedCategory, selectedCategoryIndex, selectedRoundIndex] = (() => {
-    for (const r of pack.rounds) {
-      for (const c of r.categories) {
-        if (c.selected)
-          return [c, r.categories.indexOf(c), pack.rounds.indexOf(r)] as const;
-      }
-    }
-    return [undefined, -1, -1] as const;
-  })();
+  const selectedCategory =
+    selectedRI >= 0 && selectedCI >= 0
+      ? pack.rounds[selectedRI]?.categories[selectedCI]
+      : undefined;
 
   const addRound = () => {
+    const newRi = pack.rounds.length;
     pack.rounds.push({
       name: `Round ${pack.rounds.length + 1}`,
-      expanded: true,
-      categories: [{ name: "Category 1", questions: [], selected: true }],
+      categories: [{ name: "Category 1", comment: "", questions: [] }],
     });
-    if (selectedRoundIndex !== -1)
-      pack.rounds[selectedRoundIndex].categories[
-        selectedCategoryIndex
-      ].selected = false;
+    setExpandedRounds((prev) => [...prev, true]);
+    setSelectedRI(newRi);
+    setSelectedCI(0);
     setPack({ ...pack });
     requestAnimationFrame(() => {
       const rounds = sidebarRef.current?.querySelectorAll("[data-round]");
@@ -70,7 +65,6 @@ export function usePack(
       name: `${src.name} (copy)`,
       categories: src.categories.map((cat) => ({
         ...cat,
-        selected: false,
         questions: cat.questions.map((q) => ({
           ...q,
           answers: [...q.answers],
@@ -79,11 +73,24 @@ export function usePack(
       })),
     };
     pack.rounds.splice(ri + 1, 0, copy);
+    setExpandedRounds((prev) => {
+      const next = [...prev];
+      next.splice(ri + 1, 0, prev[ri]);
+      return next;
+    });
+    if (selectedRI > ri) setSelectedRI(selectedRI + 1);
     setPack({ ...pack });
   };
 
   const deleteRound = (ri: number) => {
     pack.rounds = pack.rounds.filter((_, i) => i !== ri);
+    setExpandedRounds((prev) => prev.filter((_, i) => i !== ri));
+    if (selectedRI === ri) {
+      setSelectedRI(-1);
+      setSelectedCI(-1);
+    } else if (selectedRI > ri) {
+      setSelectedRI(selectedRI - 1);
+    }
     setPack({ ...pack });
   };
 
@@ -93,28 +100,24 @@ export function usePack(
   };
 
   const toggleRoundExpand = (ri: number) => {
-    pack.rounds[ri].expanded = !pack.rounds[ri].expanded;
-    setPack({ ...pack });
+    setExpandedRounds((prev) => prev.map((e, i) => (i === ri ? !e : e)));
   };
 
   const selectCategory = (ri: number, ci: number) => {
-    pack.rounds.forEach((r) =>
-      r.categories.forEach((c) => (c.selected = false))
-    );
-    pack.rounds[ri].categories[ci].selected = true;
-    setPack({ ...pack });
+    setSelectedRI(ri);
+    setSelectedCI(ci);
   };
 
   const addCategory = (ri: number) => {
-    pack.rounds.forEach((r) =>
-      r.categories.forEach((c) => (c.selected = false))
-    );
+    const ci = pack.rounds[ri].categories.length;
     pack.rounds[ri].categories.push({
-      name: `Category ${pack.rounds[ri].categories.length + 1}`,
-      selected: true,
+      name: `Category ${ci + 1}`,
+      comment: "",
       questions: [],
     });
-    pack.rounds[ri].expanded = true;
+    setExpandedRounds((prev) => prev.map((e, i) => (i === ri ? true : e)));
+    setSelectedRI(ri);
+    setSelectedCI(ci);
     setPack({ ...pack });
   };
 
@@ -123,7 +126,6 @@ export function usePack(
     const copy = {
       ...src,
       name: `${src.name} (copy)`,
-      selected: false,
       questions: src.questions.map((q) => ({
         ...q,
         answers: [...q.answers],
@@ -131,6 +133,7 @@ export function usePack(
       })),
     };
     pack.rounds[ri].categories.splice(ci + 1, 0, copy);
+    if (selectedRI === ri && selectedCI > ci) setSelectedCI(selectedCI + 1);
     setPack({ ...pack });
   };
 
@@ -138,6 +141,14 @@ export function usePack(
     pack.rounds[ri].categories = pack.rounds[ri].categories.filter(
       (_, i) => i !== ci
     );
+    if (selectedRI === ri) {
+      if (selectedCI === ci) {
+        setSelectedRI(-1);
+        setSelectedCI(-1);
+      } else if (selectedCI > ci) {
+        setSelectedCI(selectedCI - 1);
+      }
+    }
     setPack({ ...pack });
   };
 
@@ -154,11 +165,48 @@ export function usePack(
     setPack({ ...pack });
   };
 
+  const duplicateFinalRoundCategory = (index: number) => {
+    const src = pack.finalRound.categories[index];
+    const copy: FinalRoundCategoryFormData = {
+      name: `${src.name} (copy)`,
+      question: {
+        ...src.question,
+        answers: [...src.question.answers],
+        attachment: { ...src.question.attachment },
+        comment: {
+          ...src.question.comment,
+          attachment: { ...src.question.comment.attachment },
+        },
+      },
+    };
+    pack.finalRound.categories.splice(index + 1, 0, copy);
+    setPack({ ...pack });
+  };
+
   const deleteFinalRoundCategory = (index: number) => {
     pack.finalRound.categories = pack.finalRound.categories.filter(
       (_, i) => i !== index
     );
     setPack({ ...pack });
+  };
+
+  const onDragEndFinalRoundCategories = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const cats = pack.finalRound.categories;
+    const oldIndex = cats.findIndex((_, i) => String(i) === active.id);
+    const newIndex = cats.findIndex((_, i) => String(i) === over.id);
+    pack.finalRound.categories = arrayMove(cats, oldIndex, newIndex);
+    setPack({ ...pack });
+  };
+
+  const remapIndex = (idx: number, oldIndex: number, newIndex: number) => {
+    if (idx === oldIndex) return newIndex;
+    if (oldIndex < newIndex && idx > oldIndex && idx <= newIndex)
+      return idx - 1;
+    if (oldIndex > newIndex && idx >= newIndex && idx < oldIndex)
+      return idx + 1;
+    return idx;
   };
 
   const onDragEndRounds = (event: DragEndEvent) => {
@@ -167,6 +215,8 @@ export function usePack(
     const oldIndex = pack.rounds.findIndex((_, i) => String(i) === active.id);
     const newIndex = pack.rounds.findIndex((_, i) => String(i) === over.id);
     pack.rounds = arrayMove(pack.rounds, oldIndex, newIndex);
+    setExpandedRounds((prev) => arrayMove(prev, oldIndex, newIndex));
+    setSelectedRI((ri) => remapIndex(ri, oldIndex, newIndex));
     setPack({ ...pack });
   };
 
@@ -177,6 +227,8 @@ export function usePack(
     const oldIndex = categories.findIndex((_, i) => String(i) === active.id);
     const newIndex = categories.findIndex((_, i) => String(i) === over.id);
     pack.rounds[ri].categories = arrayMove(categories, oldIndex, newIndex);
+    if (selectedRI === ri)
+      setSelectedCI((ci) => remapIndex(ci, oldIndex, newIndex));
     setPack({ ...pack });
   };
 
@@ -186,8 +238,11 @@ export function usePack(
     sidebarRef,
     sensors,
     selectedCategory,
-    selectedCategoryIndex,
-    selectedRoundIndex,
+    selectedCategoryIndex: selectedCI,
+    selectedRoundIndex: selectedRI,
+    expandedRounds,
+    finalRoundExpanded,
+    setFinalRoundExpanded,
     addRound,
     duplicateRound,
     deleteRound,
@@ -199,8 +254,10 @@ export function usePack(
     deleteCategory,
     addFinalRoundCategory,
     changeFinalRoundCategory,
+    duplicateFinalRoundCategory,
     deleteFinalRoundCategory,
     onDragEndRounds,
     onDragEndCategories,
+    onDragEndFinalRoundCategories,
   };
 }

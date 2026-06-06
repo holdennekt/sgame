@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/dto"
@@ -65,6 +66,8 @@ type mongoPack struct {
 	Type           domain.PrivacyType `bson:"type"`
 	Rounds         []domain.Round     `bson:"rounds"`
 	FinalRound     domain.FinalRound  `bson:"finalRound"`
+	CreatedAt      time.Time          `bson:"createdAt"`
+	UpdatedAt      time.Time          `bson:"updatedAt"`
 }
 
 func fromDomainPack(pack *domain.Pack) *mongoPack {
@@ -78,6 +81,8 @@ func fromDomainPack(pack *domain.Pack) *mongoPack {
 		Type:           pack.Type,
 		Rounds:         pack.Rounds,
 		FinalRound:     pack.FinalRound,
+		CreatedAt:      pack.CreatedAt,
+		UpdatedAt:      pack.UpdatedAt,
 	}
 }
 
@@ -91,6 +96,8 @@ func toDomainPack(mPack *mongoPack) *domain.Pack {
 		Type:           mPack.Type,
 		Rounds:         mPack.Rounds,
 		FinalRound:     mPack.FinalRound,
+		CreatedAt:      mPack.CreatedAt,
+		UpdatedAt:      mPack.UpdatedAt,
 	}
 }
 
@@ -144,8 +151,11 @@ func (r *packRepository) GetById(ctx context.Context, id string) (*domain.Pack, 
 	return toDomainPack(&mPack), nil
 }
 
-func (r *packRepository) GetByChecksum(ctx context.Context, userId string, checksum []byte, ignoreId string) ([]*domain.Pack, error) {
-	ignoreObjId, _ := primitive.ObjectIDFromHex(ignoreId)
+func (r *packRepository) GetByChecksum(ctx context.Context, userId string, checksum []byte, ignoreId *string) ([]*domain.Pack, error) {
+	ignoreObjId := primitive.NilObjectID
+	if ignoreId != nil {
+		ignoreObjId, _ = primitive.ObjectIDFromHex(*ignoreId)
+	}
 
 	cur, err := r.db.Collection(PACKS_COLLECTION).Find(
 		ctx,

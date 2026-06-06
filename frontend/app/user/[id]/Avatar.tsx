@@ -1,7 +1,7 @@
 "use client";
 
 import { User } from "@/middleware";
-import { signURL } from "@/app/actions";
+import { signURL } from "@/app/api";
 import { isError } from "@/middleware";
 import { useRef, useState } from "react";
 import { toast } from "react-toastify";
@@ -41,9 +41,11 @@ export function AvatarPicker({
   const handleFile = async (file: File) => {
     setUploading(true);
     try {
-      const signResult = await signURL({ filename: file.name, public: true });
-      if (isError(signResult)) throw new Error(signResult.error);
-      const { url, formData: fields, getUrl } = signResult;
+      const {
+        url,
+        formData: fields,
+        getUrl,
+      } = await signURL({ filename: file.name, public: true });
       const body = new FormData();
       Object.entries(fields).forEach(([k, v]) => body.append(k, v));
       body.append("file", file);
@@ -52,9 +54,12 @@ export function AvatarPicker({
       setPreview(getUrl!);
       onChange(getUrl!);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed", {
-        containerId: "profile",
-      });
+      toast.error(
+        isError(e) ? e.error : e instanceof Error ? e.message : "Upload failed",
+        {
+          containerId: "profile",
+        }
+      );
     } finally {
       setUploading(false);
     }

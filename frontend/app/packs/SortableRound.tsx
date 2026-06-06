@@ -15,6 +15,7 @@ const dangerIconBtnCls =
 export default function SortableRound({
   id,
   round,
+  expanded,
   readOnly,
   children,
   onToggleExpand,
@@ -25,6 +26,7 @@ export default function SortableRound({
 }: {
   id: string;
   round: RoundFormData;
+  expanded: boolean;
   readOnly: boolean;
   children: React.ReactNode;
   onToggleExpand: () => void;
@@ -54,7 +56,7 @@ export default function SortableRound({
       className={isDragging ? "opacity-50 relative z-50" : ""}
       data-round
     >
-      <div className="group relative flex items-center gap-0.5 rounded-md pl-0.5 pr-0.5 hover:bg-surface-raised transition-colors duration-150">
+      <div className="group flex items-center gap-0.5 rounded-md pl-0.5 pr-0.5 hover:bg-surface-raised transition-colors duration-150">
         <button
           type="button"
           className="p-0.5 text-on-surface-muted shrink-0"
@@ -63,7 +65,7 @@ export default function SortableRound({
           <ChevronDown
             size={12}
             className={`transition-transform duration-150${
-              round.expanded ? "" : " -rotate-90"
+              expanded ? "" : " -rotate-90"
             }`}
           />
         </button>
@@ -75,7 +77,7 @@ export default function SortableRound({
           readOnly={readOnly}
         />
         {!readOnly && (
-          <div className="absolute right-0 flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:group-hover:bg-surface-raised transition-opacity shrink-0 rounded-sm">
+          <div className="flex items-center gap-0.5 shrink-0 overflow-hidden transition-[max-width] duration-150 can-hover:max-w-0 group-hover:max-w-28">
             <button
               type="button"
               title="Add round"

@@ -6,7 +6,7 @@ import { FormEventHandler, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { FiCheck } from "react-icons/fi";
-import { updateUser } from "@/app/actions";
+import { updateUser } from "@/app/api";
 import { isError } from "@/middleware";
 
 const inputCls =
@@ -37,14 +37,14 @@ export function EditForm({ user, onDone }: { user: User; onDone: () => void }) {
         avatar: avatarUrl,
       };
       if (password) body.password = password;
-      const result = await updateUser(user.id, body);
-      if (isError(result)) {
-        toast.error(result.error, { containerId: "profile" });
-        return;
-      }
+      await updateUser(user.id, body);
       toast.success("Saved", { containerId: "profile" });
       router.refresh();
       onDone();
+    } catch (e) {
+      toast.error(isError(e) ? e.error : "Save failed", {
+        containerId: "profile",
+      });
     } finally {
       setSaving(false);
     }

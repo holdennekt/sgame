@@ -6,22 +6,16 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/dto"
 	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"github.com/holdennekt/sgame/backend/pkg/sets"
-	"gopkg.in/vansante/go-ffprobe.v2"
 )
 
 const (
@@ -32,12 +26,13 @@ const (
 )
 
 type PackService struct {
-	packRepository repository.Pack
-	storage        storage.Storage
+	packRepository    repository.Pack
+	storage           storage.Storage
+	attachmentService *AttachmentService
 }
 
-func NewPackService(packRepository repository.Pack, storage storage.Storage) *PackService {
-	return &PackService{packRepository, storage}
+func NewPackService(packRepository repository.Pack, storage storage.Storage, attachmentService *AttachmentService) *PackService {
+	return &PackService{packRepository, storage, attachmentService}
 }
 
 func (s *PackService) Create(ctx context.Context, user domain.User, cpr dto.CreatePackRequest) (string, error) {
@@ -63,6 +58,30 @@ func (s *PackService) Create(ctx context.Context, user domain.User, cpr dto.Crea
 	}
 
 	return s.packRepository.Create(ctx, pack)
+}
+
+func (s *PackService) CreateFromDraft(ctx context.Context, user domain.User, draft *domain.PackDraft) (string, error) {
+	if user.IsGuest {
+		return "", custerr.NewForbiddenErr("guest users aren't allowed to create packs")
+	}
+
+	roundsChecksum, err := s.validateRoundsCheckSum(ctx, user.Id, draftToCreatePackRequest(draft), nil)
+	if err != nil {
+		return "", err
+	}
+
+	now := time.Now()
+	return s.packRepository.Create(ctx, &domain.Pack{
+		CreatedBy:      user,
+		RoundsChecksum: roundsChecksum,
+		Content:        draft.Content,
+		Name:           draft.Name,
+		Type:           draft.Type,
+		Rounds:         draft.Rounds,
+		FinalRound:     draft.FinalRound,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	})
 }
 
 func (s *PackService) GetById(ctx context.Context, userId, id string) (*domain.Pack, error) {
@@ -116,8 +135,45 @@ func (s *PackService) GetCreatedBy(ctx context.Context, userId, createdBy string
 	return s.packRepository.GetCreatedBy(ctx, userId, createdBy, search)
 }
 
-func (s *PackService) Update(ctx context.Context, user domain.User, dto dto.UpdatePackRequest) error {
-	pack, err := s.packRepository.GetById(ctx, dto.Id)
+func (s *PackService) UpdateFromDraft(ctx context.Context, user domain.User, draft *domain.PackDraft) error {
+	oldPack, err := s.packRepository.GetById(ctx, *draft.LinkedPackId)
+	if err != nil {
+		return err
+	}
+	if oldPack.CreatedBy.Id != user.Id {
+		return custerr.NewForbiddenErr("can only edit your own packs")
+	}
+
+	roundsChecksum, err := s.validateRoundsCheckSum(ctx, user.Id, draftToCreatePackRequest(draft), draft.LinkedPackId)
+	if err != nil {
+		return err
+	}
+
+	if err := s.packRepository.Update(ctx, &domain.Pack{
+		Id:             oldPack.Id,
+		CreatedBy:      user,
+		RoundsChecksum: roundsChecksum,
+		Content:        draft.Content,
+		Name:           draft.Name,
+		Type:           draft.Type,
+		Rounds:         draft.Rounds,
+		FinalRound:     draft.FinalRound,
+		CreatedAt:      oldPack.CreatedAt,
+		UpdatedAt:      time.Now(),
+	}); err != nil {
+		return err
+	}
+
+	for key := range sets.Delta(oldPack.AttachmentKeys(), draft.AttachmentKeys()) {
+		if err := s.storage.Delete(context.Background(), key); err != nil {
+			log.Printf("failed to cleanup pack attachment %s: %v", key, err)
+		}
+	}
+	return nil
+}
+
+func (s *PackService) Update(ctx context.Context, user domain.User, req dto.UpdatePackRequest) error {
+	pack, err := s.packRepository.GetById(ctx, req.Id)
 	if err != nil {
 		return err
 	}
@@ -128,15 +184,15 @@ func (s *PackService) Update(ctx context.Context, user domain.User, dto dto.Upda
 
 	defer func() {
 		if err != nil {
-			for key := range sets.Delta(dto.CreatePackRequest.AttachmentKeys(), pack.AttachmentKeys()) {
+			for key := range sets.Delta(req.AttachmentKeys(), pack.AttachmentKeys()) {
 				if err := s.storage.Delete(context.Background(), key); err != nil {
-					log.Printf("failed to cleanup attachment %s: %v", key, err)
+					log.Printf("failed to cleanup pack attachment %s: %v", key, err)
 				}
 			}
 		}
 	}()
 
-	newPack, err := s.updateDomain(ctx, pack, dto, user)
+	newPack, err := s.updateDomain(ctx, user, pack, req)
 	if err != nil {
 		return err
 	}
@@ -146,9 +202,9 @@ func (s *PackService) Update(ctx context.Context, user domain.User, dto dto.Upda
 		return err
 	}
 
-	for key := range sets.Delta(pack.AttachmentKeys(), dto.CreatePackRequest.AttachmentKeys()) {
+	for key := range sets.Delta(pack.AttachmentKeys(), req.AttachmentKeys()) {
 		if err := s.storage.Delete(context.Background(), key); err != nil {
-			log.Printf("failed to cleanup attachment %s: %v", key, err)
+			log.Printf("failed to cleanup pack attachment %s: %v", key, err)
 		}
 	}
 	return nil
@@ -178,7 +234,7 @@ func (s *PackService) SignURL(ctx context.Context, user domain.User, req dto.Sig
 		return nil, "", custerr.NewForbiddenErr("guest users aren't allowed to upload media")
 	}
 
-	key := s.generateKey(req.Filename, *req.Public)
+	key := s.attachmentService.generateKey(req.Filename, *req.Public)
 	result, err := s.storage.SignUploadPolicy(ctx, storage.SignUploadPolicyInput{Key: key, TTL: POST_URL_TTL})
 	if err != nil {
 		return nil, "", err
@@ -193,7 +249,7 @@ func (s *PackService) SignURL(ctx context.Context, user domain.User, req dto.Sig
 	return result, getUrl, nil
 }
 
-func (s *PackService) validateRoundsCheckSum(ctx context.Context, userId string, pack dto.CreatePackRequest, ignoreId string) ([]byte, error) {
+func (s *PackService) validateRoundsCheckSum(ctx context.Context, userId string, pack dto.CreatePackRequest, ignoreId *string) ([]byte, error) {
 	marshaledRounds, _ := json.Marshal(struct {
 		Rounds     []dto.CreateRoundRequest    `json:"rounds"`
 		FinalRound dto.CreateFinalRoundRequest `json:"finalRound"`
@@ -226,7 +282,7 @@ func (s *PackService) validateRoundsCheckSum(ctx context.Context, userId string,
 }
 
 func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackRequest, user domain.User) (*domain.Pack, error) {
-	roundsChecksum, err := s.validateRoundsCheckSum(ctx, user.Id, dto, "")
+	roundsChecksum, err := s.validateRoundsCheckSum(ctx, user.Id, dto, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -243,6 +299,7 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 			content = append(content, c.Name)
 			category := domain.Category{
 				Name:      c.Name,
+				Comment:   c.Comment,
 				Questions: []domain.Question{},
 			}
 			for _, q := range c.Questions {
@@ -260,7 +317,7 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 				}
 
 				if q.Attachment != nil {
-					attachment, err := s.createDomainAttachment(ctx, *q.Attachment, dto.Type)
+					attachment, err := s.attachmentService.createDomain(ctx, *q.Attachment, dto.Type)
 					if err != nil {
 						return nil, err
 					}
@@ -272,7 +329,7 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 						Text: q.Comment.Text,
 					}
 					if q.Comment.Attachment != nil {
-						attachment, err := s.createDomainAttachment(ctx, *q.Comment.Attachment, dto.Type)
+						attachment, err := s.attachmentService.createDomain(ctx, *q.Comment.Attachment, dto.Type)
 						if err != nil {
 							return nil, err
 						}
@@ -305,7 +362,7 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 		}
 
 		if c.Question.Attachment != nil {
-			attachment, err := s.createDomainAttachment(ctx, *c.Question.Attachment, dto.Type)
+			attachment, err := s.attachmentService.createDomain(ctx, *c.Question.Attachment, dto.Type)
 			if err != nil {
 				return nil, err
 			}
@@ -317,7 +374,7 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 				Text: c.Question.Comment.Text,
 			}
 			if c.Question.Comment.Attachment != nil {
-				attachment, err := s.createDomainAttachment(ctx, *c.Question.Comment.Attachment, dto.Type)
+				attachment, err := s.attachmentService.createDomain(ctx, *c.Question.Comment.Attachment, dto.Type)
 				if err != nil {
 					return nil, err
 				}
@@ -328,6 +385,7 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 		finalRound.Categories = append(finalRound.Categories, category)
 	}
 
+	now := time.Now()
 	return &domain.Pack{
 		CreatedBy:      user,
 		RoundsChecksum: roundsChecksum,
@@ -336,18 +394,20 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 		Type:           dto.Type,
 		Rounds:         rounds,
 		FinalRound:     finalRound,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}, nil
 }
 
-func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dto dto.UpdatePackRequest, user domain.User) (*domain.Pack, error) {
-	roundsChecksum, err := s.validateRoundsCheckSum(ctx, user.Id, dto.CreatePackRequest, dto.Id)
+func (s *PackService) updateDomain(ctx context.Context, user domain.User, oldPack *domain.Pack, req dto.UpdatePackRequest) (*domain.Pack, error) {
+	roundsChecksum, err := s.validateRoundsCheckSum(ctx, user.Id, req.CreatePackRequest, &req.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	content := []string{dto.Name}
+	content := []string{req.Name}
 	rounds := []domain.Round{}
-	for _, r := range dto.Rounds {
+	for _, r := range req.Rounds {
 		content = append(content, r.Name)
 		round := domain.Round{
 			Name:       r.Name,
@@ -357,6 +417,7 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 			content = append(content, c.Name)
 			category := domain.Category{
 				Name:      c.Name,
+				Comment:   c.Comment,
 				Questions: []domain.Question{},
 			}
 			for _, q := range c.Questions {
@@ -374,7 +435,7 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 				}
 
 				if q.Attachment != nil {
-					attachment, err := s.upsertDomainAttachment(ctx, oldPack, *q.Attachment, dto.Type)
+					attachment, err := s.attachmentService.upsertDomain(ctx, oldPack.GetAttachment(q.Attachment.Key), *q.Attachment, req.Type)
 					if err != nil {
 						return nil, err
 					}
@@ -386,7 +447,7 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 						Text: q.Comment.Text,
 					}
 					if q.Comment.Attachment != nil {
-						attachment, err := s.upsertDomainAttachment(ctx, oldPack, *q.Comment.Attachment, dto.Type)
+						attachment, err := s.attachmentService.upsertDomain(ctx, oldPack.GetAttachment(q.Comment.Attachment.Key), *q.Comment.Attachment, req.Type)
 						if err != nil {
 							return nil, err
 						}
@@ -404,7 +465,7 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 	finalRound := domain.FinalRound{
 		Categories: []domain.FinalRoundCategory{},
 	}
-	for _, c := range dto.FinalRound.Categories {
+	for _, c := range req.FinalRound.Categories {
 		category := domain.FinalRoundCategory{
 			HiddenFinalRoundCategory: domain.HiddenFinalRoundCategory{
 				Name: c.Name,
@@ -419,7 +480,7 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 		}
 
 		if c.Question.Attachment != nil {
-			attachment, err := s.upsertDomainAttachment(ctx, oldPack, *c.Question.Attachment, dto.Type)
+			attachment, err := s.attachmentService.upsertDomain(ctx, oldPack.GetAttachment(c.Question.Attachment.Key), *c.Question.Attachment, req.Type)
 			if err != nil {
 				return nil, err
 			}
@@ -431,7 +492,7 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 				Text: c.Question.Comment.Text,
 			}
 			if c.Question.Comment.Attachment != nil {
-				attachment, err := s.upsertDomainAttachment(ctx, oldPack, *c.Question.Comment.Attachment, dto.Type)
+				attachment, err := s.attachmentService.upsertDomain(ctx, oldPack.GetAttachment(c.Question.Comment.Attachment.Key), *c.Question.Comment.Attachment, req.Type)
 				if err != nil {
 					return nil, err
 				}
@@ -443,161 +504,15 @@ func (s *PackService) updateDomain(ctx context.Context, oldPack *domain.Pack, dt
 	}
 
 	return &domain.Pack{
-		Id:             dto.Id,
+		Id:             req.Id,
 		CreatedBy:      user,
 		RoundsChecksum: roundsChecksum,
 		Content:        strings.Join(content, ", "),
-		Name:           dto.Name,
-		Type:           dto.Type,
+		Name:           req.Name,
+		Type:           req.Type,
 		Rounds:         rounds,
 		FinalRound:     finalRound,
+		CreatedAt:      oldPack.CreatedAt,
+		UpdatedAt:      time.Now(),
 	}, nil
-}
-
-func (s *PackService) createDomainAttachment(ctx context.Context, dto dto.CreateAttachmentRequest, privacyType domain.PrivacyType) (*domain.Attachment, error) {
-	attachment := &domain.Attachment{
-		Key: dto.Key,
-	}
-	if dto.URL != "" {
-		key, err := s.generateKeyFromURL(dto.URL, privacyType == domain.Public)
-		if err != nil {
-			return nil, err
-		}
-		err = s.storage.UploadFromURL(
-			ctx,
-			storage.URLUploadInput{
-				Key:      key,
-				URL:      dto.URL,
-				MaxBytes: MAX_FILE_SIZE,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		attachment.Key = key
-	}
-
-	attachmentStats, err := s.storage.GetStats(ctx, attachment.Key)
-	if err != nil {
-		return nil, err
-	}
-	attachment.MimeType = attachmentStats.ContentType
-	attachment.Size = attachmentStats.Size
-
-	reader, err := s.storage.Get(ctx, attachment.Key)
-	if err != nil {
-		return nil, err
-	}
-	defer reader.Close()
-
-	tmpFile, err := os.CreateTemp("", "sgame-probe-*")
-	if err != nil {
-		return nil, custerr.NewInternalErr(fmt.Errorf("failed to create temp file: %w", err))
-	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
-	if _, err := io.Copy(tmpFile, reader); err != nil {
-		return nil, custerr.NewInternalErr(fmt.Errorf("failed to buffer file for probing: %w", err))
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	probeData, err := ffprobe.ProbeURL(ctx, tmpFile.Name())
-	if err != nil {
-		return nil, custerr.NewInternalErr(fmt.Errorf("failed to analyze media: %w", err))
-	}
-	attachment.Type = s.getAttachmentType(probeData)
-
-	if attachment.Type == domain.Video || attachment.Type == domain.Audio {
-		attachment.Duration = probeData.Format.DurationSeconds
-	} else {
-		attachment.Duration = DEFAULT_ATTACHMENT_DURATION
-	}
-
-	return attachment, nil
-}
-
-func (s *PackService) upsertDomainAttachment(ctx context.Context, oldPack *domain.Pack, newAttachmentRequest dto.CreateAttachmentRequest, newPrivacyType domain.PrivacyType) (*domain.Attachment, error) {
-	var attachment *domain.Attachment
-
-	oldAttachment := oldPack.GetAttachment(newAttachmentRequest.Key)
-	if oldAttachment != nil {
-		keyUUID := newAttachmentRequest.Key[strings.Index(newAttachmentRequest.Key, "/"):]
-		newKey := string(newPrivacyType) + keyUUID
-		if oldAttachment.Key != newKey {
-			if err := s.storage.Move(ctx, oldAttachment.Key, newKey); err != nil {
-				return nil, err
-			}
-		}
-		attachment = oldAttachment
-		attachment.Key = newKey
-	} else {
-		var err error
-		attachment, err = s.createDomainAttachment(
-			ctx,
-			newAttachmentRequest,
-			newPrivacyType,
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return attachment, nil
-}
-
-func (s *PackService) getAttachmentType(data *ffprobe.ProbeData) domain.FileType {
-	hasVideo := false
-	hasAudio := false
-
-	imageCodecs := map[string]bool{
-		"png":   true,
-		"mjpeg": true,
-		"jpeg":  true,
-		"gif":   true,
-		"bmp":   true,
-		"webp":  true,
-		"tiff":  true,
-		"svg":   true,
-	}
-
-	for _, stream := range data.Streams {
-		switch stream.CodecType {
-		case "video":
-			if _, ok := imageCodecs[stream.CodecName]; !ok {
-				hasVideo = true
-			}
-		case "audio":
-			hasAudio = true
-		}
-	}
-
-	if hasVideo {
-		return domain.Video
-	}
-	if hasAudio {
-		return domain.Audio
-	}
-
-	return domain.Image
-}
-
-func (s *PackService) generateKey(filename string, public bool) string {
-	ext := filepath.Ext(filename)
-	id := uuid.New().String()
-	prefix := "private"
-	if public {
-		prefix = "public"
-	}
-
-	return fmt.Sprintf("%s/%s%s", prefix, id, ext)
-}
-
-func (s *PackService) generateKeyFromURL(sourceUrl string, public bool) (string, error) {
-	u, err := url.Parse(sourceUrl)
-	if err != nil {
-		return "", custerr.NewBadRequestErr(fmt.Sprintf("error parsing URL: %v", err))
-	}
-	filename := filepath.Base(u.Path)
-	return s.generateKey(filename, public), nil
 }

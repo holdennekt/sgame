@@ -4,7 +4,7 @@ import { toast, ToastContainer } from "react-toastify";
 import Navbar from "../../components/Navbar";
 import { FormEventHandler } from "react";
 import Link from "next/link";
-import { register } from "../actions";
+import { register } from "@/app/api";
 import { isError } from "@/middleware";
 
 const inputClass =
@@ -18,15 +18,17 @@ export default function Page() {
   const onSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const result = await register({
-      login: formData.get("login") as string,
-      password: formData.get("password") as string,
-    });
-    if (isError(result)) {
-      toast.error(result.error, { containerId: "register" });
-      return;
+    try {
+      await register({
+        login: formData.get("login") as string,
+        password: formData.get("password") as string,
+      });
+      window.location.href = "/lobby";
+    } catch (e) {
+      toast.error(isError(e) ? e.error : "Registration failed", {
+        containerId: "register",
+      });
     }
-    window.location.href = "/lobby";
   };
 
   return (

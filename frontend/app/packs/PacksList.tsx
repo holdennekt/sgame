@@ -2,10 +2,14 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useDebouncedCallback } from "use-debounce";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQueryClient,
+  InfiniteData,
+} from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ToastContainer } from "react-toastify";
-import { getPacks, deletePack } from "@/app/actions";
+import { getPacks, deletePack, createDraft, importDraft } from "@/app/api";
 import { isError } from "@/middleware";
 import { toast } from "react-toastify";
 import NewRoomModal from "@/components/NewRoomModal";
@@ -17,14 +21,17 @@ import { HiddenPack, PackPreview } from "@/types/pack";
 import { FaLock, FaGlobe } from "react-icons/fa6";
 import { FiTrash2 } from "react-icons/fi";
 import { IoIosSearch, IoIosAdd } from "react-icons/io";
+import { LuFileArchive } from "react-icons/lu";
 
 function PackCard({
   pack,
   onPlay,
+  onEdit,
   onDelete,
 }: {
   pack: HiddenPack;
   onPlay: () => void;
+  onEdit: () => void;
   onDelete: () => Promise<void>;
 }) {
   const user = useRequiredUser();
@@ -71,6 +78,11 @@ function PackCard({
                 {pack.createdBy.name}
               </Link>
             )}
+            {pack.createdAt && (
+              <span className="ml-2">
+                · {new Date(pack.createdAt).toLocaleDateString()}
+              </span>
+            )}
           </p>
         </div>
 
@@ -112,12 +124,12 @@ function PackCard({
         </button>
         {isOwn && (
           <div className="flex items-center gap-1.5">
-            <Link
+            <button
               className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
-              href={`/packs/${pack.id}?edit=true`}
+              onClick={onEdit}
             >
               Edit
-            </Link>
+            </button>
             <button
               onClick={onDelete}
               className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border text-on-surface-muted hover:text-danger hover:border-danger transition-colors duration-150"
@@ -134,51 +146,24 @@ function PackCard({
 
 export default function PacksList() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const user = useRequiredUser();
   const [filter, setFilter] = useState("");
   const [debouncedFilter, setDebouncedFilter] = useState("");
-  const [newRoomModal, setNewRoomModal] = useState<{
-    isOpen: boolean;
-    pack?: PackPreview;
-  }>({
-    isOpen: false,
-  });
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [importing, setImporting] = useState(false);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isPending,
-    refetch,
-  } = useInfiniteQuery<SearchResponse<HiddenPack>>({
-    queryKey: ["packs", debouncedFilter],
-    queryFn: async ({ pageParam }) => {
-      const result = await getPacks(debouncedFilter, pageParam as number);
-      if (isError(result)) throw new Error(result.error);
-      return result;
-    },
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) =>
-      lastPage.hasNext ? lastPage.page + 1 : undefined,
-  });
-
-  const debounceFilter = useDebouncedCallback((value: string) => {
-    setDebouncedFilter(value);
-  }, 400);
-
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending } =
+    useInfiniteQuery<SearchResponse<HiddenPack>>({
+      queryKey: ["packs", debouncedFilter],
+      queryFn: ({ pageParam }) =>
+        getPacks(debouncedFilter, pageParam as number),
+      initialPageParam: 1,
+      getNextPageParam: (lastPage) =>
+        lastPage.hasNext ? lastPage.page + 1 : undefined,
+    });
   const packs = data?.pages.flatMap((p) => p.items) ?? [];
 
-  const handleDelete = async (packId: string) => {
-    if (!confirm("Delete this pack?")) return;
-    const result = await deletePack(packId);
-    if (isError(result)) {
-      toast.error(result.error, { containerId: "packs" });
-      return;
-    }
-    refetch();
-  };
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
     count: packs.length,
@@ -208,34 +193,181 @@ export default function PacksList() {
     fetchNextPage,
   ]);
 
+  const debounceFilter = useDebouncedCallback((value: string) => {
+    setDebouncedFilter(value);
+  }, 400);
+
+  const handleEdit = async (packId: string) => {
+    try {
+      const { id } = await createDraft(packId);
+      queryClient.invalidateQueries({ queryKey: ["drafts"] });
+      router.push(`/packs/drafts/${id}`);
+    } catch (e) {
+      toast.error(isError(e) ? e.error : "Failed to create draft", {
+        containerId: "packs",
+      });
+    }
+  };
+
+  const handleDelete = async (packId: string) => {
+    if (!confirm("Delete this pack?")) return;
+    const key = ["packs", debouncedFilter];
+    const previous = queryClient.getQueryData(key);
+    queryClient.setQueryData(
+      key,
+      (old: InfiniteData<SearchResponse<HiddenPack>>) => ({
+        ...old,
+        pages: old.pages.map((page) => ({
+          ...page,
+          items: page.items.filter((p) => p.id !== packId),
+        })),
+      })
+    );
+    try {
+      await deletePack(packId);
+    } catch (e) {
+      queryClient.setQueryData(key, previous);
+      toast.error(isError(e) ? e.error : "Delete failed", {
+        containerId: "packs",
+      });
+    }
+  };
+
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const formData = new FormData();
+    formData.append("siq", file);
+    setImporting(true);
+    try {
+      const { id } = await importDraft(formData);
+      queryClient.invalidateQueries({ queryKey: ["drafts"] });
+      router.push(`/packs/drafts/${id}`);
+    } catch (e) {
+      toast.error(isError(e) ? e.error : "Import failed", {
+        containerId: "packs",
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const [newRoomModal, setNewRoomModal] = useState<{
+    isOpen: boolean;
+    pack?: PackPreview;
+  }>({
+    isOpen: false,
+  });
+
+  const handleNew = async () => {
+    try {
+      const { id } = await createDraft();
+      queryClient.invalidateQueries({ queryKey: ["drafts"] });
+      router.push(`/packs/drafts/${id}`);
+    } catch (e) {
+      toast.error(isError(e) ? e.error : "Failed to create draft", {
+        containerId: "packs",
+      });
+    }
+  };
+
   return (
     <>
+      {importing && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background/70 backdrop-blur-sm">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-medium text-on-background">
+            Importing .siq — this may take a while for large packs…
+          </p>
+        </div>
+      )}
       <main className="flex-1 min-w-0 min-h-0 p-2">
         <div className="flex flex-col h-full rounded-md bg-surface text-on-surface p-4 border border-border gap-3">
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="relative w-full sm:w-auto">
-              <div className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-on-surface-muted">
-                <IoIosSearch size={16} />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center shrink-0">
+            {/* Row 1: search + Drafts link on mobile */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 sm:flex-none">
+                <div className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-on-surface-muted">
+                  <IoIosSearch size={16} />
+                </div>
+                <input
+                  className="h-9 w-full sm:w-52 pl-8 pr-3 rounded-lg border border-border bg-background text-on-background text-sm outline-none placeholder:text-on-surface-muted focus-ring transition-[border-color] duration-150"
+                  type="text"
+                  placeholder="Search packs..."
+                  value={filter}
+                  onChange={(e) => {
+                    setFilter(e.target.value);
+                    debounceFilter(e.target.value.trim());
+                  }}
+                />
               </div>
-              <input
-                className="h-9 w-full sm:w-52 pl-8 pr-3 rounded-lg border border-border bg-background text-on-background text-sm outline-none placeholder:text-on-surface-muted focus-ring transition-[border-color] duration-150"
-                type="text"
-                placeholder="Search packs..."
-                value={filter}
-                onChange={(e) => {
-                  setFilter(e.target.value);
-                  debounceFilter(e.target.value.trim());
-                }}
-              />
+              {!user.isGuest && (
+                <Link
+                  className="h-9 sm:hidden inline-flex items-center justify-center px-3.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150 shrink-0"
+                  href="/packs/drafts"
+                >
+                  Drafts
+                </Link>
+              )}
             </div>
+
             {!user.isGuest && (
-              <button
-                className="ml-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150 shrink-0"
-                onClick={() => router.push("/packs/new")}
-              >
-                <IoIosAdd size={16} />
-                New pack
-              </button>
+              <>
+                {/* Row 2 on mobile: Import + New pack, full-width equal split */}
+                <div className="sm:hidden flex gap-2">
+                  <button
+                    className="h-9 flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150 disabled:opacity-50"
+                    onClick={() => importInputRef.current?.click()}
+                    disabled={importing}
+                  >
+                    <LuFileArchive size={15} />
+                    {importing ? "Importing…" : "Import"}
+                  </button>
+                  <button
+                    className="h-9 flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150"
+                    onClick={handleNew}
+                  >
+                    <IoIosAdd size={16} />
+                    New pack
+                  </button>
+                </div>
+
+                {/* Desktop: all three in one row, pushed right */}
+                <div className="hidden sm:flex items-center gap-2 ml-auto">
+                  <Link
+                    className="h-9 inline-flex items-center justify-center px-3.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
+                    href="/packs/drafts"
+                  >
+                    Drafts
+                  </Link>
+                  <button
+                    className="h-9 inline-flex items-center gap-1.5 px-3.5 rounded-lg text-sm font-medium border border-border text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150 disabled:opacity-50"
+                    onClick={() => importInputRef.current?.click()}
+                    disabled={importing}
+                  >
+                    <LuFileArchive size={15} />
+                    Import .siq
+                  </button>
+                  <button
+                    className="h-9 inline-flex items-center gap-1.5 px-3.5 rounded-lg text-sm font-medium bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150"
+                    onClick={handleNew}
+                  >
+                    <IoIosAdd size={16} />
+                    New pack
+                  </button>
+                </div>
+
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept=".siq"
+                  className="hidden"
+                  onChange={handleImport}
+                />
+              </>
             )}
           </div>
 
@@ -276,6 +408,7 @@ export default function PacksList() {
                           },
                         })
                       }
+                      onEdit={() => handleEdit(packs[virtualItem.index].id)}
                       onDelete={() => handleDelete(packs[virtualItem.index].id)}
                     />
                   </div>

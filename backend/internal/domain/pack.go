@@ -18,6 +18,8 @@ type Pack struct {
 	Type           PrivacyType `json:"type"`
 	Rounds         []Round     `json:"rounds"`
 	FinalRound     FinalRound  `json:"finalRound"`
+	CreatedAt      time.Time   `json:"createdAt"`
+	UpdatedAt      time.Time   `json:"updatedAt"`
 }
 
 type PackPreview struct {
@@ -27,7 +29,6 @@ type PackPreview struct {
 
 type Round struct {
 	Name       string     `json:"name" bson:"name"`
-	Comment    *string    `json:"comment" bson:"comment"`
 	Categories []Category `json:"categories" bson:"categories"`
 }
 
@@ -308,12 +309,18 @@ func (p *Pack) GetAttachment(key string) *Attachment {
 				if question.Attachment != nil && question.Attachment.Key == key {
 					return question.Attachment
 				}
+				if question.Comment != nil && question.Comment.Attachment != nil && question.Comment.Attachment.Key == key {
+					return question.Comment.Attachment
+				}
 			}
 		}
 	}
 	for _, category := range p.FinalRound.Categories {
 		if category.Question.Attachment != nil && category.Question.Attachment.Key == key {
 			return category.Question.Attachment
+		}
+		if category.Question.Comment != nil && category.Question.Comment.Attachment != nil && category.Question.Comment.Attachment.Key == key {
+			return category.Question.Comment.Attachment
 		}
 	}
 	return nil

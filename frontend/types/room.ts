@@ -311,13 +311,11 @@ export interface HiddenFinalRoundState {
 
 export type RoundDemo = {
   name: string;
-  comment: string | null;
   categories: string[];
 };
 
 const dummyRoundDemo: RoundDemo = {
   name: "round 1",
-  comment: null,
   categories: ["1", "2", "3"],
 };
 

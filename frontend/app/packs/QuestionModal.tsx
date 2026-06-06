@@ -23,12 +23,14 @@ export default function QuestionModal({
   close,
   question,
   saveQuestion,
+  validationError,
   readOnly = false,
 }: {
   isOpen: boolean;
   close: () => void;
   question: QuestionFormData;
   saveQuestion: (question: Omit<QuestionFormData, "index">) => void;
+  validationError?: string;
   readOnly?: boolean;
 }) {
   const [value, setValue] = useState(question.value);
@@ -63,38 +65,17 @@ export default function QuestionModal({
 
   const onSave = () => {
     const numValue = Number(value);
-    if (
-      !numValue ||
-      numValue < 1 ||
-      !Number.isInteger(numValue) ||
-      numValue > 10000
-    )
-      return setError("Value must be a positive integer under 10k");
-    if (text.length > 500)
-      return setError("Text must be under 500 characters long");
-    if (
-      !text.length &&
-      ((attachment.type === "file" && !attachment.file) ||
-        (attachment.type === "url" && !attachment.url))
-    )
-      return setError("Text is required without attachment");
-    if (
-      attachment.type === "url" &&
-      attachment.url &&
-      attachment.url.length > 2000
-    )
-      return setError("Attachment URL is too long");
-    if (!answers.length) return setError("At least 1 answer is required");
-    if (answers.some((answer) => answer.length > 200))
-      return setError("Answer must be under 200 characters long");
-    if (comment.text.length > 400)
-      return setError("Comment text must be under 400 characters long");
-    if (
-      comment.attachment.type === "url" &&
-      comment.attachment.url &&
-      comment.attachment.url.length > 2000
-    )
-      return setError("Comment attachment URL is too long");
+    if (!Number.isInteger(numValue) || numValue < 0 || numValue > 10000)
+      return setError("Value must be between 0 and 10000");
+    if (text.length > 1000)
+      return setError("Text must be under 1000 characters");
+    if (answers.length > 50) return setError("Maximum 50 answers");
+    if (answers.some((a) => a.length === 0))
+      return setError("Answers cannot be empty");
+    if (answers.some((a) => a.length > 500))
+      return setError("Each answer must be under 500 characters");
+    if (comment.text.length > 1000)
+      return setError("Comment text must be under 1000 characters");
 
     saveQuestion({
       value: numValue,
@@ -109,6 +90,7 @@ export default function QuestionModal({
 
   const addAnswer = () => {
     if (!answerInput.trim()) return;
+    if (answers.length >= 10) return;
     setAnswers((answers) => [...answers, answerInput.trim()]);
     setAnswerInput("");
   };
@@ -165,8 +147,7 @@ export default function QuestionModal({
               placeholder="Enter question text..."
               value={text}
               onChange={(e) => setText(e.target.value)}
-              maxLength={200}
-              required
+              maxLength={500}
               readOnly={readOnly}
             />
           </div>
@@ -214,6 +195,7 @@ export default function QuestionModal({
                   placeholder="Add answer..."
                   value={answerInput}
                   onChange={(e) => setAnswerInput(e.target.value)}
+                  maxLength={100}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -246,7 +228,7 @@ export default function QuestionModal({
                     onChange={(e) =>
                       setComment((prev) => ({ ...prev, text: e.target.value }))
                     }
-                    maxLength={400}
+                    maxLength={500}
                     readOnly={readOnly}
                   />
                 </div>
@@ -267,7 +249,11 @@ export default function QuestionModal({
 
       {!readOnly && (
         <div className="mt-2 w-0 min-w-full">
-          {error && <p className="mb-2 text-xs text-danger">{error}</p>}
+          {(validationError || error) && (
+            <p className="mb-2 text-xs text-danger">
+              {validationError ?? error}
+            </p>
+          )}
           <div className="flex items-center justify-between gap-4">
             <button
               type="button"

@@ -17,38 +17,55 @@ import (
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
+func baseKind(t reflect.Type) reflect.Kind {
+	if t.Kind() == reflect.Pointer {
+		return t.Elem().Kind()
+	}
+	return t.Kind()
+}
+
 func messageForTag(fe validator.FieldError) string {
+	param := fe.Param()
 	switch fe.Tag() {
 	case "required":
-		return fmt.Sprintf("%s is required", fe.Namespace())
+		return "is required"
+	case "required_without":
+		return fmt.Sprintf("is required when %s is not provided", strings.ToLower(param))
+	case "excluded_with":
+		return fmt.Sprintf("cannot be used together with %s", strings.ToLower(param))
 	case "min":
-		switch fe.Type().Kind() {
+		switch baseKind(fe.Type()) {
 		case reflect.String:
-			return fmt.Sprintf("%s must be at least %s characters long", fe.Namespace(), fe.Param())
+			return fmt.Sprintf("must be at least %s characters", param)
 		case reflect.Int:
-			return fmt.Sprintf("%s must be at least %s", fe.Namespace(), fe.Param())
+			return fmt.Sprintf("must be at least %s", param)
 		case reflect.Slice:
-			return fmt.Sprintf("%s must have at least %s items", fe.Namespace(), fe.Param())
+			return fmt.Sprintf("must have at least %s items", param)
 		}
 	case "max":
-		switch fe.Type().Kind() {
+		switch baseKind(fe.Type()) {
 		case reflect.String:
-			return fmt.Sprintf("%s must be at most %s characters long", fe.Namespace(), fe.Param())
+			return fmt.Sprintf("must be at most %s characters", param)
 		case reflect.Int:
-			return fmt.Sprintf("%s must be at most %s", fe.Namespace(), fe.Param())
+			return fmt.Sprintf("must be at most %s", param)
 		case reflect.Slice:
-			return fmt.Sprintf("%s must have at most %s items", fe.Namespace(), fe.Param())
+			return fmt.Sprintf("must have at most %s items", param)
 		}
-	case "url":
-		return fmt.Sprintf("%s must be a URL", fe.Namespace())
 	case "oneof":
-		return fmt.Sprintf("%s must be one of: %s", fe.Namespace(), fe.Param())
+		return fmt.Sprintf("must be one of: %s", param)
 	case "unique":
-		return fmt.Sprintf("%s must have unique %s values", fe.Namespace(), fe.Param())
+		return fmt.Sprintf("must have unique %s", strings.ToLower(param))
 	case "same_length":
-		return fmt.Sprintf("%s must have same %s length", fe.Namespace(), fe.Param())
+		return "all categories must have the same number of questions"
 	}
-	return fe.Error()
+	return fmt.Sprintf("failed validation (%s)", fe.Tag())
+}
+
+func pathFromNamespace(ns string) string {
+	if _, after, ok := strings.Cut(ns, "."); ok {
+		return after
+	}
+	return ns
 }
 
 func ErrorMiddleware(ctx *gin.Context) {
@@ -60,11 +77,14 @@ func ErrorMiddleware(ctx *gin.Context) {
 	}
 	switch err := errs[0].Err.(type) {
 	case validator.ValidationErrors:
-		errs := make([]string, len(err))
-		for i, fieldErr := range err {
-			errs[i] = messageForTag(fieldErr)
+		validationErrs := make([]dto.ValidationError, len(err))
+		for i, fe := range err {
+			validationErrs[i] = dto.ValidationError{
+				Path:    pathFromNamespace(fe.Namespace()),
+				Message: messageForTag(fe),
+			}
 		}
-		ctx.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: strings.Join(errs, ", ")})
+		ctx.JSON(http.StatusBadRequest, dto.ValidationErrorResponse{Errors: validationErrs})
 	case custerr.BadRequestErr:
 		ctx.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 	case custerr.UnauthorizedErr:

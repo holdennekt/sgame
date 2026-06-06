@@ -14,7 +14,7 @@ import {
   isQuestionDemo,
   isCorrectAnswerDemo,
 } from "@/types/room";
-import { leaveRoom } from "@/app/actions";
+import { leaveRoom } from "@/app/api";
 import { useWebSocket } from "./useWebSocket";
 
 export function useRoom(initialRoom: RoomHost | RoomPlayer, userId: string) {
@@ -107,8 +107,8 @@ export function useRoom(initialRoom: RoomHost | RoomPlayer, userId: string) {
     try {
       await leaveRoom(room.id);
       router.push("/");
-    } catch (error) {
-      if (error instanceof Error) setError(error.message);
+    } catch (e) {
+      if (isError(e)) setError(e.error);
     }
   };
 

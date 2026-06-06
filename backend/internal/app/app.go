@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"os"
+	"reflect"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -24,6 +26,13 @@ func init() {
 	log.SetFlags(0)
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation(custvalid.SameLength, custvalid.ValidateSameLength)
+		v.RegisterTagNameFunc(func(fld reflect.StructField) string {
+			name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+			if name == "" || name == "-" {
+				return fld.Name
+			}
+			return name
+		})
 	}
 }
 
@@ -32,14 +41,15 @@ type app struct {
 	authController                    *http.AuthController
 	userController                    *http.UserController
 	packController                    *http.PackController
+	packDraftController               *http.PackDraftController
 	roomController                    *http.RoomController
 	lobbyHandler                      *ws.LobbyHandler
 	roomHandler                       *ws.RoomHandler
 	roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter
 }
 
-func NewApp(roomCache cache.Room, authController *http.AuthController, userController *http.UserController, packController *http.PackController, roomController *http.RoomController, lobbyHandler *ws.LobbyHandler, roomHandler *ws.RoomHandler, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *app {
-	return &app{roomCache, authController, userController, packController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter}
+func NewApp(roomCache cache.Room, authController *http.AuthController, userController *http.UserController, packController *http.PackController, packDraftController *http.PackDraftController, roomController *http.RoomController, lobbyHandler *ws.LobbyHandler, roomHandler *ws.RoomHandler, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *app {
+	return &app{roomCache, authController, userController, packController, packDraftController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter}
 }
 
 func (a *app) Run() {
@@ -97,6 +107,7 @@ func (a *app) Run() {
 	protected := api.Group("/", a.authController.Authorize)
 	a.userController.RegisterRoutes(protected)
 	a.packController.RegisterRoutes(protected)
+	a.packDraftController.RegisterRoutes(protected)
 	a.roomController.RegisterRoutes(protected)
 
 	wsGroup := protected.Group("/ws")

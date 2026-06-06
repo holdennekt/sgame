@@ -13,14 +13,16 @@ const dangerIconBtnCls =
 
 export default function SortableCategory({
   id,
-  cat,
+  category,
+  selected,
   readOnly,
   onSelect,
   onDuplicate,
   onDelete,
 }: {
   id: string;
-  cat: CategoryFormData;
+  category: CategoryFormData;
+  selected: boolean;
   readOnly: boolean;
   onSelect: () => void;
   onDuplicate: () => void;
@@ -44,23 +46,23 @@ export default function SortableCategory({
         ),
         transition: transform ? transition : undefined,
       }}
-      className={`group relative flex items-center ${
+      className={`group flex items-center gap-1.5 rounded-md cursor-pointer text-sm pl-5 py-1 ${
         isDragging ? "opacity-50 z-50" : ""
+      } ${
+        selected
+          ? "bg-surface-raised text-primary font-medium"
+          : "text-on-surface-muted hover:bg-surface-raised hover:text-on-surface"
       }`}
+      onClick={onSelect}
     >
-      <button
-        type="button"
-        className={`w-full text-left text-sm truncate pl-5 pr-1 py-1 rounded-md ${
-          cat.selected
-            ? "bg-surface-raised text-primary font-medium"
-            : "text-on-surface-muted group-hover:bg-surface-raised group-hover:text-on-surface"
-        }`}
-        onClick={onSelect}
-      >
-        {cat.name || <em className="opacity-50">Unnamed</em>}
-      </button>
+      <span className="truncate flex-1 min-w-0">
+        {category.name || <em className="opacity-50">Unnamed</em>}
+      </span>
+      <span className="shrink-0 text-[10px] font-medium px-1 rounded leading-4">
+        {category.questions.length}
+      </span>
       {!readOnly && (
-        <div className="absolute right-0 flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:group-hover:bg-surface-raised transition-opacity shrink-0 rounded-sm">
+        <div className="flex items-center gap-0.5 shrink-0 overflow-hidden transition-[max-width] duration-150 can-hover:max-w-0 group-hover:max-w-20">
           <button
             type="button"
             title="Duplicate category"
@@ -74,7 +76,6 @@ export default function SortableCategory({
             className={`${iconBtnCls} cursor-grab active:cursor-grabbing touch-none`}
             {...attributes}
             {...listeners}
-            onClick={(e) => e.stopPropagation()}
           >
             <RiDraggable size={11} />
           </button>

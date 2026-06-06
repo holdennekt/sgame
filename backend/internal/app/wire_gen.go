@@ -39,8 +39,12 @@ func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage2 storage.Stor
 	userService := service.NewUserService(user, session)
 	userController := http.NewUserController(userService)
 	pack := mongo2.NewPackRepository(mdb)
-	packService := service.NewPackService(pack, storage2)
+	attachmentService := service.NewAttachmentService(storage2)
+	packService := service.NewPackService(pack, storage2, attachmentService)
 	packController := http.NewPackController(packService)
+	packDraft := mongo2.NewPackDraftRepository(mdb)
+	packDraftService := service.NewPackDraftService(packDraft, pack, storage2, attachmentService, packService)
+	packDraftController := http.NewPackDraftController(packDraftService)
 	repositoryRoom := mongo2.NewRoomRepository(mdb)
 	pubSubChannelGetter := providePubSubChannelGetter(rds)
 	streamsChannelGetter := provideStreamsChannelGetter(rds)
@@ -52,13 +56,13 @@ func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage2 storage.Stor
 	lobbyHandler := provideLobbyHandler(pubSubChannelGetter, lobbyEventsProcessorGetter)
 	roomEventsProcessorGetter := provideRoomEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter)
 	roomHandler := provideRoomHandler(roomService, roomEventsProcessorGetter, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter)
-	appApp := NewApp(room, authController, userController, packController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter)
+	appApp := NewApp(room, authController, userController, packController, packDraftController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter)
 	return appApp
 }
 
 // wire.go:
 
-var RepoSet = wire.NewSet(mongo2.NewUserRepository, mongo2.NewRoomRepository, mongo2.NewPackRepository)
+var RepoSet = wire.NewSet(mongo2.NewUserRepository, mongo2.NewRoomRepository, mongo2.NewPackRepository, mongo2.NewPackDraftRepository)
 
 var CacheSet = wire.NewSet(redis2.NewSessionCache, redis2.NewRoomCache)
 
@@ -102,9 +106,9 @@ func provideRoomService(packRepository repository.Pack, roomRepository repositor
 	return service.NewRoomService(packRepository, roomRepository, roomCache, pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, persistentStreamsGetter.ServerChannelGetter, roomInternalEventsProcessorGetter)
 }
 
-var ServiceSet = wire.NewSet(service.NewAuthService, service.NewUserService, provideRoomService, service.NewPackService)
+var ServiceSet = wire.NewSet(service.NewAuthService, service.NewUserService, provideRoomService, service.NewAttachmentService, service.NewPackService, service.NewPackDraftService)
 
-var ControllerSet = wire.NewSet(http.NewAuthController, http.NewUserController, http.NewPackController, http.NewRoomController)
+var ControllerSet = wire.NewSet(http.NewAuthController, http.NewUserController, http.NewPackController, http.NewPackDraftController, http.NewRoomController)
 
 func provideLobbyHandler(pubsubGetter PubSubChannelGetter, lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter) *ws.LobbyHandler {
 	return ws.NewLobbyHandler(pubsubGetter.ServerChannelGetter, lobbyEventsProcessorGetter)

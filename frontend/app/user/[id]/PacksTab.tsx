@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useDebouncedCallback } from "use-debounce";
 import { IoIosSearch, IoIosAdd } from "react-icons/io";
-import { getPacksCreatedBy, deletePack } from "@/app/actions";
+import { getPacksCreatedBy, deletePack, createDraft } from "@/app/api";
 import { isError } from "@/middleware";
 import { toast } from "react-toastify";
 import { HiddenPack, PackPreview } from "@/types/pack";
@@ -35,15 +35,8 @@ export default function PacksTab({
     refetch,
   } = useInfiniteQuery<SearchResponse<HiddenPack>>({
     queryKey: ["packs", userId, debouncedFilter],
-    queryFn: async ({ pageParam }) => {
-      const result = await getPacksCreatedBy(
-        userId,
-        debouncedFilter,
-        pageParam as number
-      );
-      if (isError(result)) throw new Error(result.error);
-      return result;
-    },
+    queryFn: ({ pageParam }) =>
+      getPacksCreatedBy(userId, debouncedFilter, pageParam as number),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.hasNext ? lastPage.page + 1 : undefined,
@@ -73,12 +66,14 @@ export default function PacksTab({
 
   const handleDelete = async (packId: string) => {
     if (!confirm("Delete this pack?")) return;
-    const result = await deletePack(packId);
-    if (isError(result)) {
-      toast.error(result.error, { containerId: "profile" });
-      return;
+    try {
+      await deletePack(packId);
+      refetch();
+    } catch (e) {
+      toast.error(isError(e) ? e.error : "Delete failed", {
+        containerId: "profile",
+      });
     }
-    refetch();
   };
 
   return (
@@ -100,7 +95,14 @@ export default function PacksTab({
         </div>
         {isOwn && (
           <button
-            onClick={() => router.push("/packs/new")}
+            onClick={async () => {
+              try {
+                const { id } = await createDraft();
+                router.push(`/packs/drafts/${id}`);
+              } catch {
+                // silently ignore
+              }
+            }}
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150 shrink-0"
           >
             <IoIosAdd size={16} />
