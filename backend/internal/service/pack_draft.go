@@ -110,6 +110,38 @@ func (s *PackDraftService) GetById(ctx context.Context, userId, id string) (*dom
 	return draft, nil
 }
 
+func populateAttachmentURLs(ctx context.Context, stor storage.Storage, draft *domain.PackDraft) {
+	setURL := func(a *domain.Attachment) {
+		if a == nil {
+			return
+		}
+		u, err := stor.URL(ctx, a.Key, GET_URL_TTL)
+		if err != nil {
+			log.Printf("failed to get URL for attachment %s: %v", a.Key, err)
+			return
+		}
+		a.URL = u
+	}
+	for ri := range draft.Rounds {
+		for ci := range draft.Rounds[ri].Categories {
+			for qi := range draft.Rounds[ri].Categories[ci].Questions {
+				q := &draft.Rounds[ri].Categories[ci].Questions[qi]
+				setURL(q.Attachment)
+				if q.Comment != nil {
+					setURL(q.Comment.Attachment)
+				}
+			}
+		}
+	}
+	for ci := range draft.FinalRound.Categories {
+		q := &draft.FinalRound.Categories[ci].Question
+		setURL(q.Attachment)
+		if q.Comment != nil {
+			setURL(q.Comment.Attachment)
+		}
+	}
+}
+
 func (s *PackDraftService) GetByUser(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackDraft, int, error) {
 	return s.packDraftRepo.GetByUser(ctx, userId, search)
 }
@@ -200,24 +232,6 @@ func (s *PackDraftService) Delete(ctx context.Context, userId, id string) error 
 	return nil
 }
 
-func (s *PackDraftService) Import(ctx context.Context, user domain.User, r io.ReaderAt, size int64) (string, error) {
-	if user.IsGuest {
-		return "", custerr.NewForbiddenErr("guest users cannot import packs")
-	}
-
-	draft, err := s.parseSIQ(ctx, r, size)
-	if err != nil {
-		return "", err
-	}
-	draft.CreatedBy = user
-
-	now := time.Now()
-	draft.CreatedAt = now
-	draft.UpdatedAt = now
-
-	return s.packDraftRepo.Create(ctx, draft)
-}
-
 func (s *PackDraftService) Publish(ctx context.Context, user domain.User, id string) (string, error) {
 	draft, err := s.packDraftRepo.GetById(ctx, id)
 	if err != nil {
@@ -230,6 +244,13 @@ func (s *PackDraftService) Publish(ctx context.Context, user domain.User, id str
 	createPackRequest := draftToCreatePackRequest(draft)
 
 	if err := s.validator.Struct(createPackRequest); err != nil {
+		return "", err
+	}
+
+	if err := s.promoteAttachments(ctx, draft); err != nil {
+		return "", err
+	}
+	if err := s.packDraftRepo.Update(ctx, draft); err != nil {
 		return "", err
 	}
 
@@ -252,6 +273,81 @@ func (s *PackDraftService) Publish(ctx context.Context, user domain.User, id str
 		log.Printf("publish: failed to delete draft %s: %v", id, err)
 	}
 	return packId, nil
+}
+
+func (s *PackDraftService) promoteAttachments(ctx context.Context, draft *domain.PackDraft) error {
+	targetType := draft.Type
+
+	var atts []*domain.Attachment
+	for ri := range draft.Rounds {
+		for ci := range draft.Rounds[ri].Categories {
+			for qi := range draft.Rounds[ri].Categories[ci].Questions {
+				q := &draft.Rounds[ri].Categories[ci].Questions[qi]
+				if q.Attachment != nil {
+					atts = append(atts, q.Attachment)
+				}
+				if q.Comment != nil && q.Comment.Attachment != nil {
+					atts = append(atts, q.Comment.Attachment)
+				}
+			}
+		}
+	}
+	for ci := range draft.FinalRound.Categories {
+		q := &draft.FinalRound.Categories[ci].Question
+		if q.Attachment != nil {
+			atts = append(atts, q.Attachment)
+		}
+		if q.Comment != nil && q.Comment.Attachment != nil {
+			atts = append(atts, q.Comment.Attachment)
+		}
+	}
+
+	if len(atts) == 0 {
+		return nil
+	}
+
+	type result struct {
+		att    *domain.Attachment
+		newKey string
+		err    error
+	}
+
+	jobs := make(chan *domain.Attachment)
+	results := make(chan result)
+
+	for range min(8, len(atts)) {
+		go func() {
+			for att := range jobs {
+				slashIdx := strings.Index(att.Key, "/")
+				newKey := string(targetType) + att.Key[slashIdx:]
+				if att.Key == newKey {
+					results <- result{att: att, newKey: newKey}
+					continue
+				}
+				results <- result{att: att, newKey: newKey, err: s.storage.Move(ctx, att.Key, newKey)}
+			}
+		}()
+	}
+
+	go func() {
+		for _, att := range atts {
+			jobs <- att
+		}
+		close(jobs)
+	}()
+
+	var firstErr error
+	for range atts {
+		r := <-results
+		if r.err != nil {
+			if firstErr == nil {
+				firstErr = r.err
+			}
+		} else {
+			r.att.Key = r.newKey
+		}
+	}
+	return firstErr
 }
 
 func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, oldDraft *domain.PackDraft, req dto.UpdatePackDraftRequest) (*domain.PackDraft, error) {
@@ -285,7 +381,7 @@ func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, o
 				}
 
 				if q.Attachment != nil {
-					attachment, err := s.attachmentService.upsertDomain(ctx, oldDraft.GetAttachment(q.Attachment.Key), *q.Attachment, req.Type)
+					attachment, err := s.attachmentService.upsertDomainDraft(ctx, oldDraft.GetAttachment(q.Attachment.Key), *q.Attachment)
 					if err != nil {
 						return nil, err
 					}
@@ -297,7 +393,7 @@ func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, o
 						Text: q.Comment.Text,
 					}
 					if q.Comment.Attachment != nil {
-						attachment, err := s.attachmentService.upsertDomain(ctx, oldDraft.GetAttachment(q.Comment.Attachment.Key), *q.Comment.Attachment, req.Type)
+						attachment, err := s.attachmentService.upsertDomainDraft(ctx, oldDraft.GetAttachment(q.Comment.Attachment.Key), *q.Comment.Attachment)
 						if err != nil {
 							return nil, err
 						}
@@ -330,7 +426,7 @@ func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, o
 		}
 
 		if c.Question.Attachment != nil {
-			attachment, err := s.attachmentService.upsertDomain(ctx, oldDraft.GetAttachment(c.Question.Attachment.Key), *c.Question.Attachment, req.Type)
+			attachment, err := s.attachmentService.upsertDomainDraft(ctx, oldDraft.GetAttachment(c.Question.Attachment.Key), *c.Question.Attachment)
 			if err != nil {
 				return nil, err
 			}
@@ -342,7 +438,7 @@ func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, o
 				Text: c.Question.Comment.Text,
 			}
 			if c.Question.Comment.Attachment != nil {
-				attachment, err := s.attachmentService.upsertDomain(ctx, oldDraft.GetAttachment(c.Question.Comment.Attachment.Key), *c.Question.Comment.Attachment, req.Type)
+				attachment, err := s.attachmentService.upsertDomainDraft(ctx, oldDraft.GetAttachment(c.Question.Comment.Attachment.Key), *c.Question.Comment.Attachment)
 				if err != nil {
 					return nil, err
 				}
@@ -365,38 +461,6 @@ func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, o
 		CreatedAt:    oldDraft.CreatedAt,
 		UpdatedAt:    time.Now(),
 	}, nil
-}
-
-func populateAttachmentURLs(ctx context.Context, stor storage.Storage, draft *domain.PackDraft) {
-	getURL := func(a *domain.Attachment) {
-		if a == nil {
-			return
-		}
-		u, err := stor.URL(ctx, a.Key, GET_URL_TTL)
-		if err != nil {
-			log.Printf("failed to get URL for attachment %s: %v", a.Key, err)
-			return
-		}
-		a.URL = u
-	}
-	for ri := range draft.Rounds {
-		for ci := range draft.Rounds[ri].Categories {
-			for qi := range draft.Rounds[ri].Categories[ci].Questions {
-				q := &draft.Rounds[ri].Categories[ci].Questions[qi]
-				getURL(q.Attachment)
-				if q.Comment != nil {
-					getURL(q.Comment.Attachment)
-				}
-			}
-		}
-	}
-	for ci := range draft.FinalRound.Categories {
-		q := &draft.FinalRound.Categories[ci].Question
-		getURL(q.Attachment)
-		if q.Comment != nil {
-			getURL(q.Comment.Attachment)
-		}
-	}
 }
 
 func draftToCreatePackRequest(draft *domain.PackDraft) dto.CreatePackRequest {
@@ -454,4 +518,22 @@ func commentToDTO(c *domain.Comment) *dto.CreateCommentRequest {
 		return nil
 	}
 	return &dto.CreateCommentRequest{Text: c.Text, Attachment: attToDTO(c.Attachment)}
+}
+
+func (s *PackDraftService) Import(ctx context.Context, user domain.User, r io.ReaderAt, size int64) (string, error) {
+	if user.IsGuest {
+		return "", custerr.NewForbiddenErr("guest users cannot import packs")
+	}
+
+	draft, err := s.parseSIQ(ctx, r, size)
+	if err != nil {
+		return "", err
+	}
+	draft.CreatedBy = user
+
+	now := time.Now()
+	draft.CreatedAt = now
+	draft.UpdatedAt = now
+
+	return s.packDraftRepo.Create(ctx, draft)
 }

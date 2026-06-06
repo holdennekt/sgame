@@ -41,6 +41,21 @@ func (s *AttachmentService) createDomain(ctx context.Context, req dto.CreateAtta
 	return s.probe(ctx, key)
 }
 
+func (s *AttachmentService) upsertDomainDraft(ctx context.Context, oldAttachment *domain.Attachment, req dto.CreateAttachmentRequest) (*domain.Attachment, error) {
+	var attachment *domain.Attachment
+
+	if oldAttachment != nil {
+		attachment = oldAttachment
+	} else {
+		var err error
+		attachment, err = s.createDomain(ctx, req, domain.Private)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return attachment, nil
+}
+
 func (s *AttachmentService) upsertDomain(ctx context.Context, oldAttachment *domain.Attachment, req dto.CreateAttachmentRequest, privacyType domain.PrivacyType) (*domain.Attachment, error) {
 	var attachment *domain.Attachment
 
@@ -56,11 +71,7 @@ func (s *AttachmentService) upsertDomain(ctx context.Context, oldAttachment *dom
 		attachment.Key = newKey
 	} else {
 		var err error
-		attachment, err = s.createDomain(
-			ctx,
-			req,
-			privacyType,
-		)
+		attachment, err = s.createDomain(ctx, req, privacyType)
 		if err != nil {
 			return nil, err
 		}

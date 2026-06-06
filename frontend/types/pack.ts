@@ -361,7 +361,7 @@ export async function convertPackFormDataToRequest(
     | { error: string }
   >
 ): Promise<CreatePackRequest> {
-  const isPublic = formData.type === "public";
+  const isPublic = false;
 
   const rounds = await Promise.all(
     formData.rounds.map(async (round) => ({
