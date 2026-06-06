@@ -61,19 +61,15 @@ type userDoc struct {
 	Avatar *string `bson:"avatar"`
 }
 
-func collectPackKeys(ctx context.Context, db *mongo.Database) (map[string]struct{}, error) {
-	projection := bson.M{
-		"rounds.categories.questions.attachment.key":            1,
-		"rounds.categories.questions.comment.attachment.key":    1,
-		"finalRound.categories.question.attachment.key":         1,
-		"finalRound.categories.question.comment.attachment.key": 1,
-	}
-	cur, err := db.Collection("packs").Find(ctx, bson.M{}, options.Find().SetProjection(projection))
-	if err != nil {
-		return nil, err
-	}
-	defer cur.Close(ctx)
+var packAttachmentProjection = bson.M{
+	"rounds.categories.questions.attachment.key":            1,
+	"rounds.categories.questions.comment.attachment.key":    1,
+	"finalRound.categories.question.attachment.key":         1,
+	"finalRound.categories.question.comment.attachment.key": 1,
+}
 
+func collectKeysFromPackDocs(ctx context.Context, cur *mongo.Cursor) (map[string]struct{}, error) {
+	defer cur.Close(ctx)
 	keys := make(map[string]struct{})
 	for cur.Next(ctx) {
 		var pack packDoc
@@ -102,6 +98,22 @@ func collectPackKeys(ctx context.Context, db *mongo.Database) (map[string]struct
 		}
 	}
 	return keys, cur.Err()
+}
+
+func collectPackKeys(ctx context.Context, db *mongo.Database) (map[string]struct{}, error) {
+	cur, err := db.Collection("packs").Find(ctx, bson.M{}, options.Find().SetProjection(packAttachmentProjection))
+	if err != nil {
+		return nil, err
+	}
+	return collectKeysFromPackDocs(ctx, cur)
+}
+
+func collectPackDraftKeys(ctx context.Context, db *mongo.Database) (map[string]struct{}, error) {
+	cur, err := db.Collection("pack_drafts").Find(ctx, bson.M{}, options.Find().SetProjection(packAttachmentProjection))
+	if err != nil {
+		return nil, err
+	}
+	return collectKeysFromPackDocs(ctx, cur)
 }
 
 func collectAvatarKeys(ctx context.Context, db *mongo.Database) (map[string]struct{}, error) {
@@ -171,14 +183,23 @@ func main() {
 	}
 	log.Printf("Pack attachment keys: %d", len(packKeys))
 
+	packDraftKeys, err := collectPackDraftKeys(ctx, db)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Pack draft attachment keys: %d", len(packDraftKeys))
+
 	avatarKeys, err := collectAvatarKeys(ctx, db)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("Avatar keys: %d", len(avatarKeys))
 
-	referenced := make(map[string]struct{}, len(packKeys)+len(avatarKeys))
+	referenced := make(map[string]struct{}, len(packKeys)+len(packDraftKeys)+len(avatarKeys))
 	for k := range packKeys {
+		referenced[k] = struct{}{}
+	}
+	for k := range packDraftKeys {
 		referenced[k] = struct{}{}
 	}
 	for k := range avatarKeys {
