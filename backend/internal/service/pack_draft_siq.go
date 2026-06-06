@@ -387,19 +387,12 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 				qText, qMedia := extractContent(findParam(params, "question"))
 				aText, aMedia := extractContent(findParam(params, "answer"))
 
-				price := q.Price
-				if q.Type == "secret" {
-					if pp := findParam(params, "price"); pp != nil && pp.NumberSet != nil {
-						price = pp.NumberSet.Minimum
-					}
-				}
-
 				questions = append(questions, domain.Question{
 					HiddenQuestion: domain.HiddenQuestion{
 						Round:    r.Name,
 						Category: theme.Name,
 						Index:    i,
-						Value:    price,
+						Value:    q.Price,
 					},
 					Type:       siqTypeToQuestionType(q.Type),
 					Text:       strPtr(qText),
