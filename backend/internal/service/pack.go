@@ -84,43 +84,64 @@ func (s *PackService) CreateFromDraft(ctx context.Context, user domain.User, dra
 	})
 }
 
-func (s *PackService) GetById(ctx context.Context, userId, id string) (*domain.Pack, error) {
+func (s *PackService) GetById(ctx context.Context, userId, id string) (any, error) {
 	pack, err := s.packRepository.GetById(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	if pack.Type != "public" && userId != pack.CreatedBy.Id && userId != domain.SYSTEM {
-		return nil, custerr.NewForbiddenErr("can not get private pack")
+
+	if userId != pack.CreatedBy.Id && userId != domain.SYSTEM {
+		if pack.Type != domain.Public {
+			return nil, custerr.NewForbiddenErr("can not get private pack")
+		}
+		return domain.NewHiddenPack(*pack), nil
 	}
 
-	for ri, round := range pack.Rounds {
-		for ci, category := range round.Categories {
-			for qi := range category.Questions {
-				att := pack.Rounds[ri].Categories[ci].Questions[qi].Attachment
-				if att == nil {
-					continue
+	if err := populatePackAttachmentURLs(ctx, s.storage, pack); err != nil {
+		return nil, err
+	}
+	return pack, nil
+}
+
+func populatePackAttachmentURLs(ctx context.Context, stor storage.Storage, pack *domain.Pack) error {
+	setURL := func(a *domain.Attachment) error {
+		if a == nil {
+			return nil
+		}
+		u, err := stor.URL(ctx, a.Key, GET_URL_TTL)
+		if err != nil {
+			return err
+		}
+		a.URL = u
+		return nil
+	}
+	for ri := range pack.Rounds {
+		for ci := range pack.Rounds[ri].Categories {
+			for qi := range pack.Rounds[ri].Categories[ci].Questions {
+				q := &pack.Rounds[ri].Categories[ci].Questions[qi]
+				if err := setURL(q.Attachment); err != nil {
+					return err
 				}
-				u, err := s.storage.URL(ctx, att.Key, GET_URL_TTL)
-				if err != nil {
-					return nil, err
+				if q.Comment != nil {
+					if err := setURL(q.Comment.Attachment); err != nil {
+						return err
+					}
 				}
-				pack.Rounds[ri].Categories[ci].Questions[qi].Attachment.URL = u
 			}
 		}
 	}
 	for ci := range pack.FinalRound.Categories {
-		att := pack.FinalRound.Categories[ci].Question.Attachment
-		if att == nil {
-			continue
+		q := &pack.FinalRound.Categories[ci].Question
+		if err := setURL(q.Attachment); err != nil {
+			return err
 		}
-		u, err := s.storage.URL(ctx, att.Key, GET_URL_TTL)
-		if err != nil {
-			return nil, err
+		if q.Comment != nil {
+			if err := setURL(q.Comment.Attachment); err != nil {
+				return err
+			}
 		}
-		pack.FinalRound.Categories[ci].Question.Attachment.URL = u
 	}
-
-	return pack, nil
+	return nil
 }
 
 func (s *PackService) GetPreviews(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackPreview, int, error) {

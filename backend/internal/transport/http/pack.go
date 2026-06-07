@@ -77,13 +77,13 @@ func (c *PackController) getById(ctx *gin.Context) {
 	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 	id := ctx.Param("id")
 
-	pack, err := c.packService.GetById(ctx, userId, id)
+	result, err := c.packService.GetById(ctx, userId, id)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, pack)
+	ctx.JSON(http.StatusOK, result)
 }
 
 // @Summary      Get pack previews

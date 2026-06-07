@@ -242,9 +242,10 @@ export interface HiddenPack {
   type: PrivacyType;
   rounds: HiddenRound[];
   finalRound: HiddenFinalRound;
-  createdAt: string;
-  updatedAt: string;
 }
+
+export const isHiddenPack = (pack: Pack | HiddenPack): pack is HiddenPack =>
+  !("createdAt" in pack);
 
 export interface HiddenRound {
   name: string;

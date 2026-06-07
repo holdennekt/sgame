@@ -78,11 +78,6 @@ function PackCard({
                 {pack.createdBy.name}
               </Link>
             )}
-            {pack.createdAt && (
-              <span className="ml-2">
-                · {new Date(pack.createdAt).toLocaleDateString()}
-              </span>
-            )}
           </p>
         </div>
 

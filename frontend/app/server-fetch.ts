@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { Pack } from "@/types/pack";
+import { HiddenPack, Pack } from "@/types/pack";
 import { PackDraft } from "@/types/pack_draft";
 import { Room, RoomLobby } from "@/types/room";
 import { User } from "@/middleware";
@@ -29,11 +29,14 @@ export const getUser = async (id: string): Promise<User> => {
   return resp.json();
 };
 
-export const getPack = async (id: string): Promise<Pack> => {
+export const getPack = async (
+  id: string
+): Promise<Pack | HiddenPack | null> => {
   const resp = await fetch(backendUrl(`/api/packs/${id}`), {
     cache: "no-store",
     headers: cookieHeader(),
   });
+  if (resp.status === 403) return null;
   if (!resp.ok) throw await resp.json();
   return resp.json();
 };
