@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	gcsstorage "cloud.google.com/go/storage"
 	"github.com/holdennekt/sgame/backend/pkg/envvar"
@@ -116,7 +117,7 @@ func collectPackDraftKeys(ctx context.Context, db *mongo.Database) (map[string]s
 	return collectKeysFromPackDocs(ctx, cur)
 }
 
-func collectAvatarKeys(ctx context.Context, db *mongo.Database) (map[string]struct{}, error) {
+func collectAvatarKeys(ctx context.Context, db *mongo.Database, publicURLPrefix string) (map[string]struct{}, error) {
 	cur, err := db.Collection("users").Find(
 		ctx,
 		bson.M{"avatar": bson.M{"$ne": nil}},
@@ -133,9 +134,10 @@ func collectAvatarKeys(ctx context.Context, db *mongo.Database) (map[string]stru
 		if err := cur.Decode(&user); err != nil {
 			return nil, err
 		}
-		if user.Avatar != nil && *user.Avatar != "" {
-			keys[*user.Avatar] = struct{}{}
+		if user.Avatar == nil || *user.Avatar == "" {
+			continue
 		}
+		keys[strings.TrimPrefix(*user.Avatar, publicURLPrefix)] = struct{}{}
 	}
 	return keys, cur.Err()
 }
@@ -175,6 +177,16 @@ func main() {
 	defer mongoConn.Disconnect(ctx)
 	db := mongoConn.Database(envvar.GetEnvVar("MONGO_NAME"))
 
+	bucketName := envvar.GetEnvVar("BUCKET_NAME")
+	provider := os.Getenv("STORAGE_PROVIDER")
+
+	var avatarURLPrefix string
+	if provider == "gcs" {
+		avatarURLPrefix = fmt.Sprintf("https://storage.googleapis.com/%s/", bucketName)
+	} else {
+		avatarURLPrefix = fmt.Sprintf("%s/storage/%s/", envvar.GetEnvVar("FRONTEND_URL"), bucketName)
+	}
+
 	log.Println("Collecting referenced keys from MongoDB...")
 
 	packKeys, err := collectPackKeys(ctx, db)
@@ -189,7 +201,7 @@ func main() {
 	}
 	log.Printf("Pack draft attachment keys: %d", len(packDraftKeys))
 
-	avatarKeys, err := collectAvatarKeys(ctx, db)
+	avatarKeys, err := collectAvatarKeys(ctx, db, avatarURLPrefix)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -206,9 +218,6 @@ func main() {
 		referenced[k] = struct{}{}
 	}
 	log.Printf("Total referenced keys: %d", len(referenced))
-
-	bucketName := envvar.GetEnvVar("BUCKET_NAME")
-	provider := os.Getenv("STORAGE_PROVIDER")
 
 	var totalObjects, orphaned int
 	var totalSize, orphanedSize int64
