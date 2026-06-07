@@ -2,6 +2,7 @@ package gcs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	gcsstorage "cloud.google.com/go/storage"
+	"google.golang.org/api/googleapi"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
@@ -103,6 +105,20 @@ func (s *GCSStorage) Move(ctx context.Context, oldKey, newKey string) error {
 	dst := s.client.Bucket(s.bucketName).Object(newKey)
 	if _, err := dst.CopierFrom(src).Run(ctx); err != nil {
 		return custerr.NewInternalErr(fmt.Errorf("failed to copy file during move: %w", err))
+	}
+	if strings.HasPrefix(newKey, "public/") {
+		if err := dst.ACL().Set(ctx, gcsstorage.AllUsers, gcsstorage.RoleReader); err != nil {
+			_ = dst.Delete(ctx)
+			return custerr.NewInternalErr(fmt.Errorf("failed to set public ACL on moved file: %w", err))
+		}
+	} else {
+		if err := dst.ACL().Delete(ctx, gcsstorage.AllUsers); err != nil {
+			var gerr *googleapi.Error
+			if !errors.As(err, &gerr) || gerr.Code != http.StatusNotFound {
+				_ = dst.Delete(ctx)
+				return custerr.NewInternalErr(fmt.Errorf("failed to remove public ACL on moved file: %w", err))
+			}
+		}
 	}
 	return s.Delete(ctx, oldKey)
 }
