@@ -3,6 +3,8 @@ import Navbar from "@/components/Navbar";
 import PackEditor from "../PackEditor";
 import { convertPackToFormData } from "@/types/pack";
 
+export const dynamic = "force-dynamic";
+
 export default async function Page({ params }: { params: { id: string } }) {
   const pack = await getPack(params.id);
 

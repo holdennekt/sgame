@@ -299,7 +299,6 @@ export default function PackEditor({
       setPublishErrors([]);
       queryClient.invalidateQueries({ queryKey: ["packs"] });
       queryClient.invalidateQueries({ queryKey: ["drafts"] });
-      router.refresh();
       router.push(`/packs/${id}`);
     } catch (e) {
       if (isValidationErrors(e)) {
