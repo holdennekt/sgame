@@ -17,12 +17,12 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	_ "github.com/holdennekt/sgame/backend/docs"
+	"github.com/holdennekt/sgame/backend/internal/config"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor"
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
 	myHttp "github.com/holdennekt/sgame/backend/internal/transport/http"
 	myWs "github.com/holdennekt/sgame/backend/internal/transport/ws"
 	"github.com/holdennekt/sgame/backend/pkg/custvalid"
-	"github.com/holdennekt/sgame/backend/pkg/envvar"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -41,6 +41,7 @@ func init() {
 }
 
 type app struct {
+	cfg                               *config.Config
 	roomCache                         cache.Room
 	authController                    *myHttp.AuthController
 	userController                    *myHttp.UserController
@@ -52,8 +53,8 @@ type app struct {
 	roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter
 }
 
-func NewApp(roomCache cache.Room, authController *myHttp.AuthController, userController *myHttp.UserController, packController *myHttp.PackController, packDraftController *myHttp.PackDraftController, roomController *myHttp.RoomController, lobbyHandler *myWs.LobbyHandler, roomHandler *myWs.RoomHandler, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *app {
-	return &app{roomCache, authController, userController, packController, packDraftController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter}
+func NewApp(cfg *config.Config, roomCache cache.Room, authController *myHttp.AuthController, userController *myHttp.UserController, packController *myHttp.PackController, packDraftController *myHttp.PackDraftController, roomController *myHttp.RoomController, lobbyHandler *myWs.LobbyHandler, roomHandler *myWs.RoomHandler, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *app {
+	return &app{cfg, roomCache, authController, userController, packController, packDraftController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter}
 }
 
 func (a *app) Run() {
@@ -92,10 +93,10 @@ func (a *app) Run() {
 	a.roomHandler.SetShutdownCtx(appCtx)
 
 	corsConfig := cors.DefaultConfig()
-	if os.Getenv("APP_ENV") == "development" {
+	if a.cfg.AppEnv == "development" {
 		corsConfig.AllowAllOrigins = true
 	} else {
-		corsConfig.AllowOrigins = []string{envvar.GetEnvVar("FRONTEND_URL")}
+		corsConfig.AllowOrigins = []string{a.cfg.FrontendURL}
 	}
 	corsConfig.AllowCredentials = true
 
@@ -124,7 +125,7 @@ func (a *app) Run() {
 	a.lobbyHandler.RegisterRoute(wsGroup)
 	a.roomHandler.RegisterRoute(wsGroup)
 
-	servAddres := envvar.GetEnvVar("HOST") + ":" + envvar.GetEnvVar("PORT")
+	servAddres := a.cfg.Host + ":" + a.cfg.Port
 
 	srv := &http.Server{
 		Addr:    servAddres,

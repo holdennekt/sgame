@@ -13,7 +13,6 @@ import (
 
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
-	"github.com/holdennekt/sgame/backend/pkg/envvar"
 	"github.com/minio/minio-go/v7"
 )
 
@@ -21,10 +20,11 @@ type MinioStorage struct {
 	client     *minio.Client
 	bucketName string
 	publicBase string
+	userAgent  string
 	httpClient *http.Client
 }
 
-func NewMinioStorage(client *minio.Client, bucketName, publicBase string) storage.Storage {
+func NewMinioStorage(client *minio.Client, bucketName, publicBase, userAgent string) storage.Storage {
 	exists, err := client.BucketExists(context.Background(), bucketName)
 	if err != nil {
 		slog.Error("fatal error", "err", err)
@@ -62,6 +62,7 @@ func NewMinioStorage(client *minio.Client, bucketName, publicBase string) storag
 		client:     client,
 		bucketName: bucketName,
 		publicBase: publicBase,
+		userAgent:  userAgent,
 		httpClient: &http.Client{
 			Timeout: 60 * time.Minute,
 		},
@@ -84,7 +85,7 @@ func (s *MinioStorage) UploadFromURL(ctx context.Context, uui storage.URLUploadI
 	if err != nil {
 		return custerr.NewInternalErr(fmt.Errorf("failed to upload file: %w", err))
 	}
-	req.Header.Set("User-Agent", envvar.GetEnvVar("USER_AGENT"))
+	req.Header.Set("User-Agent", s.userAgent)
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {

@@ -9,11 +9,11 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"github.com/holdennekt/sgame/backend/internal/app"
+	"github.com/holdennekt/sgame/backend/internal/config"
 	gcsStorage "github.com/holdennekt/sgame/backend/internal/infrastructure/storage/gcs"
 	minioStorage "github.com/holdennekt/sgame/backend/internal/infrastructure/storage/minio"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/pkg/custvalid"
-	"github.com/holdennekt/sgame/backend/pkg/envvar"
 	"github.com/joho/godotenv"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -41,7 +41,13 @@ func init() {
 func main() {
 	godotenv.Load()
 
-	if os.Getenv("APP_ENV") == "production" {
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("invalid configuration", "err", err)
+		os.Exit(1)
+	}
+
+	if cfg.AppEnv == "production" {
 		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	} else {
 		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
@@ -49,54 +55,54 @@ func main() {
 
 	mongoURI := fmt.Sprintf(
 		"mongodb://%s:%s@%s:%s/%s?authSource=admin",
-		envvar.GetEnvVar("MONGO_ROOT_USER"),
-		envvar.GetEnvVar("MONGO_ROOT_PASSWORD"),
-		envvar.GetEnvVar("MONGO_HOST"),
-		envvar.GetEnvVar("MONGO_PORT"),
-		envvar.GetEnvVar("MONGO_NAME"),
+		cfg.MongoUser,
+		cfg.MongoPassword,
+		cfg.MongoHost,
+		cfg.MongoPort,
+		cfg.MongoName,
 	)
 	opts := options.Client().ApplyURI(mongoURI)
 	conn, err := mongo.Connect(context.Background(), opts)
 	if err != nil {
-		slog.Error("fatal error", "err", err)
+		slog.Error("failed to connect to mongodb", "err", err)
 		os.Exit(1)
 	}
 	defer conn.Disconnect(context.Background())
 
-	mdb := conn.Database(envvar.GetEnvVar("MONGO_NAME"))
+	mdb := conn.Database(cfg.MongoName)
 
 	rds := redis.NewClient(&redis.Options{
-		Addr:     envvar.GetEnvVar("REDIS_HOST") + ":" + envvar.GetEnvVar("REDIS_PORT"),
-		Username: envvar.GetEnvVar("REDIS_USER"),
-		Password: envvar.GetEnvVar("REDIS_PASSWORD"),
-		DB:       envvar.GetEnvVarInt("REDIS_DB"),
+		Addr:     cfg.RedisHost + ":" + cfg.RedisPort,
+		Username: cfg.RedisUser,
+		Password: cfg.RedisPassword,
+		DB:       cfg.RedisDB,
 	})
 	defer rds.Close()
 
-	var storage storage.Storage
+	var store storage.Storage
 
-	if envvar.GetEnvVar("STORAGE_PROVIDER") == "gcs" {
-		storage, err = gcsStorage.NewGCSStorage(context.Background(), envvar.GetEnvVar("BUCKET_NAME"))
+	if cfg.StorageProvider == "gcs" {
+		store, err = gcsStorage.NewGCSStorage(context.Background(), cfg.BucketName)
 		if err != nil {
-			slog.Error("fatal error", "err", err)
+			slog.Error("failed to initialize gcs storage", "err", err)
 			os.Exit(1)
 		}
 	} else {
-		mio, err := minio.New(envvar.GetEnvVar("MINIO_ENDPOINT"), &minio.Options{
+		mio, err := minio.New(cfg.MinioEndpoint, &minio.Options{
 			Creds: credentials.NewStaticV4(
-				envvar.GetEnvVar("MINIO_ROOT_USER"),
-				envvar.GetEnvVar("MINIO_ROOT_PASSWORD"),
+				cfg.MinioUser,
+				cfg.MinioPassword,
 				"",
 			),
-			Secure: envvar.GetEnvVarBool("MINIO_USE_SSL"),
+			Secure: cfg.MinioUseSSL,
 		})
 		if err != nil {
-			slog.Error("fatal error", "err", err)
+			slog.Error("failed to initialize minio client", "err", err)
 			os.Exit(1)
 		}
-		storage = minioStorage.NewMinioStorage(mio, envvar.GetEnvVar("BUCKET_NAME"), envvar.GetEnvVar("FRONTEND_URL"))
+		store = minioStorage.NewMinioStorage(mio, cfg.BucketName, cfg.FrontendURL, cfg.UserAgent)
 	}
 
-	app := app.InitializeApp(mdb, rds, storage)
+	app := app.InitializeApp(mdb, rds, store, cfg)
 	app.Run()
 }

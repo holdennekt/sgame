@@ -8,6 +8,7 @@ package app
 
 import (
 	"github.com/google/wire"
+	"github.com/holdennekt/sgame/backend/internal/config"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor"
 	redis2 "github.com/holdennekt/sgame/backend/internal/infrastructure/cache/redis"
 	mongo2 "github.com/holdennekt/sgame/backend/internal/infrastructure/database/mongo"
@@ -30,7 +31,7 @@ import (
 
 // Injectors from wire.go:
 
-func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage2 storage.Storage) *app {
+func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage2 storage.Storage, cfg *config.Config) *app {
 	room := redis2.NewRoomCache(rds)
 	session := redis2.NewSessionCache(rds)
 	user := mongo2.NewUserRepository(mdb)
@@ -56,7 +57,7 @@ func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage2 storage.Stor
 	lobbyHandler := provideLobbyHandler(pubSubChannelGetter, lobbyEventsProcessorGetter)
 	roomEventsProcessorGetter := provideRoomEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter)
 	roomHandler := provideRoomHandler(roomService, roomEventsProcessorGetter, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter)
-	appApp := NewApp(room, authController, userController, packController, packDraftController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter)
+	appApp := NewApp(cfg, room, authController, userController, packController, packDraftController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter)
 	return appApp
 }
 

@@ -5,6 +5,7 @@ package app
 
 import (
 	"github.com/google/wire"
+	"github.com/holdennekt/sgame/backend/internal/config"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor"
 	redisCache "github.com/holdennekt/sgame/backend/internal/infrastructure/cache/redis"
 	mongoDatabase "github.com/holdennekt/sgame/backend/internal/infrastructure/database/mongo"
@@ -103,7 +104,7 @@ var HandlerSet = wire.NewSet(
 	provideRoomHandler,
 )
 
-func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage storage.Storage) *app {
+func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage storage.Storage, cfg *config.Config) *app {
 	wire.Build(
 		RepoSet,
 		CacheSet,
