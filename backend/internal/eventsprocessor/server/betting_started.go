@@ -36,7 +36,7 @@ func HandleBettingStartedMessage(ctx context.Context, server realtime.Channel, i
 		defer cancel()
 
 		newerRoom, err := roomCache.SafeUpdate(ctx, roomId, func(newRoom *domain.Room) error {
-			if newRoom.State != domain.Betting || !bsp.Question.IsCurrent(newRoom) {
+			if newRoom.State != domain.Betting || !bsp.IsCurrent(newRoom) {
 				return ErrDeferredFunctionCancelled
 			}
 			deadlineChanged := newRoom.CurrentQuestion != nil &&

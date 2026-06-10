@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
@@ -65,7 +66,9 @@ func (s *UserService) Update(ctx context.Context, user *domain.DbUser) error {
 		return err
 	}
 	if sessionId, err := s.sessionCache.GetKey(ctx, user.Id); err == nil {
-		s.sessionCache.Set(ctx, sessionId, &user.User)
+		if err := s.sessionCache.Set(ctx, sessionId, &user.User); err != nil {
+			slog.Warn("failed to update session cache", "err", err)
+		}
 	}
 	return nil
 }
@@ -75,7 +78,9 @@ func (s *UserService) Delete(ctx context.Context, id string) error {
 		return err
 	}
 	if sessionId, err := s.sessionCache.GetKey(ctx, id); err == nil {
-		s.sessionCache.Delete(ctx, sessionId)
+		if err := s.sessionCache.Delete(ctx, sessionId); err != nil {
+			slog.Warn("failed to delete session from cache", "err", err)
+		}
 	}
 	return nil
 }

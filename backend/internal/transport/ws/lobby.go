@@ -52,7 +52,7 @@ func (h *LobbyHandler) connect(ctx *gin.Context) {
 		// CompressionMode:    websocket.CompressionContextTakeover,
 	})
 	if err != nil {
-		ctx.Error(custerr.NewInternalErr(err))
+		_ = ctx.Error(custerr.NewInternalErr(err))
 		return
 	}
 

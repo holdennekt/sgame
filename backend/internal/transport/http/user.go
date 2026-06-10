@@ -56,13 +56,13 @@ func (c *UserController) getFromSession(ctx *gin.Context) {
 func (c *UserController) create(ctx *gin.Context) {
 	var user domain.DbUser
 	if err := ctx.ShouldBindJSON(&user); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
 	id, err := c.userService.Create(ctx, &user)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -84,7 +84,7 @@ func (c *UserController) getById(ctx *gin.Context) {
 
 	user, err := c.userService.GetById(ctx, id)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -108,13 +108,13 @@ func (c *UserController) update(ctx *gin.Context) {
 	requesterId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 	id := ctx.Param("id")
 	if requesterId != id {
-		ctx.Error(custerr.NewForbiddenErr("not allowed to update other users"))
+		_ = ctx.Error(custerr.NewForbiddenErr("not allowed to update other users"))
 		return
 	}
 
 	var req dto.UpdateUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -123,7 +123,7 @@ func (c *UserController) update(ctx *gin.Context) {
 		Password: req.Password,
 	}
 	if err := c.userService.Update(ctx, user); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -143,7 +143,7 @@ func (c *UserController) delete(ctx *gin.Context) {
 	id := ctx.Param("id")
 
 	if err := c.userService.Delete(ctx, id); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 

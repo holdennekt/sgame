@@ -38,7 +38,7 @@ func HandleQuestionStartedMessage(ctx context.Context, server realtime.Channel, 
 		_, err := roomCache.SafeUpdate(ctx, roomId, func(newRoom *domain.Room) error {
 			questionEnded :=
 				newRoom.State != domain.ShowingQuestion ||
-					!qsp.Question.IsCurrent(newRoom)
+					!qsp.IsCurrent(newRoom)
 			deadlineChanged := newRoom.CurrentQuestion != nil &&
 				!room.CurrentQuestion.TimerEndsAt.Equal(newRoom.CurrentQuestion.TimerEndsAt)
 			if questionEnded || deadlineChanged || newRoom.PausedState.Paused {

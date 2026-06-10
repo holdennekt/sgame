@@ -43,13 +43,13 @@ func (c *AuthController) RegisterRoutes(r *gin.RouterGroup) {
 func (c *AuthController) login(ctx *gin.Context) {
 	var cur dto.CreateUserRequest
 	if err := ctx.ShouldBindJSON(&cur); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
 	sessionId, userId, err := c.authService.Login(ctx, cur)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -71,13 +71,13 @@ func (c *AuthController) login(ctx *gin.Context) {
 func (c *AuthController) register(ctx *gin.Context) {
 	var cur dto.CreateUserRequest
 	if err := ctx.ShouldBindJSON(&cur); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
 	sessionId, userId, err := c.authService.Register(ctx, cur)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -98,7 +98,7 @@ func (c *AuthController) logout(ctx *gin.Context) {
 		ctx.Status(http.StatusNoContent)
 		return
 	}
-	c.authService.Logout(ctx, sessionId)
+	_ = c.authService.Logout(ctx, sessionId)
 	ctx.SetCookie(SESSION_ID_COOKIE_NAME, "", -1, "", "", false, true)
 	ctx.Status(http.StatusNoContent)
 }
@@ -117,13 +117,13 @@ func (c *AuthController) logout(ctx *gin.Context) {
 func (c *AuthController) guest(ctx *gin.Context) {
 	var req dto.GuestLoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
 	sessionId, userId, err := c.authService.GuestLogin(ctx, req.Name)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 

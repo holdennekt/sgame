@@ -37,7 +37,7 @@ func NewPackDraftService(packDraftRepo repository.PackDraft, packRepo repository
 		}
 		return name
 	})
-	v.RegisterValidation(custvalid.SameLength, custvalid.ValidateSameLength)
+	_ = v.RegisterValidation(custvalid.SameLength, custvalid.ValidateSameLength)
 	return &PackDraftService{
 		packDraftRepo:     packDraftRepo,
 		packRepo:          packRepo,

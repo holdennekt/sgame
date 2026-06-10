@@ -48,7 +48,7 @@ func (c *channel) Send(ctx context.Context, msg message.Message) error {
 	return nil
 }
 
-func (c *channel) Recieve(ctx context.Context) <-chan message.Message {
+func (c *channel) Receive(ctx context.Context) <-chan message.Message {
 	ctx, c.cancel = context.WithCancel(ctx)
 	out := make(chan message.Message)
 

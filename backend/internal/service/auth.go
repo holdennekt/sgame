@@ -75,7 +75,7 @@ func (s *AuthService) Register(ctx context.Context, cur dto.CreateUserRequest) (
 	if err != nil {
 		return
 	}
-	dbUser.User.Id = userId
+	dbUser.Id = userId
 
 	id, err := uuid.NewRandom()
 	if err != nil {

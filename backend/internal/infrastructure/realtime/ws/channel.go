@@ -26,12 +26,12 @@ func (c *channel) Send(ctx context.Context, msg message.Message) error {
 	return nil
 }
 
-func (c *channel) Recieve(ctx context.Context) <-chan message.Message {
+func (c *channel) Receive(ctx context.Context) <-chan message.Message {
 	messages := make(chan message.Message)
 	go func() {
 		defer func() {
 			close(messages)
-			c.conn.Close(websocket.StatusNormalClosure, "context done or error")
+			_ = c.conn.Close(websocket.StatusNormalClosure, "context done or error")
 		}()
 
 		for {

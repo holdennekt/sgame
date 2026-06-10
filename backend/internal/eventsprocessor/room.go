@@ -67,8 +67,8 @@ func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInt
 }
 
 func (p *RoomEventsProcessor) Listen(ctx context.Context) {
-	clientMessages := p.client.Recieve(ctx)
-	serverMessages := p.roomServer.Recieve(ctx)
+	clientMessages := p.client.Receive(ctx)
+	serverMessages := p.roomServer.Receive(ctx)
 	for {
 		select {
 		case msg, ok := <-clientMessages:
@@ -78,14 +78,14 @@ func (p *RoomEventsProcessor) Listen(ctx context.Context) {
 				if err := p.handleClientClosure(ctx); err != nil {
 					slog.Error("error while handling client closure", "err", err)
 				}
-				p.roomServer.Close()
+				_ = p.roomServer.Close()
 				return
 			}
 
 			slog.Info("user sent room message", "user", p.user.Name, "user_id", p.user.Id, "room_id", p.id, "event", msg.Event, "payload", string(msg.Payload))
 			if err := p.handleClientMessage(ctx, msg); err != nil {
 				slog.Error("error", "err", err)
-				p.client.Send(ctx, outgoing.NewErrorMessage(err))
+				_ = p.client.Send(ctx, outgoing.NewErrorMessage(err))
 			}
 		case msg, ok := <-serverMessages:
 			if !ok {
@@ -94,7 +94,7 @@ func (p *RoomEventsProcessor) Listen(ctx context.Context) {
 				if err := p.handleServerClosure(ctx); err != nil {
 					slog.Error("error while handling roomServer closure", "err", err)
 				}
-				p.client.Close()
+				_ = p.client.Close()
 				return
 			}
 
@@ -201,8 +201,8 @@ func (p *RoomEventsProcessor) handleServerMessage(ctx context.Context, msg messa
 	case domain.CorrectAnswerDemo:
 		return outgoing.HandleCorrectAnswerDemoMessage(ctx, p.client, msg)
 	case domain.RoomDeleted:
-		p.lobbyServer.Close()
-		p.roomServer.Close()
+		_ = p.lobbyServer.Close()
+		_ = p.roomServer.Close()
 		return outgoing.HandleRoomDeletedMessage(ctx, p.client, msg)
 	}
 	return nil
@@ -269,12 +269,12 @@ func (p *RoomInternalEventsProcessor) Listen(ctx context.Context) {
 				slog.Debug("exiting owner refresh ticker")
 				return
 			case <-tickerC:
-				p.roomCache.UpdateOwner(ctx, p.id, OWNER_TTL)
+				_ = p.roomCache.UpdateOwner(ctx, p.id, OWNER_TTL)
 			}
 		}
 	}()
 
-	messages := p.roomInternalServer.Recieve(ctx)
+	messages := p.roomInternalServer.Receive(ctx)
 	for {
 		msg, ok := <-messages
 		if !ok {
@@ -319,8 +319,8 @@ func (p *RoomInternalEventsProcessor) handleMessage(ctx context.Context, msg mes
 		return server.HandleUserDisconnectedMessage(ctx, p.roomServer, p.roomInternalServer, p.lobbyServer, p.roomCache, p.roomRepository, p.id, msg)
 	case domain.RoomDeleted:
 		slog.Info("internal room server got room_deleted event")
-		p.lobbyServer.Close()
-		p.roomServer.Close()
+		_ = p.lobbyServer.Close()
+		_ = p.roomServer.Close()
 		return p.roomInternalServer.Close()
 	}
 	return nil

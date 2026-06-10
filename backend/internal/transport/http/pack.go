@@ -49,13 +49,13 @@ func (c *PackController) create(ctx *gin.Context) {
 
 	var cpr dto.CreatePackRequest
 	if err := ctx.ShouldBindJSON(&cpr); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
 	id, err := c.packService.Create(ctx, user, cpr)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -79,7 +79,7 @@ func (c *PackController) getById(ctx *gin.Context) {
 
 	result, err := c.packService.GetById(ctx, userId, id)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -101,7 +101,7 @@ func (c *PackController) getPreviews(ctx *gin.Context) {
 
 	var query dto.SearchRequest
 	if err := ctx.ShouldBindQuery(&query); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 	if query.Page == 0 {
@@ -113,7 +113,7 @@ func (c *PackController) getPreviews(ctx *gin.Context) {
 
 	packs, total, err := c.packService.GetPreviews(ctx, userId, query)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -141,7 +141,7 @@ func (c *PackController) getHiddens(ctx *gin.Context) {
 
 	var query dto.SearchRequest
 	if err := ctx.ShouldBindQuery(&query); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 	if query.Page == 0 {
@@ -153,7 +153,7 @@ func (c *PackController) getHiddens(ctx *gin.Context) {
 
 	packs, count, err := c.packService.GetHiddens(ctx, userId, query)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -187,14 +187,14 @@ func (c *PackController) update(ctx *gin.Context) {
 
 	var upr dto.UpdatePackRequest
 	if err := ctx.ShouldBindJSON(&upr); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 	upr.Id = id
 
 	err := c.packService.Update(ctx, user, upr)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -218,7 +218,7 @@ func (c *PackController) delete(ctx *gin.Context) {
 
 	err := c.packService.Delete(ctx, userId, id)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -240,13 +240,13 @@ func (c *PackController) signURL(ctx *gin.Context) {
 
 	var sr dto.SignURLRequest
 	if err := ctx.ShouldBindJSON(&sr); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
 	signed, getUrl, err := c.packService.SignURL(ctx, user, sr)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -270,7 +270,7 @@ func (c *PackController) getCreatedBy(ctx *gin.Context) {
 
 	var query dto.SearchRequest
 	if err := ctx.ShouldBindQuery(&query); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 	if query.Page == 0 {
@@ -282,7 +282,7 @@ func (c *PackController) getCreatedBy(ctx *gin.Context) {
 
 	packs, total, err := c.packService.GetCreatedBy(ctx, userId, createdBy, query)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 

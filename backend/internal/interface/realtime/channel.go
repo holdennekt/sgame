@@ -8,7 +8,7 @@ import (
 
 type Channel interface {
 	Send(ctx context.Context, msg message.Message) error
-	Recieve(ctx context.Context) <-chan message.Message
+	Receive(ctx context.Context) <-chan message.Message
 	Close() error
 	Delete(ctx context.Context) error
 }

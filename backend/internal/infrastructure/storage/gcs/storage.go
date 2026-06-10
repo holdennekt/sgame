@@ -68,7 +68,7 @@ func (s *GCSStorage) UploadFromURL(ctx context.Context, uui storage.URLUploadInp
 	if err != nil {
 		return custerr.NewInternalErr(fmt.Errorf("failed to upload file: %w", err))
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		bts, _ := io.ReadAll(resp.Body)
@@ -93,7 +93,7 @@ func (s *GCSStorage) UploadFromURL(ctx context.Context, uui storage.URLUploadInp
 	}
 
 	if written > uui.MaxBytes {
-		s.client.Bucket(s.bucketName).Object(uui.Key).Delete(ctx)
+		_ = s.client.Bucket(s.bucketName).Object(uui.Key).Delete(ctx)
 		return custerr.NewBadRequestErr(fmt.Sprintf("file %q is too large. maximum size allowed: %d bytes", uui.URL, uui.MaxBytes))
 	}
 

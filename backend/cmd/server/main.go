@@ -24,7 +24,7 @@ import (
 
 func init() {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterValidation(custvalid.SameLength, custvalid.ValidateSameLength)
+		_ = v.RegisterValidation(custvalid.SameLength, custvalid.ValidateSameLength)
 	}
 }
 
@@ -39,7 +39,7 @@ func init() {
 // @name sessionId
 
 func main() {
-	godotenv.Load()
+	_ = godotenv.Load()
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -67,7 +67,7 @@ func main() {
 		slog.Error("failed to connect to mongodb", "err", err)
 		os.Exit(1)
 	}
-	defer conn.Disconnect(context.Background())
+	defer func() { _ = conn.Disconnect(context.Background()) }()
 
 	mdb := conn.Database(cfg.MongoName)
 
@@ -77,7 +77,7 @@ func main() {
 		Password: cfg.RedisPassword,
 		DB:       cfg.RedisDB,
 	})
-	defer rds.Close()
+	defer func() { _ = rds.Close() }()
 
 	var store storage.Storage
 

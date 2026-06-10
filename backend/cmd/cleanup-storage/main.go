@@ -70,7 +70,7 @@ var packAttachmentProjection = bson.M{
 }
 
 func collectKeysFromPackDocs(ctx context.Context, cur *mongo.Cursor) (map[string]struct{}, error) {
-	defer cur.Close(ctx)
+	defer func() { _ = cur.Close(ctx) }()
 	keys := make(map[string]struct{})
 	for cur.Next(ctx) {
 		var pack packDoc
@@ -126,7 +126,7 @@ func collectAvatarKeys(ctx context.Context, db *mongo.Database, publicURLPrefix 
 	if err != nil {
 		return nil, err
 	}
-	defer cur.Close(ctx)
+	defer func() { _ = cur.Close(ctx) }()
 
 	keys := make(map[string]struct{})
 	for cur.Next(ctx) {
@@ -159,7 +159,7 @@ func main() {
 	dryRun := flag.Bool("dry-run", false, "list orphaned objects without deleting them")
 	flag.Parse()
 
-	godotenv.Load()
+	_ = godotenv.Load()
 	ctx := context.Background()
 
 	mongoURI := fmt.Sprintf(
@@ -174,7 +174,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer mongoConn.Disconnect(ctx)
+	defer func() { _ = mongoConn.Disconnect(ctx) }()
 	db := mongoConn.Database(envvar.GetEnvVar("MONGO_NAME"))
 
 	bucketName := envvar.GetEnvVar("BUCKET_NAME")
@@ -227,7 +227,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer gcsClient.Close()
+		defer func() { _ = gcsClient.Close() }()
 
 		log.Printf("Listing objects in GCS bucket %q...", bucketName)
 

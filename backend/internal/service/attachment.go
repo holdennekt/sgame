@@ -88,14 +88,14 @@ func (s *AttachmentService) probe(ctx context.Context, key string) (*domain.Atta
 	if err != nil {
 		return nil, err
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	tmpFile, err := os.CreateTemp("", "sgame-probe-*")
 	if err != nil {
 		return nil, custerr.NewInternalErr(fmt.Errorf("failed to create temp file: %w", err))
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() { _ = tmpFile.Close() }()
 	if _, err := io.Copy(tmpFile, reader); err != nil {
 		return nil, custerr.NewInternalErr(fmt.Errorf("failed to buffer file for probing: %w", err))
 	}

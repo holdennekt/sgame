@@ -44,7 +44,7 @@ func HandleAnswerStartedMessage(ctx context.Context, server realtime.Channel, in
 			answerRequestEnded :=
 				newRoom.State != domain.Answering ||
 					newRoom.AnsweringPlayer.Id != asp.UserId ||
-					!asp.Question.IsCurrent(newRoom)
+					!asp.IsCurrent(newRoom)
 			deadlineChanged := newRoom.AnsweringPlayer != nil &&
 				!room.AnsweringPlayer.TimerEndsAt.Equal(newRoom.AnsweringPlayer.TimerEndsAt)
 			if answerRequestEnded || deadlineChanged || newRoom.PausedState.Paused {

@@ -20,7 +20,7 @@ func ValidateSameLength(fl validator.FieldLevel) bool {
 	}
 
 	first := sliceVal.Index(0)
-	if first.Kind() == reflect.Ptr {
+	if first.Kind() == reflect.Pointer {
 		first = first.Elem()
 	}
 	field := first.FieldByName(fieldName)
@@ -31,7 +31,7 @@ func ValidateSameLength(fl validator.FieldLevel) bool {
 
 	for i := 1; i < sliceVal.Len(); i++ {
 		elem := sliceVal.Index(i)
-		if elem.Kind() == reflect.Ptr {
+		if elem.Kind() == reflect.Pointer {
 			elem = elem.Elem()
 		}
 		field := elem.FieldByName(fieldName)

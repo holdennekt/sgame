@@ -57,12 +57,12 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 
 	room, err := h.roomService.GetById(ctx, id)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
 	if !room.IsUserIn(user.Id) {
-		ctx.Error(custerr.NewForbiddenErr("cannot connect to room you are not in"))
+		_ = ctx.Error(custerr.NewForbiddenErr("cannot connect to room you are not in"))
 		return
 	}
 
@@ -71,7 +71,7 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 		// CompressionMode:    websocket.CompressionContextTakeover,
 	})
 	if err != nil {
-		ctx.Error(custerr.NewInternalErr(err))
+		_ = ctx.Error(custerr.NewInternalErr(err))
 		return
 	}
 

@@ -29,7 +29,7 @@ import (
 
 func init() {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterValidation(custvalid.SameLength, custvalid.ValidateSameLength)
+		_ = v.RegisterValidation(custvalid.SameLength, custvalid.ValidateSameLength)
 		v.RegisterTagNameFunc(func(fld reflect.StructField) string {
 			name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
 			if name == "" || name == "-" {
@@ -68,6 +68,10 @@ func (a *app) Run() {
 		}
 
 		processor, err := a.roomInternalEventsProcessorGetter(room.Id)
+		if err != nil {
+			slog.Error("error creating room internal events processor", "err", err)
+			continue
+		}
 		go processor.Listen(appCtx)
 	}
 

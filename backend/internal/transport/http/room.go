@@ -47,13 +47,13 @@ func (c *RoomController) create(ctx *gin.Context) {
 
 	var crr dto.CreateRoomRequest
 	if err := ctx.ShouldBindJSON(&crr); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
 	id, err := c.roomService.Create(ctx, userId, crr)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -72,7 +72,7 @@ func (c *RoomController) create(ctx *gin.Context) {
 func (c *RoomController) get(ctx *gin.Context) {
 	rooms, err := c.roomService.Get(ctx)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -101,7 +101,7 @@ func (c *RoomController) getProjection(ctx *gin.Context) {
 
 	room, err := c.roomService.GetProjection(ctx, userId, id, password)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -129,7 +129,7 @@ func (c *RoomController) join(ctx *gin.Context) {
 
 	room, err := c.roomService.Join(ctx, user, id, password)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -153,7 +153,7 @@ func (c *RoomController) leave(ctx *gin.Context) {
 
 	err := c.roomService.Leave(ctx, userId, id)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -175,7 +175,7 @@ func (c *RoomController) getHistory(ctx *gin.Context) {
 
 	var query dto.SearchRequest
 	if err := ctx.ShouldBindQuery(&query); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 	if query.Page == 0 {
@@ -187,7 +187,7 @@ func (c *RoomController) getHistory(ctx *gin.Context) {
 
 	rooms, total, err := c.roomService.GetHistory(ctx, userId, query)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 

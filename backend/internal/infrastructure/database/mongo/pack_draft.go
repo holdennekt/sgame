@@ -153,7 +153,7 @@ func (r *packDraftRepository) GetByUser(ctx context.Context, userId string, sear
 	if err != nil {
 		return nil, 0, custerr.NewInternalErr(err)
 	}
-	defer cur.Close(ctx)
+	defer func() { _ = cur.Close(ctx) }()
 
 	drafts := make([]domain.PackDraft, 0)
 	for cur.Next(ctx) {

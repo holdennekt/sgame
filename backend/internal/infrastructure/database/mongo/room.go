@@ -94,7 +94,7 @@ func (r *roomRepository) GetByParticipant(ctx context.Context, userId string, se
 	if err != nil {
 		return nil, 0, custerr.NewInternalErr(err)
 	}
-	defer cur.Close(ctx)
+	defer func() { _ = cur.Close(ctx) }()
 	rooms := make([]domain.Room, 0)
 	if err := cur.All(ctx, &rooms); err != nil {
 		return nil, 0, custerr.NewInternalErr(err)

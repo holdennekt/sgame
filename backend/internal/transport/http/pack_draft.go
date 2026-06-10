@@ -38,13 +38,13 @@ func (c *PackDraftController) create(ctx *gin.Context) {
 
 	var req dto.CreatePackDraftRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
-		ctx.Error(custerr.NewBadRequestErr(err.Error()))
+		_ = ctx.Error(custerr.NewBadRequestErr(err.Error()))
 		return
 	}
 
 	draftId, err := c.draftService.GetOrCreateEditDraft(ctx, user, req.From)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -56,7 +56,7 @@ func (c *PackDraftController) list(ctx *gin.Context) {
 
 	var query dto.SearchRequest
 	if err := ctx.ShouldBindQuery(&query); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 	if query.Page == 0 {
@@ -68,7 +68,7 @@ func (c *PackDraftController) list(ctx *gin.Context) {
 
 	drafts, total, err := c.draftService.GetByUser(ctx, userId, query)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -87,7 +87,7 @@ func (c *PackDraftController) getById(ctx *gin.Context) {
 
 	draft, err := c.draftService.GetById(ctx, userId, id)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -100,13 +100,13 @@ func (c *PackDraftController) update(ctx *gin.Context) {
 
 	var req dto.UpdatePackDraftRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
 	newDraft, err := c.draftService.Update(ctx, user, id, req)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -118,7 +118,7 @@ func (c *PackDraftController) delete(ctx *gin.Context) {
 	id := ctx.Param("id")
 
 	if err := c.draftService.Delete(ctx, userId, id); err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -132,7 +132,7 @@ func (c *PackDraftController) importSIQ(ctx *gin.Context) {
 
 	mr, err := ctx.Request.MultipartReader()
 	if err != nil {
-		ctx.Error(custerr.NewBadRequestErr(err.Error()))
+		_ = ctx.Error(custerr.NewBadRequestErr(err.Error()))
 		return
 	}
 
@@ -143,29 +143,29 @@ func (c *PackDraftController) importSIQ(ctx *gin.Context) {
 			break
 		}
 		if err != nil {
-			ctx.Error(custerr.NewBadRequestErr(err.Error()))
+			_ = ctx.Error(custerr.NewBadRequestErr(err.Error()))
 			return
 		}
 		if part.FormName() != "siq" {
-			io.Copy(io.Discard, part)
+			_, _ = io.Copy(io.Discard, part)
 			continue
 		}
 		data, err = io.ReadAll(part)
 		if err != nil {
-			ctx.Error(custerr.NewBadRequestErr(err.Error()))
+			_ = ctx.Error(custerr.NewBadRequestErr(err.Error()))
 			return
 		}
 		break
 	}
 
 	if len(data) == 0 {
-		ctx.Error(custerr.NewBadRequestErr("missing siq file"))
+		_ = ctx.Error(custerr.NewBadRequestErr("missing siq file"))
 		return
 	}
 
 	id, err := c.draftService.Import(ctx, user, bytes.NewReader(data), int64(len(data)))
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 
@@ -178,7 +178,7 @@ func (c *PackDraftController) publish(ctx *gin.Context) {
 
 	packId, err := c.draftService.Publish(ctx, user, id)
 	if err != nil {
-		ctx.Error(err)
+		_ = ctx.Error(err)
 		return
 	}
 

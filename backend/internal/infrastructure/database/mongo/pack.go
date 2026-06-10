@@ -106,14 +106,6 @@ type mongoPackPreview struct {
 	Name string             `json:"name"`
 }
 
-func fromDomainPackPreview(packPreview domain.PackPreview) mongoPackPreview {
-	objId, _ := primitive.ObjectIDFromHex(packPreview.Id)
-	return mongoPackPreview{
-		Id:   objId,
-		Name: packPreview.Name,
-	}
-}
-
 func toDomainPackPreview(mPackPreview mongoPackPreview) domain.PackPreview {
 	return domain.PackPreview{
 		Id:   mPackPreview.Id.Hex(),
@@ -171,7 +163,7 @@ func (r *packRepository) GetByChecksum(ctx context.Context, userId string, check
 	if err != nil {
 		return nil, custerr.NewInternalErr(err)
 	}
-	defer cur.Close(ctx)
+	defer func() { _ = cur.Close(ctx) }()
 
 	packs := make([]*domain.Pack, 0)
 	for cur.Next(ctx) {
@@ -223,7 +215,7 @@ func (r *packRepository) GetPreviews(ctx context.Context, userId string, search 
 	if err != nil {
 		return nil, 0, custerr.NewInternalErr(err)
 	}
-	defer cur.Close(ctx)
+	defer func() { _ = cur.Close(ctx) }()
 
 	packsPreviews := make([]domain.PackPreview, 0)
 	for cur.Next(ctx) {
@@ -274,7 +266,7 @@ func (r *packRepository) GetHiddens(ctx context.Context, userId string, search d
 	if err != nil {
 		return nil, 0, custerr.NewInternalErr(err)
 	}
-	defer cur.Close(ctx)
+	defer func() { _ = cur.Close(ctx) }()
 
 	hiddenPacks := make([]domain.HiddenPack, 0)
 	for cur.Next(ctx) {
@@ -321,7 +313,7 @@ func (r *packRepository) GetCreatedBy(ctx context.Context, userId, createdBy str
 	if err != nil {
 		return nil, 0, custerr.NewInternalErr(err)
 	}
-	defer cur.Close(ctx)
+	defer func() { _ = cur.Close(ctx) }()
 	hiddenPacks := make([]domain.HiddenPack, 0)
 	for cur.Next(ctx) {
 		var pack mongoPack

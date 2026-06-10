@@ -29,8 +29,8 @@ func NewLobbyEventsProcessorGetter(lobbyChannelGetter realtime.ServerChannelGett
 }
 
 func (p *LobbyEventsProcessor) Listen(ctx context.Context) {
-	clientMessages := p.client.Recieve(ctx)
-	serverMessages := p.server.Recieve(ctx)
+	clientMessages := p.client.Receive(ctx)
+	serverMessages := p.server.Receive(ctx)
 	for {
 		select {
 		case msg, ok := <-clientMessages:
@@ -38,14 +38,14 @@ func (p *LobbyEventsProcessor) Listen(ctx context.Context) {
 				if err := p.handleClientClosure(); err != nil {
 					slog.Error("error while handling client closure", "err", err)
 				}
-				p.server.Close()
+				_ = p.server.Close()
 				return
 			}
 
 			slog.Info("user sent lobby message", "user", p.user.Name, "user_id", p.user.Id, "event", msg.Event, "payload", string(msg.Payload))
 			if err := p.handleClientMessage(ctx, msg); err != nil {
 				slog.Error("error", "err", err)
-				p.client.Send(ctx, outgoing.NewErrorMessage(err))
+				_ = p.client.Send(ctx, outgoing.NewErrorMessage(err))
 			}
 
 		case msg, ok := <-serverMessages:
@@ -53,7 +53,7 @@ func (p *LobbyEventsProcessor) Listen(ctx context.Context) {
 				if err := p.handleServerClosure(); err != nil {
 					slog.Error("error while handling server closure", "err", err)
 				}
-				p.client.Close()
+				_ = p.client.Close()
 				return
 			}
 
@@ -68,7 +68,9 @@ func (p *LobbyEventsProcessor) Listen(ctx context.Context) {
 func (p *LobbyEventsProcessor) handleClientMessage(ctx context.Context, msg message.Message) error {
 	switch msg.Event {
 	case domain.Chat:
-		client.HandleClientChatMessage(ctx, p.server, p.user, msg)
+		if err := client.HandleClientChatMessage(ctx, p.server, p.user, msg); err != nil {
+			slog.Error("error handling client chat message", "err", err)
+		}
 	}
 	return nil
 }
@@ -76,11 +78,17 @@ func (p *LobbyEventsProcessor) handleClientMessage(ctx context.Context, msg mess
 func (p *LobbyEventsProcessor) handleServerMessage(ctx context.Context, msg message.Message) error {
 	switch msg.Event {
 	case domain.Chat:
-		client.HandleServerChatMessage(ctx, p.client, msg)
+		if err := client.HandleServerChatMessage(ctx, p.client, msg); err != nil {
+			slog.Error("error handling server chat message", "err", err)
+		}
 	case domain.RoomUpdated:
-		outgoing.HandleRoomUpdatedMessage(ctx, p.roomCache, p.client, p.user, msg)
+		if err := outgoing.HandleRoomUpdatedMessage(ctx, p.roomCache, p.client, p.user, msg); err != nil {
+			slog.Error("error handling room updated message", "err", err)
+		}
 	case domain.RoomDeleted:
-		outgoing.HandleRoomDeletedMessage(ctx, p.client, msg)
+		if err := outgoing.HandleRoomDeletedMessage(ctx, p.client, msg); err != nil {
+			slog.Error("error handling room deleted message", "err", err)
+		}
 	}
 	return nil
 }

@@ -7,7 +7,7 @@ type InternalErr struct {
 }
 
 func NewInternalErr(err error) InternalErr {
-	return InternalErr{Msg: errors.Join(errors.New("internal server error\n"), err).Error()}
+	return InternalErr{Msg: errors.Join(errors.New("internal server error"), err).Error()}
 }
 
 func (e InternalErr) Error() string {

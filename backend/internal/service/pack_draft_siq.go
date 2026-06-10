@@ -205,7 +205,7 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 	if err != nil {
 		return nil, custerr.NewInternalErr(err)
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	xmlBytes, err := io.ReadAll(rc)
 	if err != nil {
@@ -233,7 +233,7 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 			return nil
 		}
 		data, err := io.ReadAll(fr)
-		fr.Close()
+		_ = fr.Close()
 		if err != nil {
 			slog.Error("siq import: cannot read media", "path", zipPath, "err", err)
 			return nil
@@ -258,8 +258,8 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 			slog.Error("siq import: failed to create temp file", "err", err)
 			return &domain.Attachment{Key: key, MimeType: mimeType, Size: int64(len(data)), Type: domain.Image}
 		}
-		defer os.Remove(tmpFile.Name())
-		defer tmpFile.Close()
+		defer func() { _ = os.Remove(tmpFile.Name()) }()
+		defer func() { _ = tmpFile.Close() }()
 
 		if _, err := io.Copy(tmpFile, bytes.NewReader(data)); err != nil {
 			slog.Error("siq import: failed to buffer media for probing", "path", zipPath, "err", err)

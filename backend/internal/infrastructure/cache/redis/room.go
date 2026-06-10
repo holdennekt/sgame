@@ -83,7 +83,7 @@ func (c *roomCache) SafeUpdate(ctx context.Context, roomId string, updateFunc fu
 	if err != nil {
 		return nil, custerr.NewInternalErr(err)
 	}
-	defer lock.Release(ctx)
+	defer func() { _ = lock.Release(ctx) }()
 
 	room, err := c.GetById(ctx, roomId)
 	if err != nil {
@@ -134,7 +134,7 @@ func (c *roomCache) UpdateOwner(ctx context.Context, roomId string, ttl time.Dur
 
 func (c *roomCache) ListenForExpiredOwners(ctx context.Context, handleExpiredOwner func(roomId string)) {
 	pubsubExp := c.client.PSubscribe(ctx, "__keyevent@0__:expired")
-	defer pubsubExp.Close()
+	defer func() { _ = pubsubExp.Close() }()
 
 	re := regexp.MustCompile(fmt.Sprintf("^%s(.+)%s%s$", domain.ROOM_PREFIX, domain.INTERNAL_POSTFIX, domain.OWNER_POSTFIX))
 	ch := pubsubExp.Channel()

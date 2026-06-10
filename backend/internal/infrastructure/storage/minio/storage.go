@@ -91,7 +91,7 @@ func (s *MinioStorage) UploadFromURL(ctx context.Context, uui storage.URLUploadI
 	if err != nil {
 		return custerr.NewInternalErr(fmt.Errorf("failed to upload file: %w", err))
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		bts, _ := io.ReadAll(resp.Body)
@@ -119,7 +119,7 @@ func (s *MinioStorage) UploadFromURL(ctx context.Context, uui storage.URLUploadI
 		return custerr.NewInternalErr(fmt.Errorf("failed to upload file: %w", err))
 	}
 	if putRes.Size > uui.MaxBytes {
-		s.client.RemoveObject(ctx, s.bucketName, uui.Key, minio.RemoveObjectOptions{})
+		_ = s.client.RemoveObject(ctx, s.bucketName, uui.Key, minio.RemoveObjectOptions{})
 		return custerr.NewBadRequestErr(fmt.Sprintf("file \"%s\" is too large. maximum size allowed: %d bytes", uui.URL, uui.MaxBytes))
 	}
 
@@ -196,10 +196,10 @@ func (s *MinioStorage) URL(ctx context.Context, key string, ttl time.Duration) (
 
 func (s *MinioStorage) SignUploadPolicy(ctx context.Context, in storage.SignUploadPolicyInput) (*storage.SignUploadPolicyResult, error) {
 	policy := minio.NewPostPolicy()
-	policy.SetBucket(s.bucketName)
-	policy.SetKey(in.Key)
-	policy.SetExpires(time.Now().Add(in.TTL))
-	policy.SetContentLengthRange(0, in.MaxBytes)
+	_ = policy.SetBucket(s.bucketName)
+	_ = policy.SetKey(in.Key)
+	_ = policy.SetExpires(time.Now().Add(in.TTL))
+	_ = policy.SetContentLengthRange(0, in.MaxBytes)
 
 	u, formData, err := s.client.PresignedPostPolicy(ctx, policy)
 	if err != nil {

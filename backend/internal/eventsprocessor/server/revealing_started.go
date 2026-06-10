@@ -39,7 +39,7 @@ func HandleRevealingStartedMessage(ctx context.Context, server realtime.Channel,
 		_, err := roomCache.SafeUpdate(ctx, roomId, func(newRoom *domain.Room) error {
 			questionEnded :=
 				newRoom.State != domain.RevealingQuestion ||
-					!rsp.Question.IsCurrent(newRoom)
+					!rsp.IsCurrent(newRoom)
 			deadlineChanged := newRoom.CurrentQuestion != nil &&
 				!room.CurrentQuestion.TimerStartsAt.Equal(newRoom.CurrentQuestion.TimerStartsAt)
 			if questionEnded || deadlineChanged || newRoom.PausedState.Paused {
