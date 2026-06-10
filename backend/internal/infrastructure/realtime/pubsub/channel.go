@@ -3,7 +3,7 @@ package pubsub
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 
 	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
 	"github.com/holdennekt/sgame/backend/internal/message"
@@ -52,7 +52,7 @@ func (c *channel) Recieve(ctx context.Context) <-chan message.Message {
 				}
 				var msg message.Message
 				if err := json.Unmarshal([]byte(rdsMsg.Payload), &msg); err != nil {
-					log.Println("unmarshal error:", err)
+					slog.Error("unmarshal error", "err", err)
 					return
 				}
 				messages <- msg

@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
@@ -77,7 +77,7 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 
 	newRoom, err := h.roomService.Connect(ctx, user.Id, id)
 	if err != nil {
-		log.Println(err)
+		slog.Error("error", "err", err)
 		return
 	}
 
@@ -85,24 +85,24 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 	payload, _ := json.Marshal(newRoom.GetProjection(user.Id))
 	clientRoomUpdatedMessage := message.Message{Event: domain.RoomUpdated, Payload: payload}
 	if err := clientChannel.Send(ctx, clientRoomUpdatedMessage); err != nil {
-		log.Println(err)
+		slog.Error("error", "err", err)
 		return
 	}
 
 	serverRoomUpdatedMessage := outgoing.NewRoomUpdatedMessage(id)
 	roomServerChannel := h.roomChannelGetter.Get(domain.ROOM_PREFIX + id)
 	if err := roomServerChannel.Send(ctx, serverRoomUpdatedMessage); err != nil {
-		log.Println(err)
+		slog.Error("error", "err", err)
 		return
 	}
 
 	chatMessage := client.NewSystemChatMessage(fmt.Sprintf("%s has connected", user.Name))
 	if err := clientChannel.Send(ctx, chatMessage); err != nil {
-		log.Println(err)
+		slog.Error("error", "err", err)
 		return
 	}
 	if err := roomServerChannel.Send(ctx, chatMessage); err != nil {
-		log.Println(err)
+		slog.Error("error", "err", err)
 		return
 	}
 
@@ -112,7 +112,7 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 		user,
 	)
 	if err != nil {
-		log.Println("Error while creation roomEventsProcessor:", err)
+		slog.Error("error while creation roomEventsProcessor", "err", err)
 		return
 	}
 	go processor.Listen(h.shutdownCtx)

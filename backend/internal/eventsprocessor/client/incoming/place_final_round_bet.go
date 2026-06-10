@@ -3,7 +3,7 @@ package incoming
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
@@ -34,12 +34,12 @@ func HandlePlaceFinalRoundBetMessage(ctx context.Context, server realtime.Channe
 	case domain.ShowingFinalRoundQuestion:
 		finalRoundQuestionStartedMessage := serverevent.NewFinalRoundQuestionStartedMessage()
 		if err := internalServer.Send(ctx, finalRoundQuestionStartedMessage); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 		}
 	case domain.GameOver:
 		gameEndedMessage := serverevent.NewGameEndedMessage()
 		if err := internalServer.Send(ctx, gameEndedMessage); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 		}
 	}
 	return nil

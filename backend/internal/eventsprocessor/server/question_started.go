@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
@@ -50,14 +50,14 @@ func HandleQuestionStartedMessage(ctx context.Context, server realtime.Channel, 
 		})
 		if err != nil {
 			if err != ErrDeferredFunctionCancelled {
-				log.Println(err)
+				slog.Error("error", "err", err)
 			}
 			return
 		}
 
 		questionEndedMessage := NewQuestionEndedMessage(qsp.Question)
 		if err := internalServer.Send(ctx, questionEndedMessage); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 	})

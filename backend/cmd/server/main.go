@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
+	"os"
 
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
@@ -22,7 +23,6 @@ import (
 )
 
 func init() {
-	log.SetFlags(0)
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation(custvalid.SameLength, custvalid.ValidateSameLength)
 	}
@@ -41,6 +41,12 @@ func init() {
 func main() {
 	godotenv.Load()
 
+	if os.Getenv("APP_ENV") == "production" {
+		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	} else {
+		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	}
+
 	mongoURI := fmt.Sprintf(
 		"mongodb://%s:%s@%s:%s/%s?authSource=admin",
 		envvar.GetEnvVar("MONGO_ROOT_USER"),
@@ -52,7 +58,8 @@ func main() {
 	opts := options.Client().ApplyURI(mongoURI)
 	conn, err := mongo.Connect(context.Background(), opts)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("fatal error", "err", err)
+		os.Exit(1)
 	}
 	defer conn.Disconnect(context.Background())
 
@@ -71,7 +78,8 @@ func main() {
 	if envvar.GetEnvVar("STORAGE_PROVIDER") == "gcs" {
 		storage, err = gcsStorage.NewGCSStorage(context.Background(), envvar.GetEnvVar("BUCKET_NAME"))
 		if err != nil {
-			log.Fatal(err)
+			slog.Error("fatal error", "err", err)
+			os.Exit(1)
 		}
 	} else {
 		mio, err := minio.New(envvar.GetEnvVar("MINIO_ENDPOINT"), &minio.Options{
@@ -83,7 +91,8 @@ func main() {
 			Secure: envvar.GetEnvVarBool("MINIO_USE_SSL"),
 		})
 		if err != nil {
-			log.Fatal(err)
+			slog.Error("fatal error", "err", err)
+			os.Exit(1)
 		}
 		storage = minioStorage.NewMinioStorage(mio, envvar.GetEnvVar("BUCKET_NAME"), envvar.GetEnvVar("FRONTEND_URL"))
 	}

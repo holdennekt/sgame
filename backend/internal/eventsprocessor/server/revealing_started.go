@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
@@ -51,20 +51,20 @@ func HandleRevealingStartedMessage(ctx context.Context, server realtime.Channel,
 		})
 		if err != nil {
 			if err != ErrDeferredFunctionCancelled {
-				log.Println(err)
+				slog.Error("error", "err", err)
 			}
 			return
 		}
 
 		roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
 		if err := server.Send(ctx, roomUpdatedMessage); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 
 		questionStartedMessage := NewQuestionStartedMessage(rsp.Question)
 		if err := internalServer.Send(ctx, questionStartedMessage); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 	})

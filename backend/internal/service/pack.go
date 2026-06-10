@@ -6,7 +6,7 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -46,7 +46,7 @@ func (s *PackService) Create(ctx context.Context, user domain.User, cpr dto.Crea
 		if err != nil {
 			for key := range cpr.AttachmentKeys() {
 				if err := s.storage.Delete(context.Background(), key); err != nil {
-					log.Printf("failed to cleanup attachment %s: %v", key, err)
+					slog.Error("failed to cleanup attachment", "key", key, "err", err)
 				}
 			}
 		}
@@ -187,7 +187,7 @@ func (s *PackService) UpdateFromDraft(ctx context.Context, user domain.User, dra
 
 	for key := range sets.Delta(oldPack.AttachmentKeys(), draft.AttachmentKeys()) {
 		if err := s.storage.Delete(context.Background(), key); err != nil {
-			log.Printf("failed to cleanup pack attachment %s: %v", key, err)
+			slog.Error("failed to cleanup attachment", "key", key, "err", err)
 		}
 	}
 	return nil
@@ -207,7 +207,7 @@ func (s *PackService) Update(ctx context.Context, user domain.User, req dto.Upda
 		if err != nil {
 			for key := range sets.Delta(req.AttachmentKeys(), pack.AttachmentKeys()) {
 				if err := s.storage.Delete(context.Background(), key); err != nil {
-					log.Printf("failed to cleanup pack attachment %s: %v", key, err)
+					slog.Error("failed to cleanup attachment", "key", key, "err", err)
 				}
 			}
 		}
@@ -225,7 +225,7 @@ func (s *PackService) Update(ctx context.Context, user domain.User, req dto.Upda
 
 	for key := range sets.Delta(pack.AttachmentKeys(), req.AttachmentKeys()) {
 		if err := s.storage.Delete(context.Background(), key); err != nil {
-			log.Printf("failed to cleanup pack attachment %s: %v", key, err)
+			slog.Error("failed to cleanup attachment", "key", key, "err", err)
 		}
 	}
 	return nil
@@ -248,7 +248,7 @@ func (s *PackService) Delete(ctx context.Context, userId, id string) error {
 	go func() {
 		for key := range pack.AttachmentKeys() {
 			if err := s.storage.Delete(context.Background(), key); err != nil {
-				log.Printf("failed to cleanup attachment %s: %v", key, err)
+				slog.Error("failed to cleanup attachment", "key", key, "err", err)
 			}
 		}
 	}()

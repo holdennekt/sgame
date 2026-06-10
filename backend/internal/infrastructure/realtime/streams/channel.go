@@ -3,7 +3,8 @@ package streams
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
+	"log/slog"
 
 	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
 	"github.com/holdennekt/sgame/backend/internal/message"
@@ -56,7 +57,8 @@ func (c *channel) Recieve(ctx context.Context) <-chan message.Message {
 		if err == redis.Nil {
 			lastId = "$"
 		} else {
-			log.Panicf("Cannot get internal room message lastId: %v", err)
+			slog.Error("cannot get internal room message lastId", "err", err)
+			panic(fmt.Sprintf("cannot get internal room message lastId: %v", err))
 		}
 	}
 
@@ -72,7 +74,7 @@ func (c *channel) Recieve(ctx context.Context) <-chan message.Message {
 				if ctx.Err() != nil {
 					return
 				}
-				log.Println("XRead error:", err)
+				slog.Error("XRead error", "err", err)
 				continue
 			}
 
@@ -81,14 +83,14 @@ func (c *channel) Recieve(ctx context.Context) <-chan message.Message {
 			lastId = rdsMsg.ID
 			if c.persistent {
 				if err := c.client.Set(ctx, c.name+LAST_ID_POSTFIX, lastId, 0).Err(); err != nil {
-					log.Println("Failed to save lastId:", err)
+					slog.Error("failed to save lastId", "err", err)
 				}
 			}
 
 			var msg message.Message
 			if payload, ok := rdsMsg.Values["payload"].(string); ok {
 				if err := json.Unmarshal([]byte(payload), &msg); err != nil {
-					log.Println("Unmarshal error:", err)
+					slog.Error("unmarshal error", "err", err)
 					continue
 				}
 				out <- msg

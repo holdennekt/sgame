@@ -6,7 +6,7 @@ import (
 	"context"
 	"encoding/xml"
 	"io"
-	"log"
+	"log/slog"
 	"mime"
 	"net/url"
 	"os"
@@ -224,18 +224,18 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 	processMedia := func(zipPath string) *domain.Attachment {
 		f := zipIndex[strings.ToLower(zipPath)]
 		if f == nil {
-			log.Printf("siq import: media not found in zip: %s", zipPath)
+			slog.Warn("siq import: media not found in zip", "path", zipPath)
 			return nil
 		}
 		fr, err := f.Open()
 		if err != nil {
-			log.Printf("siq import: cannot open %s: %v", zipPath, err)
+			slog.Error("siq import: cannot open media", "path", zipPath, "err", err)
 			return nil
 		}
 		data, err := io.ReadAll(fr)
 		fr.Close()
 		if err != nil {
-			log.Printf("siq import: cannot read %s: %v", zipPath, err)
+			slog.Error("siq import: cannot read media", "path", zipPath, "err", err)
 			return nil
 		}
 
@@ -249,20 +249,20 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 			MimeType: mimeType,
 			Reader:   bytes.NewReader(data),
 		}); err != nil {
-			log.Printf("siq import: failed to upload %s: %v", zipPath, err)
+			slog.Error("siq import: failed to upload media", "path", zipPath, "err", err)
 			return nil
 		}
 
 		tmpFile, err := os.CreateTemp("", "sgame-probe-*")
 		if err != nil {
-			log.Printf("siq import: failed to create temp file: %v", err)
+			slog.Error("siq import: failed to create temp file", "err", err)
 			return &domain.Attachment{Key: key, MimeType: mimeType, Size: int64(len(data)), Type: domain.Image}
 		}
 		defer os.Remove(tmpFile.Name())
 		defer tmpFile.Close()
 
 		if _, err := io.Copy(tmpFile, bytes.NewReader(data)); err != nil {
-			log.Printf("siq import: failed to buffer %s for probing: %v", zipPath, err)
+			slog.Error("siq import: failed to buffer media for probing", "path", zipPath, "err", err)
 			return &domain.Attachment{Key: key, MimeType: mimeType, Size: int64(len(data)), Type: domain.Image}
 		}
 
@@ -270,7 +270,7 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 		defer cancel()
 		probeData, err := ffprobe.ProbeURL(probeCtx, tmpFile.Name())
 		if err != nil {
-			log.Printf("siq import: failed to probe %s: %v", zipPath, err)
+			slog.Error("siq import: failed to probe media", "path", zipPath, "err", err)
 			return &domain.Attachment{Key: key, MimeType: mimeType, Size: int64(len(data)), Type: domain.Image}
 		}
 

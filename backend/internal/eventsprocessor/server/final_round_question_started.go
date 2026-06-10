@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
@@ -41,14 +41,14 @@ func HandleFinalRoundQuestionStartedMessage(ctx context.Context, server realtime
 		})
 		if err != nil {
 			if err != ErrDeferredFunctionCancelled {
-				log.Println(err)
+				slog.Error("error", "err", err)
 			}
 			return
 		}
 
 		roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
 		if err := server.Send(ctx, roomUpdatedMessage); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 	})

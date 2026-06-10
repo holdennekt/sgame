@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"reflect"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/holdennekt/sgame/backend/internal/dto"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
@@ -100,11 +101,18 @@ func ErrorMiddleware(ctx *gin.Context) {
 	}
 }
 
+func RequestIDMiddleware(ctx *gin.Context) {
+	requestId := ctx.GetHeader("X-Request-ID")
+	if requestId == "" {
+		requestId = uuid.NewString()
+	}
+	ctx.Set("requestId", requestId)
+	ctx.Header("X-Request-ID", requestId)
+	ctx.Next()
+}
+
 func LoggingMiddleware(ctx *gin.Context) {
 	start := time.Now()
-
-	clientIP := ctx.ClientIP()
-	serverIP := GetServerIP()
 
 	var requestBodyStr string
 	contentType := ctx.Request.Header.Get("Content-Type")
@@ -122,21 +130,16 @@ func LoggingMiddleware(ctx *gin.Context) {
 
 	ctx.Next()
 
-	statusCode := ctx.Writer.Status()
-	responseBody := respBody.String()
-	duration := time.Since(start)
-
-	log.Printf(
-		"[GIN] %v | %3d | %13v | %s %s\nClientIP: %s | ServerIP: %s\nRequest: %s\nResponse: %s\n",
-		start.Format(time.RFC3339),
-		statusCode,
-		duration,
-		ctx.Request.Method,
-		ctx.Request.URL.Path,
-		clientIP,
-		serverIP,
-		requestBodyStr,
-		truncate(responseBody, 512),
+	slog.Info("request",
+		"request_id", ctx.GetString("requestId"),
+		"method", ctx.Request.Method,
+		"path", ctx.Request.URL.Path,
+		"status", ctx.Writer.Status(),
+		"duration_ms", time.Since(start).Milliseconds(),
+		"client_ip", ctx.ClientIP(),
+		"server_ip", GetServerIP(),
+		"request_body", requestBodyStr,
+		"response_body", truncate(respBody.String(), 512),
 	)
 }
 

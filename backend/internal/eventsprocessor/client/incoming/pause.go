@@ -3,7 +3,7 @@ package incoming
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
@@ -38,18 +38,18 @@ func HandlePauseMessage(ctx context.Context, server realtime.Channel, internalSe
 		if err != nil {
 			var conflictErr custerr.ConflictErr
 			if !errors.As(err, &conflictErr) {
-				log.Println(err)
+				slog.Error("error", "err", err)
 			}
 			return
 		}
 
 		if err := server.Send(ctx, outgoing.NewRoomUpdatedMessage(roomId)); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 
 		if err := sendRescheduleMessage(ctx, internalServer, newRoom); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 		}
 	})
 	return nil

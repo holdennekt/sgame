@@ -5,15 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
 	gcsstorage "cloud.google.com/go/storage"
-	"google.golang.org/api/googleapi"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
+	"google.golang.org/api/googleapi"
 )
 
 type GCSStorage struct {
@@ -72,7 +72,7 @@ func (s *GCSStorage) UploadFromURL(ctx context.Context, uui storage.URLUploadInp
 
 	if resp.StatusCode != http.StatusOK {
 		bts, _ := io.ReadAll(resp.Body)
-		log.Println("Failed to get file from URL", uui.URL, string(bts))
+		slog.Error("failed to get file from URL", "url", uui.URL, "body", string(bts))
 		return custerr.NewInternalErr(fmt.Errorf("failed to upload file: unexpected status code %d for URL %s", resp.StatusCode, uui.URL))
 	}
 
@@ -168,7 +168,7 @@ func (s *GCSStorage) URL(ctx context.Context, key string, ttl time.Duration) (st
 	return s.signedURL(ctx, key, ttl)
 }
 
-func (s *GCSStorage) signedURL(ctx context.Context, key string, ttl time.Duration) (string, error) {
+func (s *GCSStorage) signedURL(_ context.Context, key string, ttl time.Duration) (string, error) {
 	u, err := s.client.Bucket(s.bucketName).SignedURL(key, &gcsstorage.SignedURLOptions{
 		Method:  "GET",
 		Expires: time.Now().Add(ttl),

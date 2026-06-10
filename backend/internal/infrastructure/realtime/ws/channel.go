@@ -3,7 +3,7 @@ package ws
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -40,7 +40,7 @@ func (c *channel) Recieve(ctx context.Context) <-chan message.Message {
 			if err != nil {
 				var closeErr websocket.CloseError
 				if !errors.As(err, &closeErr) {
-					log.Println("read error:", err)
+					slog.Error("read error", "err", err)
 				}
 				return
 			}

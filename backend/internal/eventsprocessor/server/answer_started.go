@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
@@ -55,14 +55,14 @@ func HandleAnswerStartedMessage(ctx context.Context, server realtime.Channel, in
 		})
 		if err != nil {
 			if err != ErrDeferredFunctionCancelled {
-				log.Println(err)
+				slog.Error("error", "err", err)
 			}
 			return
 		}
 
 		roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
 		if err := server.Send(ctx, roomUpdatedMessage); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 
@@ -70,19 +70,19 @@ func HandleAnswerStartedMessage(ctx context.Context, server realtime.Channel, in
 		case domain.RevealingQuestion:
 			revealingStartedMessage := NewRevealingStartedMessage(asp.Question)
 			if err := internalServer.Send(ctx, revealingStartedMessage); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				return
 			}
 		case domain.ShowingQuestion:
 			questionStartedMessage := NewQuestionStartedMessage(asp.Question)
 			if err := internalServer.Send(ctx, questionStartedMessage); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				return
 			}
 		case domain.SelectingQuestion:
 			questionEndedMessage := NewQuestionEndedMessage(asp.Question)
 			if err := internalServer.Send(ctx, questionEndedMessage); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				return
 			}
 		}

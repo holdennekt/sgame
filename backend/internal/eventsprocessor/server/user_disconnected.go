@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"slices"
 	"time"
 
@@ -57,22 +57,22 @@ func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel,
 				return
 			}
 			if _, ok := err.(custerr.NotFoundErr); !ok {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				return
 			}
 			deletedRoomMsg := outgoing.NewRoomDeletedMessage(roomId)
 			if err := lobbyServer.Send(ctx, deletedRoomMsg); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 			}
 			if err := server.Send(ctx, deletedRoomMsg); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 			}
 			if err := internalServer.Send(ctx, deletedRoomMsg); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 			}
 			if room.State != domain.WaitingForStart && room.State != domain.GameOver {
 				if err := roomRepository.Create(ctx, room); err != nil {
-					log.Println(err)
+					slog.Error("error", "err", err)
 				}
 			}
 		})

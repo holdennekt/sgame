@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -26,15 +27,17 @@ type MinioStorage struct {
 func NewMinioStorage(client *minio.Client, bucketName, publicBase string) storage.Storage {
 	exists, err := client.BucketExists(context.Background(), bucketName)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("fatal error", "err", err)
+		os.Exit(1)
 	}
 
 	if !exists {
 		err = client.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{})
 		if err != nil {
-			log.Fatal(err)
+			slog.Error("fatal error", "err", err)
+			os.Exit(1)
 		}
-		log.Printf("Bucket \"%s\" created", bucketName)
+		slog.Info("bucket created", "bucket", bucketName)
 	}
 
 	policy := fmt.Sprintf(`{
@@ -51,7 +54,8 @@ func NewMinioStorage(client *minio.Client, bucketName, publicBase string) storag
 	}`, bucketName)
 	err = client.SetBucketPolicy(context.Background(), bucketName, policy)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("fatal error", "err", err)
+		os.Exit(1)
 	}
 
 	return &MinioStorage{
@@ -90,7 +94,7 @@ func (s *MinioStorage) UploadFromURL(ctx context.Context, uui storage.URLUploadI
 
 	if resp.StatusCode != http.StatusOK {
 		bts, _ := io.ReadAll(resp.Body)
-		log.Println("Failed to get file from URL", uui.URL, string(bts))
+		slog.Error("failed to get file from URL", "url", uui.URL, "body", string(bts))
 		return custerr.NewInternalErr(fmt.Errorf("failed to upload file: unexpected status code %d for URL %s", resp.StatusCode, uui.URL))
 	}
 

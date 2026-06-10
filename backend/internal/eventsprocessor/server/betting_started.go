@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
@@ -50,14 +50,14 @@ func HandleBettingStartedMessage(ctx context.Context, server realtime.Channel, i
 		})
 		if err != nil {
 			if err != ErrDeferredFunctionCancelled {
-				log.Println(err)
+				slog.Error("error", "err", err)
 			}
 			return
 		}
 
 		roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
 		if err := server.Send(ctx, roomUpdatedMessage); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 
@@ -65,13 +65,13 @@ func HandleBettingStartedMessage(ctx context.Context, server realtime.Channel, i
 		case domain.SelectingQuestion:
 			questionEndedMessage := NewQuestionEndedMessage(room.CurrentQuestion.Question)
 			if err := internalServer.Send(ctx, questionEndedMessage); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				return
 			}
 		case domain.ShowingQuestion:
 			answerStartedMessage := NewAnswerStartedMessage(bsp.Question, newerRoom.AnsweringPlayer.Id)
 			if err := internalServer.Send(ctx, answerStartedMessage); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				return
 			}
 		}

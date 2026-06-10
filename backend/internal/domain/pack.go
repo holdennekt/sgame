@@ -2,7 +2,7 @@ package domain
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"slices"
 	"time"
 
@@ -115,7 +115,7 @@ func (q Question) ToQuestionCorrectAnswerDemo(getAttachmentUrl func(key string) 
 	if q.Comment != nil && q.Comment.Attachment != nil {
 		u, err := getAttachmentUrl(q.Comment.Attachment.Key)
 		if err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 		}
 		demo.Comment.Attachment.URL = u
 		if q.Comment.Attachment.Duration > CorrectAnswerDemoDuration {
@@ -155,7 +155,7 @@ func (frq FinalRoundQuestion) ToQuestionCorrectAnswerDemo(getAttachmentUrl func(
 	if frq.Comment != nil && frq.Comment.Attachment != nil {
 		u, err := getAttachmentUrl(frq.Comment.Attachment.Key)
 		if err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 		}
 		demo.Comment.Attachment.URL = u
 		if frq.Comment.Attachment.Duration > CorrectAnswerDemoDuration {

@@ -3,7 +3,7 @@ package incoming
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
@@ -47,13 +47,13 @@ func HandleSelectQuestionMessage(ctx context.Context, server realtime.Channel, i
 			return room.SelectQuestion(user.Id, pack, qsp.Category, qsp.Index, getAttachmentUrl)
 		})
 		if err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 
 		roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
 		if err := server.Send(ctx, roomUpdatedMessage); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 
@@ -61,7 +61,7 @@ func HandleSelectQuestionMessage(ctx context.Context, server realtime.Channel, i
 		case domain.RevealingQuestion:
 			revealingStartedMessage := serverevent.NewRevealingStartedMessage(newRoom.CurrentQuestion.Question)
 			if err := internalServer.Send(ctx, revealingStartedMessage); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				return
 			}
 		case domain.Answering:
@@ -70,19 +70,19 @@ func HandleSelectQuestionMessage(ctx context.Context, server realtime.Channel, i
 				newRoom.AnsweringPlayer.Id,
 			)
 			if err := internalServer.Send(ctx, answerStartedMessage); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				return
 			}
 		case domain.Passing:
 			passingStartedMessage := serverevent.NewPassingStartedMessage(newRoom.CurrentQuestion.Question)
 			if err := internalServer.Send(ctx, passingStartedMessage); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				return
 			}
 		case domain.Betting:
 			bettingStartedMessage := serverevent.NewBettingStartedMessage(newRoom.CurrentQuestion.Question)
 			if err := internalServer.Send(ctx, bettingStartedMessage); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				return
 			}
 		}

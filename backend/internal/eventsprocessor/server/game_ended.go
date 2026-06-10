@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
@@ -32,20 +32,20 @@ func HandleGameEndedMessage(ctx context.Context, server realtime.Channel, intern
 		defer cancel()
 
 		if err := roomCache.Delete(ctx, roomId); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 		deletedRoomMsg := outgoing.NewRoomDeletedMessage(roomId)
 		if err := lobbyServer.Send(ctx, deletedRoomMsg); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 		if err := server.Send(ctx, deletedRoomMsg); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 		if err := internalServer.Send(ctx, deletedRoomMsg); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 	})

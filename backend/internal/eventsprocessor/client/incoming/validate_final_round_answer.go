@@ -3,7 +3,7 @@ package incoming
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
@@ -33,12 +33,12 @@ func HandleValidateFinalRoundAnswerMessage(ctx context.Context, server realtime.
 	if newRoom.State == domain.GameOver {
 		gameEndedMessage := serverevent.NewGameEndedMessage()
 		if err := internalServer.Send(ctx, gameEndedMessage); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 		}
 
 		correctAnswerDemoMessage := outgoing.NewCorrectAnswerDemoMessage(newRoom.FinalRoundState.Question, getAttachmentUrl)
 		if err := server.Send(ctx, correctAnswerDemoMessage); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 		}
 	}
 	return nil

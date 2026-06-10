@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"time"
 
@@ -150,7 +151,7 @@ func (c *roomCache) ListenForExpiredOwners(ctx context.Context, handleExpiredOwn
 				continue
 			}
 			id := matches[1]
-			fmt.Printf("Expired internal key for room ID: %s\n", id)
+			slog.Debug("owner key expired", "room_id", id)
 			handleExpiredOwner(id)
 		}
 	}

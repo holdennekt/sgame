@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"io"
-	"log"
+	"log/slog"
 	"reflect"
 	"strings"
 	"time"
@@ -117,7 +117,7 @@ func populateAttachmentURLs(ctx context.Context, stor storage.Storage, draft *do
 		}
 		u, err := stor.URL(ctx, a.Key, GET_URL_TTL)
 		if err != nil {
-			log.Printf("failed to get URL for attachment %s: %v", a.Key, err)
+			slog.Error("failed to get URL for attachment", "key", a.Key, "err", err)
 			return
 		}
 		a.URL = u
@@ -160,7 +160,7 @@ func (s *PackDraftService) Update(ctx context.Context, user domain.User, id stri
 	if draft.LinkedPackId != nil {
 		linkedPack, fetchErr := s.packRepo.GetById(context.Background(), *draft.LinkedPackId)
 		if fetchErr != nil {
-			log.Printf("draft update: failed to fetch linked pack %s, skipping attachment cleanup: %v", *draft.LinkedPackId, fetchErr)
+			slog.Error("draft update: failed to fetch linked pack, skipping attachment cleanup", "pack_id", *draft.LinkedPackId, "err", fetchErr)
 			skipCleanup = true
 		} else {
 			linkedPackKeys = linkedPack.AttachmentKeys()
@@ -171,7 +171,7 @@ func (s *PackDraftService) Update(ctx context.Context, user domain.User, id stri
 		if err != nil && !skipCleanup {
 			for key := range sets.Delta(sets.Delta(req.AttachmentKeys(), draft.AttachmentKeys()), linkedPackKeys) {
 				if err := s.storage.Delete(context.Background(), key); err != nil {
-					log.Printf("failed to cleanup pack draft attachment %s: %v", key, err)
+					slog.Error("failed to cleanup attachment", "key", key, "err", err)
 				}
 			}
 		}
@@ -190,7 +190,7 @@ func (s *PackDraftService) Update(ctx context.Context, user domain.User, id stri
 	if !skipCleanup {
 		for key := range sets.Delta(sets.Delta(draft.AttachmentKeys(), req.AttachmentKeys()), linkedPackKeys) {
 			if err := s.storage.Delete(context.Background(), key); err != nil {
-				log.Printf("failed to cleanup pack draft attachment %s: %v", key, err)
+				slog.Error("failed to cleanup attachment", "key", key, "err", err)
 			}
 		}
 	}
@@ -217,14 +217,14 @@ func (s *PackDraftService) Delete(ctx context.Context, userId, id string) error 
 		if draft.LinkedPackId != nil {
 			linkedPack, err := s.packRepo.GetById(context.Background(), *draft.LinkedPackId)
 			if err != nil {
-				log.Printf("draft delete: failed to fetch linked pack %s, skipping attachment cleanup: %v", *draft.LinkedPackId, err)
+				slog.Error("draft delete: failed to fetch linked pack, skipping attachment cleanup", "pack_id", *draft.LinkedPackId, "err", err)
 				return
 			}
 			linkedPackKeys = linkedPack.AttachmentKeys()
 		}
 		for key := range sets.Delta(draft.AttachmentKeys(), linkedPackKeys) {
 			if err := s.storage.Delete(context.Background(), key); err != nil {
-				log.Printf("draft delete: failed to cleanup attachment %s: %v", key, err)
+				slog.Error("failed to cleanup attachment", "key", key, "err", err)
 			}
 		}
 	}()
@@ -270,7 +270,7 @@ func (s *PackDraftService) Publish(ctx context.Context, user domain.User, id str
 	}
 
 	if err := s.packDraftRepo.Delete(ctx, id); err != nil {
-		log.Printf("publish: failed to delete draft %s: %v", id, err)
+		slog.Error("publish: failed to delete draft", "draft_id", id, "err", err)
 	}
 	return packId, nil
 }

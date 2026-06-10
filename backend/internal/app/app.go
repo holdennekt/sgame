@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -28,7 +28,6 @@ import (
 )
 
 func init() {
-	log.SetFlags(0)
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation(custvalid.SameLength, custvalid.ValidateSameLength)
 		v.RegisterTagNameFunc(func(fld reflect.StructField) string {
@@ -83,7 +82,7 @@ func (a *app) Run() {
 
 		processor, err := a.roomInternalEventsProcessorGetter(roomId)
 		if err != nil {
-			log.Println("Error while creation roomInternalEventsProcessor:", err)
+			slog.Error("error creating room internal events processor", "err", err)
 			return
 		}
 		go processor.Listen(appCtx)
@@ -106,6 +105,7 @@ func (a *app) Run() {
 
 	engine.Use(
 		gin.Recovery(),
+		myHttp.RequestIDMiddleware,
 		myHttp.LoggingMiddleware,
 		cors.New(corsConfig),
 		myHttp.ErrorMiddleware,
@@ -132,9 +132,10 @@ func (a *app) Run() {
 	}
 
 	go func() {
-		log.Println("Starting server at addres:", servAddres)
+		slog.Info("starting server", "addr", servAddres)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatal("server error:", err)
+			slog.Error("server error", "err", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -142,15 +143,16 @@ func (a *app) Run() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	slog.Info("shutting down server")
 	appCancel()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Failed to shutdown gracefully: %v", err)
+		slog.Error("failed to shutdown gracefully", "err", err)
+		os.Exit(1)
 	}
 
-	log.Println("Server has been shutdown gracefully")
+	slog.Info("server shutdown gracefully")
 }

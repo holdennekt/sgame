@@ -3,7 +3,7 @@ package incoming
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"slices"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
@@ -36,7 +36,7 @@ func HandleStartGameMessage(ctx context.Context, lobbyServer realtime.Channel, r
 
 	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
 	if err := lobbyServer.Send(ctx, roomUpdatedMessage); err != nil {
-		log.Println(err)
+		slog.Error("error", "err", err)
 	}
 
 	return roomServer.Send(ctx, roomUpdatedMessage)

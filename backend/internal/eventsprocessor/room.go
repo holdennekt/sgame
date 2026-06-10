@@ -3,7 +3,7 @@ package eventsprocessor
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"slices"
 	"time"
 
@@ -76,15 +76,15 @@ func (p *RoomEventsProcessor) Listen(ctx context.Context) {
 				ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 				defer cancel()
 				if err := p.handleClientClosure(ctx); err != nil {
-					log.Println("error while handling client closure", err)
+					slog.Error("error while handling client closure", "err", err)
 				}
 				p.roomServer.Close()
 				return
 			}
 
-			log.Printf("User \"%s(%s)\" has sent room \"%s\" message with event \"%s\": %v\n", p.user.Name, p.user.Id, p.id, msg.Event, string(msg.Payload))
+			slog.Info("user sent room message", "user", p.user.Name, "user_id", p.user.Id, "room_id", p.id, "event", msg.Event, "payload", string(msg.Payload))
 			if err := p.handleClientMessage(ctx, msg); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				p.client.Send(ctx, outgoing.NewErrorMessage(err))
 			}
 		case msg, ok := <-serverMessages:
@@ -92,15 +92,15 @@ func (p *RoomEventsProcessor) Listen(ctx context.Context) {
 				ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 				defer cancel()
 				if err := p.handleServerClosure(ctx); err != nil {
-					log.Println("error while handling roomServer closure", err)
+					slog.Error("error while handling roomServer closure", "err", err)
 				}
 				p.client.Close()
 				return
 			}
 
-			log.Printf("User \"%s(%s)\" has recieved room \"%s\" message with event \"%s\": %v\n", p.user.Name, p.user.Id, p.id, msg.Event, string(msg.Payload))
+			slog.Info("user received room message", "user", p.user.Name, "user_id", p.user.Id, "room_id", p.id, "event", msg.Event, "payload", string(msg.Payload))
 			if err := p.handleServerMessage(ctx, msg); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 			}
 		}
 	}
@@ -146,7 +146,7 @@ func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg messa
 }
 
 func (p *RoomEventsProcessor) handleClientClosure(ctx context.Context) error {
-	log.Printf("User \"%s(%s)\" room \"%s\" client channel closed\n", p.user.Name, p.user.Id, p.id)
+	slog.Info("room client channel closed", "user", p.user.Name, "user_id", p.user.Id, "room_id", p.id)
 	_, err := p.roomCache.GetById(ctx, p.id)
 	if err != nil {
 		if _, ok := err.(custerr.NotFoundErr); ok {
@@ -209,7 +209,7 @@ func (p *RoomEventsProcessor) handleServerMessage(ctx context.Context, msg messa
 }
 
 func (p *RoomEventsProcessor) handleServerClosure(_ context.Context) error {
-	log.Printf("User \"%s(%s)\" room \"%s\" roomServer channel closed\n", p.user.Name, p.user.Id, p.id)
+	slog.Info("room server channel closed", "user", p.user.Name, "user_id", p.user.Id, "room_id", p.id)
 	return nil
 }
 
@@ -254,7 +254,7 @@ func (p *RoomInternalEventsProcessor) Listen(ctx context.Context) {
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := p.handleServerClosure(cleanupCtx); err != nil {
-			log.Println("error while handling internalRoomServer closure", err)
+			slog.Error("error while handling internalRoomServer closure", "err", err)
 		}
 	}()
 
@@ -266,7 +266,7 @@ func (p *RoomInternalEventsProcessor) Listen(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
-				log.Println("EXITING TICKER GOROUTINE")
+				slog.Debug("exiting owner refresh ticker")
 				return
 			case <-tickerC:
 				p.roomCache.UpdateOwner(ctx, p.id, OWNER_TTL)
@@ -278,13 +278,13 @@ func (p *RoomInternalEventsProcessor) Listen(ctx context.Context) {
 	for {
 		msg, ok := <-messages
 		if !ok {
-			log.Println("INTERNAL ROOM SERVER CHANNEL WAS CLOSED")
+			slog.Info("internal room server channel was closed")
 			return
 		}
 
-		log.Printf("Server has recieved room \"%s\" internal message with event \"%s\": %v\n", p.id, msg.Event, string(msg.Payload))
+		slog.Info("server received room internal message", "room_id", p.id, "event", msg.Event, "payload", string(msg.Payload))
 		if err := p.handleMessage(ctx, msg); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 	}
@@ -318,7 +318,7 @@ func (p *RoomInternalEventsProcessor) handleMessage(ctx context.Context, msg mes
 	case domain.UserDisconnected:
 		return server.HandleUserDisconnectedMessage(ctx, p.roomServer, p.roomInternalServer, p.lobbyServer, p.roomCache, p.roomRepository, p.id, msg)
 	case domain.RoomDeleted:
-		log.Println("INTERNAL ROOM SERVER GOT ROOM_DELETED EVENT")
+		slog.Info("internal room server got room_deleted event")
 		p.lobbyServer.Close()
 		p.roomServer.Close()
 		return p.roomInternalServer.Close()
@@ -327,7 +327,7 @@ func (p *RoomInternalEventsProcessor) handleMessage(ctx context.Context, msg mes
 }
 
 func (p *RoomInternalEventsProcessor) handleServerClosure(ctx context.Context) error {
-	log.Printf("Server room \"%s\" channel closed\n", p.id)
+	slog.Info("room channel closed", "room_id", p.id)
 	if err := p.roomServer.Delete(ctx); err != nil {
 		return err
 	}

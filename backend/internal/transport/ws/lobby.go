@@ -3,7 +3,7 @@ package ws
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
@@ -61,11 +61,11 @@ func (h *LobbyHandler) connect(ctx *gin.Context) {
 
 	chatMessage := client.NewSystemChatMessage(fmt.Sprintf("%s has connected", user.Name))
 	if err := clientChannel.Send(ctx, chatMessage); err != nil {
-		log.Println(err)
+		slog.Error("error", "err", err)
 		return
 	}
 	if err := serverChannel.Send(ctx, chatMessage); err != nil {
-		log.Println(err)
+		slog.Error("error", "err", err)
 		return
 	}
 

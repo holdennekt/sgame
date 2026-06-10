@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
@@ -40,14 +40,14 @@ func HandleFinalRoundBettingStartedMessage(ctx context.Context, server realtime.
 		})
 		if err != nil {
 			if err != ErrDeferredFunctionCancelled {
-				log.Println(err)
+				slog.Error("error", "err", err)
 			}
 			return
 		}
 
 		roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
 		if err := server.Send(ctx, roomUpdatedMessage); err != nil {
-			log.Println(err)
+			slog.Error("error", "err", err)
 			return
 		}
 
@@ -55,13 +55,13 @@ func HandleFinalRoundBettingStartedMessage(ctx context.Context, server realtime.
 		case domain.ShowingFinalRoundQuestion:
 			finalRoundQuestionStartedMessage := NewFinalRoundQuestionStartedMessage()
 			if err := internalServer.Send(ctx, finalRoundQuestionStartedMessage); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				return
 			}
 		case domain.GameOver:
 			gameEndedMessage := NewGameEndedMessage()
 			if err := internalServer.Send(ctx, gameEndedMessage); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				return
 			}
 		}

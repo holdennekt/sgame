@@ -3,7 +3,7 @@ package eventsprocessor
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client"
@@ -36,30 +36,30 @@ func (p *LobbyEventsProcessor) Listen(ctx context.Context) {
 		case msg, ok := <-clientMessages:
 			if !ok {
 				if err := p.handleClientClosure(); err != nil {
-					log.Println("error while handling client closure", err)
+					slog.Error("error while handling client closure", "err", err)
 				}
 				p.server.Close()
 				return
 			}
 
-			log.Printf("User \"%s(%s)\" has sent lobby message with event \"%s\": %v\n", p.user.Name, p.user.Id, msg.Event, string(msg.Payload))
+			slog.Info("user sent lobby message", "user", p.user.Name, "user_id", p.user.Id, "event", msg.Event, "payload", string(msg.Payload))
 			if err := p.handleClientMessage(ctx, msg); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 				p.client.Send(ctx, outgoing.NewErrorMessage(err))
 			}
 
 		case msg, ok := <-serverMessages:
 			if !ok {
 				if err := p.handleServerClosure(); err != nil {
-					log.Println("error while handling server closure", err)
+					slog.Error("error while handling server closure", "err", err)
 				}
 				p.client.Close()
 				return
 			}
 
-			log.Printf("User \"%s(%s)\" has recieved lobby message with event \"%s\": %v\n", p.user.Name, p.user.Id, msg.Event, string(msg.Payload))
+			slog.Info("user received lobby message", "user", p.user.Name, "user_id", p.user.Id, "event", msg.Event, "payload", string(msg.Payload))
 			if err := p.handleServerMessage(ctx, msg); err != nil {
-				log.Println(err)
+				slog.Error("error", "err", err)
 			}
 		}
 	}
@@ -86,12 +86,12 @@ func (p *LobbyEventsProcessor) handleServerMessage(ctx context.Context, msg mess
 }
 
 func (p *LobbyEventsProcessor) handleClientClosure() error {
-	log.Printf("User \"%s(%s)\" lobby client channel closed\n", p.user.Name, p.user.Id)
+	slog.Info("lobby client channel closed", "user", p.user.Name, "user_id", p.user.Id)
 	chatMessage := client.NewSystemChatMessage(fmt.Sprintf("%s has disconnected", p.user.Name))
 	return p.server.Send(context.Background(), chatMessage)
 }
 
 func (p *LobbyEventsProcessor) handleServerClosure() error {
-	log.Printf("User \"%s(%s)\" lobby server channel closed\n", p.user.Name, p.user.Id)
+	slog.Info("lobby server channel closed", "user", p.user.Name, "user_id", p.user.Id)
 	return nil
 }
