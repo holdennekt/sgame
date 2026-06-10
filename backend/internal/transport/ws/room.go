@@ -27,10 +27,15 @@ type RoomHandler struct {
 	roomChannelGetter         realtime.ServerChannelGetter
 	roomInternalChannelGetter realtime.ServerChannelGetter
 	roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter
+	shutdownCtx               context.Context
 }
 
 func NewRoomHandler(roomService *service.RoomService, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter) *RoomHandler {
-	return &RoomHandler{roomService, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomEventsProcessorGetter}
+	return &RoomHandler{roomService: roomService, lobbyChannelGetter: lobbyChannelGetter, roomChannelGetter: roomChannelGetter, roomInternalChannelGetter: roomInternalChannelGetter, roomEventsProcessorGetter: roomEventsProcessorGetter, shutdownCtx: context.Background()}
+}
+
+func (h *RoomHandler) SetShutdownCtx(ctx context.Context) {
+	h.shutdownCtx = ctx
 }
 
 func (h *RoomHandler) RegisterRoute(r *gin.RouterGroup) {
@@ -110,5 +115,5 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 		log.Println("Error while creation roomEventsProcessor:", err)
 		return
 	}
-	go processor.Listen(context.Background())
+	go processor.Listen(h.shutdownCtx)
 }

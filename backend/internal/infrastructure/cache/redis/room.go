@@ -132,20 +132,27 @@ func (c *roomCache) UpdateOwner(ctx context.Context, roomId string, ttl time.Dur
 }
 
 func (c *roomCache) ListenForExpiredOwners(ctx context.Context, handleExpiredOwner func(roomId string)) {
-	pubsubExp := c.client.PSubscribe(context.Background(), "__keyevent@0__:expired")
+	pubsubExp := c.client.PSubscribe(ctx, "__keyevent@0__:expired")
 	defer pubsubExp.Close()
 
 	re := regexp.MustCompile(fmt.Sprintf("^%s(.+)%s%s$", domain.ROOM_PREFIX, domain.INTERNAL_POSTFIX, domain.OWNER_POSTFIX))
-	for msg := range pubsubExp.Channel() {
-		matches := re.FindStringSubmatch(msg.Payload)
-		if len(matches) != 2 {
-			continue
+	ch := pubsubExp.Channel()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg, ok := <-ch:
+			if !ok {
+				return
+			}
+			matches := re.FindStringSubmatch(msg.Payload)
+			if len(matches) != 2 {
+				continue
+			}
+			id := matches[1]
+			fmt.Printf("Expired internal key for room ID: %s\n", id)
+			handleExpiredOwner(id)
 		}
-
-		id := matches[1]
-		fmt.Printf("Expired internal key for room ID: %s\n", id)
-
-		handleExpiredOwner(id)
 	}
 }
 

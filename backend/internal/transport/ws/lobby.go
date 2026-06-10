@@ -20,10 +20,15 @@ import (
 type LobbyHandler struct {
 	lobbyChannelGetter         realtime.ServerChannelGetter
 	lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter
+	shutdownCtx                context.Context
 }
 
 func NewLobbyHandler(lobbyChannelGetter realtime.ServerChannelGetter, lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter) *LobbyHandler {
-	return &LobbyHandler{lobbyChannelGetter, lobbyEventsProcessorGetter}
+	return &LobbyHandler{lobbyChannelGetter: lobbyChannelGetter, lobbyEventsProcessorGetter: lobbyEventsProcessorGetter, shutdownCtx: context.Background()}
+}
+
+func (h *LobbyHandler) SetShutdownCtx(ctx context.Context) {
+	h.shutdownCtx = ctx
 }
 
 // @Summary      Connect to Lobby WebSocket
@@ -68,5 +73,5 @@ func (h *LobbyHandler) connect(ctx *gin.Context) {
 		clientChannel,
 		user,
 	)
-	go processor.Listen(context.Background())
+	go processor.Listen(h.shutdownCtx)
 }
