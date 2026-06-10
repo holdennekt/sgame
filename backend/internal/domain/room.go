@@ -473,10 +473,10 @@ func (r *Room) PlaceBet(userId string, amount int) error {
 }
 
 func (r *Room) PlaceBetsAuto() {
-	canBet := make([]Player, 0)
-	for _, p := range r.Players {
+	canBet := make([]*Player, 0)
+	for pi, p := range r.Players {
 		if p.Score > 0 {
-			canBet = append(canBet, p)
+			canBet = append(canBet, &r.Players[pi])
 		}
 	}
 	for i, player := range canBet {
