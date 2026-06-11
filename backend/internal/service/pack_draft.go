@@ -366,12 +366,12 @@ func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, o
 				Comment:   c.Comment,
 				Questions: []domain.Question{},
 			}
-			for _, q := range c.Questions {
+			for qi, q := range c.Questions {
 				question := domain.Question{
 					HiddenQuestion: domain.HiddenQuestion{
 						Round:    r.Name,
 						Category: c.Name,
-						Index:    q.Index,
+						Index:    qi,
 						Value:    q.Value,
 					},
 					Type:       q.Type,
@@ -471,7 +471,6 @@ func draftToCreatePackRequest(draft *domain.PackDraft) dto.CreatePackRequest {
 			qs := make([]dto.CreateQuestionRequest, len(c.Questions))
 			for qi, q := range c.Questions {
 				qs[qi] = dto.CreateQuestionRequest{
-					Index:      q.Index,
 					Value:      q.Value,
 					Type:       q.Type,
 					Text:       q.Text,

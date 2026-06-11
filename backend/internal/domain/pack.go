@@ -186,7 +186,7 @@ type HiddenCategory struct {
 type HiddenQuestion struct {
 	Round    string `json:"-" bson:"round"`
 	Category string `json:"category" bson:"category"`
-	Index    int    `json:"index" bson:"index"`
+	Index    int    `json:"-" bson:"index"`
 	Value    int    `json:"value" bson:"value"`
 }
 
@@ -332,7 +332,6 @@ func (r *Round) getCurrentRoundQuestions() CurrentRoundQuestions {
 		categoryQuestions := make([]BoardQuestion, 0, len(category.Questions))
 		for _, question := range category.Questions {
 			categoryQuestions = append(categoryQuestions, BoardQuestion{
-				Index:         question.Index,
 				Value:         question.Value,
 				HasBeenPlayed: false,
 			})

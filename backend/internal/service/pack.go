@@ -329,12 +329,12 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 				Comment:   c.Comment,
 				Questions: []domain.Question{},
 			}
-			for _, q := range c.Questions {
+			for qi, q := range c.Questions {
 				question := domain.Question{
 					HiddenQuestion: domain.HiddenQuestion{
 						Round:    r.Name,
 						Category: c.Name,
-						Index:    q.Index,
+						Index:    qi,
 						Value:    q.Value,
 					},
 					Type:       q.Type,
@@ -447,12 +447,12 @@ func (s *PackService) updateDomain(ctx context.Context, user domain.User, oldPac
 				Comment:   c.Comment,
 				Questions: []domain.Question{},
 			}
-			for _, q := range c.Questions {
+			for qi, q := range c.Questions {
 				question := domain.Question{
 					HiddenQuestion: domain.HiddenQuestion{
 						Round:    r.Name,
 						Category: c.Name,
-						Index:    q.Index,
+						Index:    qi,
 						Value:    q.Value,
 					},
 					Type:       q.Type,

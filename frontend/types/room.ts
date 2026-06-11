@@ -119,7 +119,6 @@ export interface RoomOptions {
 }
 
 export interface BoardQuestion {
-  index: number;
   value: number;
   hasBeenPlayed: boolean;
 }

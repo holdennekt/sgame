@@ -86,7 +86,6 @@ type CategoryQuestions struct {
 	Questions []BoardQuestion `json:"questions" bson:"questions"`
 }
 type BoardQuestion struct {
-	Index         int  `json:"index" bson:"index"`
 	Value         int  `json:"value" bson:"value"`
 	HasBeenPlayed bool `json:"hasBeenPlayed" bson:"hasBeenPlayed"`
 }

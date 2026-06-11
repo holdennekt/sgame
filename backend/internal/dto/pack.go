@@ -50,7 +50,6 @@ type CreateCategoryRequest struct {
 }
 
 type CreateQuestionRequest struct {
-	Index      int                      `json:"index" binding:"min=0,max=9"`
 	Value      int                      `json:"value" binding:"max=10000"`
 	Type       domain.QuestionType      `json:"type" binding:"oneof=regular catInBag auction"`
 	Text       *string                  `json:"text,omitempty" binding:"required_without=Attachment,omitnil,min=1,max=500"`

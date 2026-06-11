@@ -36,7 +36,7 @@ export default function CategoryEditor({
     React.SetStateAction<{
       isOpen: boolean;
       question: QuestionFormData;
-      saveQuestion: (q: Omit<QuestionFormData, "index">) => void;
+      saveQuestion: (q: QuestionFormData) => void;
     }>
   >;
   readOnly?: boolean;
@@ -67,7 +67,6 @@ export default function CategoryEditor({
     setQuestionModal({
       isOpen: true,
       question: {
-        index: qi,
         value: 0,
         text: "",
         attachment: { type: "file" },
@@ -77,10 +76,7 @@ export default function CategoryEditor({
       },
       saveQuestion: (q) =>
         setPack((pack) => {
-          pack.rounds[roundIndex].categories[categoryIndex].questions.push({
-            ...q,
-            index: qi,
-          });
+          pack.rounds[roundIndex].categories[categoryIndex].questions.push(q);
           return { ...pack };
         }),
     });
@@ -97,8 +93,6 @@ export default function CategoryEditor({
         attachment: { ...src.attachment },
       };
       questions.splice(qi + 1, 0, copy);
-      pack.rounds[roundIndex].categories[categoryIndex].questions =
-        questions.map((q, i) => ({ ...q, index: i }));
       return { ...pack };
     });
   };
@@ -118,10 +112,7 @@ export default function CategoryEditor({
       question,
       saveQuestion: (q) =>
         setPack((pack) => {
-          pack.rounds[roundIndex].categories[categoryIndex].questions[qi] = {
-            ...q,
-            index: qi,
-          };
+          pack.rounds[roundIndex].categories[categoryIndex].questions[qi] = q;
           return { ...pack };
         }),
     });
@@ -139,7 +130,7 @@ export default function CategoryEditor({
         questions,
         oldIndex,
         newIndex
-      ).map((q, i) => ({ ...q, index: i }));
+      );
       return { ...pack };
     });
   };

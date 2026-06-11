@@ -29,7 +29,7 @@ export default function QuestionModal({
   isOpen: boolean;
   close: () => void;
   question: QuestionFormData;
-  saveQuestion: (question: Omit<QuestionFormData, "index">) => void;
+  saveQuestion: (question: QuestionFormData) => void;
   validationError?: string;
   readOnly?: boolean;
 }) {

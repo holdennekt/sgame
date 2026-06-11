@@ -35,7 +35,7 @@ export default function BoardPanel({
             </span>
           </div>
           {Array.from({ length: questionsInCategoryCount }, (_, i) => {
-            const q = questions.find((q) => q.index === i);
+            const q = questions[i];
             return !q || q.hasBeenPlayed ? (
               <div
                 key={i}
@@ -51,7 +51,7 @@ export default function BoardPanel({
                 }`}
                 onClick={
                   canSelectQuestion
-                    ? () => selectQuestion({ category, index: q.index })
+                    ? () => selectQuestion({ category, index: i })
                     : undefined
                 }
               >

@@ -956,7 +956,7 @@ func TestStartNextRegularRound_PopulatesCurrentRoundQuestions(t *testing.T) {
 func TestAnyAvailableQuestions_AllPlayed_ReturnsFalse(t *testing.T) {
 	r := buildRoom(func(r *Room) {
 		r.CurrentRoundQuestions = CurrentRoundQuestions{
-			{Category: "A", Questions: []BoardQuestion{{Index: 0, HasBeenPlayed: true}}},
+			{Category: "A", Questions: []BoardQuestion{{HasBeenPlayed: true}}},
 		}
 	})
 	assert.False(t, r.AnyAvailableQuestions())
@@ -966,8 +966,8 @@ func TestAnyAvailableQuestions_OneAvailable_ReturnsTrue(t *testing.T) {
 	r := buildRoom(func(r *Room) {
 		r.CurrentRoundQuestions = CurrentRoundQuestions{
 			{Category: "A", Questions: []BoardQuestion{
-				{Index: 0, HasBeenPlayed: true},
-				{Index: 1, HasBeenPlayed: false},
+				{HasBeenPlayed: true},
+				{HasBeenPlayed: false},
 			}},
 		}
 	})

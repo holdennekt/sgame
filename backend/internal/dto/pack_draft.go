@@ -50,7 +50,6 @@ type UpdateCategoryDraftRequest struct {
 }
 
 type UpdateQuestionDraftRequest struct {
-	Index      int                        `json:"index"`
 	Value      int                        `json:"value"`
 	Type       domain.QuestionType        `json:"type" binding:"oneof=regular catInBag auction"`
 	Text       *string                    `json:"text,omitempty" binding:"omitnil,max=1000"`

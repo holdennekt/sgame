@@ -185,12 +185,11 @@ export default function PackEditor({
   const [questionModal, setQuestionModal] = useState<{
     isOpen: boolean;
     question: QuestionFormData;
-    saveQuestion: (q: Omit<QuestionFormData, "index">) => void;
+    saveQuestion: (q: QuestionFormData) => void;
     validationError?: string;
   }>({
     isOpen: false,
     question: {
-      index: 0,
       value: 0,
       text: "",
       attachment: { type: "file" },
@@ -348,10 +347,7 @@ export default function PackEditor({
                 : message,
               saveQuestion: (q) => {
                 const newPack = { ...pack };
-                newPack.rounds[ri].categories[ci].questions[qi] = {
-                  ...q,
-                  index: qi,
-                };
+                newPack.rounds[ri].categories[ci].questions[qi] = q;
                 setPack(newPack);
                 clearTimeout(autosaveTimer.current);
                 saveDraft(newPack);

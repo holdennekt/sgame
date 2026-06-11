@@ -27,7 +27,6 @@ export interface CommentFormData {
 }
 
 export interface QuestionFormData {
-  index: number;
   value: number;
   type: QuestionType;
   text: string;
@@ -81,7 +80,6 @@ export interface CreateCommentRequest {
 }
 
 export interface CreateQuestionRequest {
-  index: number;
   value: number;
   type: QuestionType;
   text: string | null;
@@ -202,7 +200,6 @@ export interface Question extends HiddenQuestion {
 }
 
 const dummyQuestion: Question = {
-  index: 0,
   value: 0,
   category: "",
   text: "",
@@ -258,7 +255,6 @@ export interface HiddenCategory {
 
 export interface HiddenQuestion {
   category: string;
-  index: number;
   value: number;
 }
 
@@ -304,7 +300,6 @@ function convertCategoryToFormData(category: Category): CategoryFormData {
 
 function convertQuestionToFormData(question: Question): QuestionFormData {
   return {
-    index: question.index,
     value: question.value,
     type: question.type,
     text: question.text ?? "",
