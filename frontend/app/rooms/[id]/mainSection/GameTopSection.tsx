@@ -146,7 +146,13 @@ export default function GameTopSection() {
       );
 
     case "final_round_betting":
-      return <TextPanel topText="Final round!" bottomText="Place your bet" />;
+      return (
+        <TextPanel
+          topText="Final round!"
+          bottomText={room.finalRoundState!.question!.category}
+          commentText="Place your bet"
+        />
+      );
 
     case "showing_final_round_question":
       return (

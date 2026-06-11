@@ -71,6 +71,7 @@ func NewPlayerRoom(room *Room) RoomPlayer {
 		var finalRoundQuestion *HiddenFinalRoundQuestion
 		if room.FinalRoundState.Question != nil {
 			finalRoundQuestion = &HiddenFinalRoundQuestion{
+				Category:   room.FinalRoundState.Question.Category,
 				Text:       room.FinalRoundState.Question.Text,
 				Attachment: room.FinalRoundState.Question.Attachment,
 			}
