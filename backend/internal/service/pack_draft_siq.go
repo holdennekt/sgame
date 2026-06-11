@@ -70,7 +70,9 @@ type siqParams struct {
 
 type siqParam struct {
 	Name      string        `xml:"name,attr"`
+	Type      string        `xml:"type,attr"`
 	Items     []siqItem     `xml:"item"`
+	Params    []siqParam    `xml:"param"`
 	NumberSet *siqNumberSet `xml:"numberSet"`
 	CharData  string        `xml:",chardata"`
 }
@@ -178,6 +180,42 @@ func findParam(params []siqParam, name string) *siqParam {
 		}
 	}
 	return nil
+}
+
+// buildOptionsMap returns label→text for each child param of an answerOptions group.
+func buildOptionsMap(param *siqParam) map[string]string {
+	if param == nil {
+		return nil
+	}
+	m := make(map[string]string, len(param.Params))
+	for i := range param.Params {
+		text, _ := extractContent(&param.Params[i])
+		if text != "" {
+			m[param.Params[i].Name] = text
+		}
+	}
+	return m
+}
+
+// appendSelectOptions appends "A. ...\nB. ..." lines to qText in document order.
+func appendSelectOptions(qText string, param *siqParam) string {
+	if param == nil || len(param.Params) == 0 {
+		return qText
+	}
+	var lines []string
+	for i := range param.Params {
+		text, _ := extractContent(&param.Params[i])
+		if text != "" {
+			lines = append(lines, param.Params[i].Name+". "+text)
+		}
+	}
+	if len(lines) == 0 {
+		return qText
+	}
+	if qText != "" {
+		return qText + "\n" + strings.Join(lines, "\n")
+	}
+	return strings.Join(lines, "\n")
 }
 
 // parseSIQ unzips r, parses content.xml, uploads all referenced media to
@@ -387,6 +425,19 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 				qText, qMedia := extractContent(findParam(params, "question"))
 				aText, aMedia := extractContent(findParam(params, "answer"))
 
+				answers := extractAnswers(q.Right)
+				answerTypeParam := findParam(params, "answerType")
+				if answerTypeParam != nil && normalizeText(answerTypeParam.CharData) == "select" {
+					optParam := findParam(params, "answerOptions")
+					qText = appendSelectOptions(qText, optParam)
+					optMap := buildOptionsMap(optParam)
+					for j, a := range answers {
+						if text, ok := optMap[a]; ok {
+							answers[j] = text
+						}
+					}
+				}
+
 				questions = append(questions, domain.Question{
 					HiddenQuestion: domain.HiddenQuestion{
 						Round:    r.Name,
@@ -397,7 +448,7 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 					Type:       siqTypeToQuestionType(q.Type),
 					Text:       strPtr(qText),
 					Attachment: lookupMedia(qMedia),
-					Answers:    extractAnswers(q.Right),
+					Answers:    answers,
 					Comment:    buildComment(aText, aMedia, lookupMedia),
 				})
 			}
