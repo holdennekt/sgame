@@ -82,7 +82,7 @@ func (p *LobbyEventsProcessor) handleServerMessage(ctx context.Context, msg mess
 			slog.Error("error handling server chat message", "err", err)
 		}
 	case domain.RoomUpdated:
-		if err := outgoing.HandleRoomUpdatedMessage(ctx, p.roomCache, p.client, p.user, msg); err != nil {
+		if err := outgoing.HandleLobbyRoomUpdatedMessage(ctx, p.roomCache, p.client, msg); err != nil {
 			slog.Error("error handling room updated message", "err", err)
 		}
 	case domain.RoomDeleted:

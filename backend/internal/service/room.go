@@ -87,8 +87,13 @@ func (s *RoomService) GetProjection(ctx context.Context, userId, id, password st
 		return nil, err
 	}
 
-	if room.Options.Type == domain.Private && *room.Options.Password != password {
-		return nil, custerr.NewForbiddenErr("wrong password")
+	if !room.IsUserIn(userId) {
+		if room.IsUserBanned(userId) {
+			return nil, custerr.NewForbiddenErr("you were banned from this room")
+		}
+		if room.Options.Type == domain.Private && *room.Options.Password != password {
+			return nil, custerr.NewForbiddenErr("wrong password")
+		}
 	}
 
 	return room.GetProjection(userId), nil

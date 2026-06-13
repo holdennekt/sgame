@@ -61,9 +61,19 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 		return
 	}
 
-	if !room.IsUserIn(user.Id) {
-		_ = ctx.Error(custerr.NewForbiddenErr("cannot connect to room you are not in"))
-		return
+	isSpectator := !room.IsUserIn(user.Id)
+	if isSpectator {
+		if room.IsUserBanned(user.Id) {
+			_ = ctx.Error(custerr.NewForbiddenErr("you were banned from this room"))
+			return
+		}
+		if room.Options.Type == domain.Private {
+			password := ctx.Query(http.PASSWORD_QUERY_PARAM)
+			if *room.Options.Password != password {
+				_ = ctx.Error(custerr.NewForbiddenErr("wrong password"))
+				return
+			}
+		}
 	}
 
 	conn, err := websocket.Accept(ctx.Writer, ctx.Request, &websocket.AcceptOptions{
@@ -75,41 +85,54 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 		return
 	}
 
-	newRoom, err := h.roomService.Connect(ctx, user.Id, id)
-	if err != nil {
-		slog.Error("error", "err", err)
-		return
-	}
-
 	clientChannel := ws.NewChannel(conn)
-	payload, _ := json.Marshal(newRoom.GetProjection(user.Id))
-	clientRoomUpdatedMessage := message.Message{Event: domain.RoomUpdated, Payload: payload}
-	if err := clientChannel.Send(ctx, clientRoomUpdatedMessage); err != nil {
-		slog.Error("error", "err", err)
-		return
-	}
 
-	serverRoomUpdatedMessage := outgoing.NewRoomUpdatedMessage(id)
-	roomServerChannel := h.roomChannelGetter.Get(domain.ROOM_PREFIX + id)
-	if err := roomServerChannel.Send(ctx, serverRoomUpdatedMessage); err != nil {
-		slog.Error("error", "err", err)
-		return
-	}
+	if isSpectator {
+		// Spectators are invisible: no membership update, no presence broadcast,
+		// no connect chat. They only receive the read-only spectator projection.
+		payload, _ := json.Marshal(room.GetProjection(user.Id))
+		clientRoomUpdatedMessage := message.Message{Event: domain.RoomUpdated, Payload: payload}
+		if err := clientChannel.Send(ctx, clientRoomUpdatedMessage); err != nil {
+			slog.Error("error", "err", err)
+			return
+		}
+	} else {
+		newRoom, err := h.roomService.Connect(ctx, user.Id, id)
+		if err != nil {
+			slog.Error("error", "err", err)
+			return
+		}
 
-	chatMessage := client.NewSystemChatMessage(fmt.Sprintf("%s has connected", user.Name))
-	if err := clientChannel.Send(ctx, chatMessage); err != nil {
-		slog.Error("error", "err", err)
-		return
-	}
-	if err := roomServerChannel.Send(ctx, chatMessage); err != nil {
-		slog.Error("error", "err", err)
-		return
+		payload, _ := json.Marshal(newRoom.GetProjection(user.Id))
+		clientRoomUpdatedMessage := message.Message{Event: domain.RoomUpdated, Payload: payload}
+		if err := clientChannel.Send(ctx, clientRoomUpdatedMessage); err != nil {
+			slog.Error("error", "err", err)
+			return
+		}
+
+		serverRoomUpdatedMessage := outgoing.NewRoomUpdatedMessage(id)
+		roomServerChannel := h.roomChannelGetter.Get(domain.ROOM_PREFIX + id)
+		if err := roomServerChannel.Send(ctx, serverRoomUpdatedMessage); err != nil {
+			slog.Error("error", "err", err)
+			return
+		}
+
+		chatMessage := client.NewSystemChatMessage(fmt.Sprintf("%s has connected", user.Name))
+		if err := clientChannel.Send(ctx, chatMessage); err != nil {
+			slog.Error("error", "err", err)
+			return
+		}
+		if err := roomServerChannel.Send(ctx, chatMessage); err != nil {
+			slog.Error("error", "err", err)
+			return
+		}
 	}
 
 	processor, err := h.roomEventsProcessorGetter(
 		clientChannel,
 		id,
 		user,
+		isSpectator,
 	)
 	if err != nil {
 		slog.Error("error while creation roomEventsProcessor", "err", err)

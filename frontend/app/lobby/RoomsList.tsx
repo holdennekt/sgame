@@ -8,9 +8,11 @@ import RoomLobbyCard from "./Room";
 export default function RoomsList({
   rooms,
   openPasswordModal,
+  openSpectateModal,
 }: {
   rooms: RoomLobby[];
   openPasswordModal: (roomId: string) => void;
+  openSpectateModal: (roomId: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -56,6 +58,7 @@ export default function RoomsList({
             <RoomLobbyCard
               room={rooms[virtualItem.index]}
               openPasswordModal={openPasswordModal}
+              openSpectateModal={openSpectateModal}
             />
           </div>
         ))}

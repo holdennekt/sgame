@@ -14,10 +14,15 @@ import {
   isQuestionDemo,
   isCorrectAnswerDemo,
 } from "@/types/room";
-import { leaveRoom } from "@/app/api";
+import { joinRoom, leaveRoom } from "@/app/api";
 import { useWebSocket } from "./useWebSocket";
 
-export function useRoom(initialRoom: RoomHost | RoomPlayer, userId: string) {
+export function useRoom(
+  initialRoom: RoomHost | RoomPlayer,
+  userId: string,
+  isSpectator = false,
+  password?: string
+) {
   const router = useRouter();
   const [room, setRoom] = useState(initialRoom);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -31,16 +36,25 @@ export function useRoom(initialRoom: RoomHost | RoomPlayer, userId: string) {
     useState<CorrectAnswerDemo | null>(null);
   const delayedRoundDemoRef = useRef<RoundDemo | null>(null);
 
-  const { wsConn, handlers } = useWebSocket(
-    `/api/ws/room/${initialRoom.id}`,
-    "room"
-  );
+  const wsPath = (() => {
+    const base = `/api/ws/room/${initialRoom.id}`;
+    if (isSpectator && password) {
+      return `${base}?password=${encodeURIComponent(password)}`;
+    }
+    return base;
+  })();
+
+  const { wsConn, handlers } = useWebSocket(wsPath, "room");
 
   const setError = (msg: string) =>
     setLastError((prev) => ({ msg, count: (prev?.count ?? 0) + 1 }));
 
-  const send = (event: string, payload?: unknown) =>
+  // Spectators are read-only: they receive broadcasts but never send game
+  // actions. The backend ignores their messages too; this is the client guard.
+  const send = (event: string, payload?: unknown) => {
+    if (isSpectator) return;
     wsConn.current?.send(JSON.stringify({ event, payload }));
+  };
 
   useEffect(() => {
     if (!questionDemo && !correctAnswerDemo && delayedRoundDemoRef.current) {
@@ -104,9 +118,25 @@ export function useRoom(initialRoom: RoomHost | RoomPlayer, userId: string) {
     send("change_score", { playerId, score });
 
   const leave = async () => {
+    // Spectators are not members, so there is nothing to leave on the server.
+    if (isSpectator) {
+      router.push("/");
+      return;
+    }
     try {
       await leaveRoom(room.id);
       router.push("/");
+    } catch (e) {
+      if (isError(e)) setError(e.error);
+    }
+  };
+
+  // Spectators can join the room they're watching. Private rooms reject
+  // spectators at the backend, so this is always a public room — no password.
+  const joinAsPlayer = async () => {
+    try {
+      await joinRoom(room.id, undefined);
+      router.push(`/rooms/${room.id}`);
     } catch (e) {
       if (isError(e)) setError(e.error);
     }
@@ -127,6 +157,7 @@ export function useRoom(initialRoom: RoomHost | RoomPlayer, userId: string) {
       startGame,
       togglePause,
       leave,
+      joinAsPlayer,
       submitAnswer,
       selectQuestion,
       passQuestion,

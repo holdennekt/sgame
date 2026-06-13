@@ -1502,10 +1502,19 @@ func TestGetProjection_Player_ReturnsRoomPlayer(t *testing.T) {
 	assert.True(t, ok)
 }
 
-func TestGetProjection_Outsider_ReturnsRoomLobby(t *testing.T) {
+func TestGetProjection_Outsider_ReturnsRoomPlayer(t *testing.T) {
 	r := buildRoom()
-	_, ok := r.GetProjection("nobody").(RoomLobby)
+	// Non-members (spectators) receive the same live player view as players —
+	// board, scores, timers — never the lobby card or host view.
+	_, ok := r.GetProjection("nobody").(RoomPlayer)
 	assert.True(t, ok)
+}
+
+func TestNewRoomLobby_ReturnsLobbyCard(t *testing.T) {
+	r := buildRoom()
+	lobby := NewRoomLobby(&r)
+	assert.Equal(t, r.Id, lobby.Id)
+	assert.Equal(t, r.Name, lobby.Name)
 }
 
 // ---- 26. GetAvailableFinalRoundCategories ----

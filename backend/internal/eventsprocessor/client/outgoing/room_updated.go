@@ -28,3 +28,13 @@ func HandleRoomUpdatedMessage(ctx context.Context, roomCache cache.Room, client 
 	payload, _ := json.Marshal(room.GetProjection(user.Id))
 	return client.Send(ctx, message.Message{Event: msg.Event, Payload: payload})
 }
+
+func HandleLobbyRoomUpdatedMessage(ctx context.Context, roomCache cache.Room, client realtime.Channel, msg message.Message) error {
+	var roomUpdatedPayload roomUpdatedPayload
+	if err := json.Unmarshal(msg.Payload, &roomUpdatedPayload); err != nil {
+		return err
+	}
+	room, _ := roomCache.GetById(ctx, roomUpdatedPayload.Id)
+	payload, _ := json.Marshal(domain.NewRoomLobby(room))
+	return client.Send(ctx, message.Message{Event: msg.Event, Payload: payload})
+}

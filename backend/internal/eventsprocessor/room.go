@@ -37,12 +37,13 @@ type RoomEventsProcessor struct {
 	id                 string
 	user               domain.User
 	pack               *domain.Pack
+	isSpectator        bool
 }
 
-type RoomEventsProcessorGetter func(client realtime.Channel, id string, user domain.User) (*RoomEventsProcessor, error)
+type RoomEventsProcessorGetter func(client realtime.Channel, id string, user domain.User, isSpectator bool) (*RoomEventsProcessor, error)
 
 func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage) RoomEventsProcessorGetter {
-	return func(client realtime.Channel, id string, user domain.User) (*RoomEventsProcessor, error) {
+	return func(client realtime.Channel, id string, user domain.User, isSpectator bool) (*RoomEventsProcessor, error) {
 		room, err := roomCache.GetById(context.Background(), id)
 		if err != nil {
 			return nil, err
@@ -62,6 +63,7 @@ func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInt
 			id,
 			user,
 			pack,
+			isSpectator,
 		}, nil
 	}
 }
@@ -107,6 +109,9 @@ func (p *RoomEventsProcessor) Listen(ctx context.Context) {
 }
 
 func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg message.Message) error {
+	if p.isSpectator {
+		return nil
+	}
 	getURL := func(key string) (string, error) {
 		return p.storage.URL(ctx, key, GET_URL_TTL)
 	}
@@ -147,6 +152,9 @@ func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg messa
 
 func (p *RoomEventsProcessor) handleClientClosure(ctx context.Context) error {
 	slog.Info("room client channel closed", "user", p.user.Name, "user_id", p.user.Id, "room_id", p.id)
+	if p.isSpectator {
+		return nil
+	}
 	_, err := p.roomCache.GetById(ctx, p.id)
 	if err != nil {
 		if _, ok := err.(custerr.NotFoundErr); ok {

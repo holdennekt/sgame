@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { HiddenPack, Pack } from "@/types/pack";
 import { PackDraft } from "@/types/pack_draft";
-import { Room, RoomLobby } from "@/types/room";
+import { RoomHost, RoomLobby, RoomPlayer } from "@/types/room";
 import { User } from "@/middleware";
 
 const backendUrl = (path: string) =>
@@ -50,14 +50,16 @@ export const getDraft = async (id: string): Promise<PackDraft> => {
   return resp.json();
 };
 
-export const joinRoom = async (
+// Used for both members (already joined via the lobby) and spectators.
+// GET /rooms/:id returns the appropriate projection based on membership.
+// For private room spectators, password must be provided.
+export const getRoom = async (
   id: string,
-  password: string | undefined
-): Promise<Room> => {
-  const url = new URL(backendUrl(`/api/rooms/${id}/join`));
+  password?: string
+): Promise<RoomHost | RoomPlayer> => {
+  const url = new URL(backendUrl(`/api/rooms/${id}`));
   if (password) url.searchParams.set("password", password);
   const resp = await fetch(url, {
-    method: "PATCH",
     cache: "no-store",
     headers: cookieHeader(),
   });

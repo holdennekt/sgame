@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import Chat from "@/components/Chat";
 import { getAvatar } from "@/components/UserAvatar";
+import { FiEye } from "react-icons/fi";
 import Link from "next/link";
 import ControlButtons from "./ControlButtons";
 import MainPanel from "./mainSection/MainPanel";
@@ -14,16 +15,26 @@ import { useRequiredUser } from "@/contexts/UserContext";
 
 export default function RoomPage({
   initialRoom,
+  isSpectator = false,
+  password,
 }: {
   initialRoom: RoomHost | RoomPlayer;
+  isSpectator?: boolean;
+  password?: string;
 }) {
   const user = useRequiredUser();
-  const { lastError, chat, game } = useRoom(initialRoom, user.id);
+  const { lastError, chat, game } = useRoom(
+    initialRoom,
+    user.id,
+    isSpectator,
+    password
+  );
   const {
     room,
     startGame,
     togglePause,
     leave,
+    joinAsPlayer,
     submitAnswer,
     skipQuestion,
     changeScore,
@@ -56,6 +67,7 @@ export default function RoomPage({
   const handleSubmitAnswer = () => {
     if (
       isHost ||
+      isSpectator ||
       (room.state !== "revealing_question" && room.state !== "showing_question")
     )
       return;
@@ -97,9 +109,17 @@ export default function RoomPage({
           <div className="overflow-hidden shrink-0 bg-surface border border-border rounded-md">
             <div className="flex items-center gap-3 p-3">
               <div className="flex-1 min-w-0">
-                <p className="text-base font-semibold truncate text-on-surface">
-                  {room.name}
-                </p>
+                <div className="flex items-center gap-2 min-w-0">
+                  <p className="text-base font-semibold truncate text-on-surface">
+                    {room.name}
+                  </p>
+                  {isSpectator && (
+                    <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-secondary/15 text-secondary">
+                      <FiEye size={11} />
+                      Spectating
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-1 text-xs text-on-surface-muted min-w-0">
                   <span className="shrink-0">Pack:</span>
                   <Link
@@ -129,11 +149,13 @@ export default function RoomPage({
             </div>
             <ControlButtons
               isHost={isHost}
+              isSpectator={isSpectator}
               isGameStarted={room.state !== "waiting_for_start"}
               isPaused={room.pausedState.paused}
               start={startGame}
               togglePause={togglePause}
               leave={leave}
+              joinAsPlayer={joinAsPlayer}
             />
           </div>
 

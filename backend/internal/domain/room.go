@@ -155,13 +155,10 @@ func (r *Room) IsUserBanned(userId string) bool {
 }
 
 func (r *Room) GetProjection(userId string) any {
-	if r.IsUserIn(userId) {
-		if r.IsUserHost(userId) {
-			return NewHostRoom(r)
-		}
-		return NewPlayerRoom(r)
+	if r.IsUserHost(userId) {
+		return NewHostRoom(r)
 	}
-	return NewRoomLobby(r)
+	return NewPlayerRoom(r)
 }
 
 func (r *Room) StartGame(pack *Pack) {
@@ -763,6 +760,55 @@ func (r *Room) ChangeScore(userId string, playerId string, score int) error {
 	return nil
 }
 
+// captureTimerProgress saves current animation/timer progress before pausing,
+// so the client can resume reveals and countdowns from where they left off.
+func (r *Room) captureTimerProgress(now time.Time) {
+	switch r.State {
+	case RevealingQuestion:
+		if r.CurrentQuestion.Attachment != nil {
+			fullDuration := float64(r.CurrentQuestion.GetMediaRevealingDuration())
+			remainedDuration := math.Max(0, float64(r.CurrentQuestion.AttachmentRevealEndsAt.Sub(now)))
+			r.CurrentQuestion.AttachmentRevealLastProgress = 1 - remainedDuration/fullDuration
+		}
+		if r.CurrentQuestion.Text != nil {
+			fullDuration := float64(r.CurrentQuestion.GetTextRevealingDuration(r.Options.ReadingSymbolsPerSecond))
+			remainedDuration := math.Min(fullDuration, float64(r.CurrentQuestion.TimerStartsAt.Sub(now)))
+			r.CurrentQuestion.TextRevealLastProgress = 1 - remainedDuration/fullDuration
+		}
+	case ShowingQuestion:
+		fullDuration := float64(time.Duration(r.Options.QuestionThinkingTime) * time.Second)
+		remainedDuration := float64(r.CurrentQuestion.TimerEndsAt.Sub(now))
+		r.CurrentQuestion.TimerLastProgress = remainedDuration / fullDuration
+	}
+}
+
+// shiftTimers moves all active timer deadlines forward by the elapsed pause
+// duration, so remaining time is preserved across a pause.
+func (r *Room) shiftTimers(elapsed time.Duration) {
+	switch r.State {
+	case RevealingQuestion:
+		if r.CurrentQuestion.Attachment != nil {
+			r.CurrentQuestion.AttachmentRevealEndsAt = r.CurrentQuestion.AttachmentRevealEndsAt.Add(elapsed)
+		}
+		r.CurrentQuestion.TimerStartsAt = r.CurrentQuestion.TimerStartsAt.Add(elapsed)
+	case ShowingQuestion:
+		r.CurrentQuestion.TimerEndsAt = r.CurrentQuestion.TimerEndsAt.Add(elapsed)
+	case Answering:
+		r.AnsweringPlayer.TimerStartsAt = r.AnsweringPlayer.TimerStartsAt.Add(elapsed)
+		r.AnsweringPlayer.TimerEndsAt = r.AnsweringPlayer.TimerEndsAt.Add(elapsed)
+	case Betting:
+		r.CurrentQuestion.BettingEndsAt = r.CurrentQuestion.BettingEndsAt.Add(elapsed)
+	case Passing:
+		r.CurrentQuestion.PassingEndsAt = r.CurrentQuestion.PassingEndsAt.Add(elapsed)
+	case FinalRoundBetting:
+		newBettingEndsAt := r.FinalRoundState.BettingEndsAt.Add(elapsed)
+		r.FinalRoundState.BettingEndsAt = &newBettingEndsAt
+	case ShowingFinalRoundQuestion:
+		newTimerEndsAt := r.FinalRoundState.TimerEndsAt.Add(elapsed)
+		r.FinalRoundState.TimerEndsAt = &newTimerEndsAt
+	}
+}
+
 func (r *Room) Pause(userId string) error {
 	now := time.Now()
 
@@ -783,23 +829,7 @@ func (r *Room) Pause(userId string) error {
 		return custerr.NewConflictErr("can not pause now")
 	}
 
-	switch r.State {
-	case RevealingQuestion:
-		if r.CurrentQuestion.Attachment != nil {
-			fullDuration := float64(r.CurrentQuestion.GetMediaRevealingDuration())
-			remainedDuration := math.Max(0, float64(r.CurrentQuestion.AttachmentRevealEndsAt.Sub(now)))
-			r.CurrentQuestion.AttachmentRevealLastProgress = 1 - remainedDuration/fullDuration
-		}
-		if r.CurrentQuestion.Text != nil {
-			fullDuration := float64(r.CurrentQuestion.GetTextRevealingDuration(r.Options.ReadingSymbolsPerSecond))
-			remainedDuration := math.Min(fullDuration, float64(r.CurrentQuestion.TimerStartsAt.Sub(now)))
-			r.CurrentQuestion.TextRevealLastProgress = 1 - remainedDuration/fullDuration
-		}
-	case ShowingQuestion:
-		fullDuration := float64(time.Duration(r.Options.QuestionThinkingTime) * time.Second)
-		remainedDuration := float64(r.CurrentQuestion.TimerEndsAt.Sub(now))
-		r.CurrentQuestion.TimerLastProgress = remainedDuration / fullDuration
-	}
+	r.captureTimerProgress(now)
 
 	r.PausedState.Paused = true
 	r.PausedState.PausedAt = &now
@@ -817,28 +847,7 @@ func (r *Room) Unpause(userId string) error {
 	r.PausedState.Paused = false
 	r.PausedState.PausedAt = nil
 
-	switch r.State {
-	case RevealingQuestion:
-		if r.CurrentQuestion.Attachment != nil {
-			r.CurrentQuestion.AttachmentRevealEndsAt = r.CurrentQuestion.AttachmentRevealEndsAt.Add(elapsed)
-		}
-		r.CurrentQuestion.TimerStartsAt = r.CurrentQuestion.TimerStartsAt.Add(elapsed)
-	case ShowingQuestion:
-		r.CurrentQuestion.TimerEndsAt = r.CurrentQuestion.TimerEndsAt.Add(elapsed)
-	case Answering:
-		r.AnsweringPlayer.TimerStartsAt = r.AnsweringPlayer.TimerStartsAt.Add(elapsed)
-		r.AnsweringPlayer.TimerEndsAt = r.AnsweringPlayer.TimerEndsAt.Add(elapsed)
-	case Betting:
-		r.CurrentQuestion.BettingEndsAt = r.CurrentQuestion.BettingEndsAt.Add(elapsed)
-	case Passing:
-		r.CurrentQuestion.PassingEndsAt = r.CurrentQuestion.PassingEndsAt.Add(elapsed)
-	case FinalRoundBetting:
-		newBettingEndsAt := r.FinalRoundState.BettingEndsAt.Add(elapsed)
-		r.FinalRoundState.BettingEndsAt = &newBettingEndsAt
-	case ShowingFinalRoundQuestion:
-		newTimerEndsAt := r.FinalRoundState.TimerEndsAt.Add(elapsed)
-		r.FinalRoundState.TimerEndsAt = &newTimerEndsAt
-	}
+	r.shiftTimers(elapsed)
 	return nil
 }
 
@@ -850,28 +859,7 @@ func (r *Room) UnpauseSystem(pausedAt time.Time) error {
 	r.PausedState.Paused = false
 	r.PausedState.PausedAt = nil
 
-	switch r.State {
-	case RevealingQuestion:
-		if r.CurrentQuestion.Attachment != nil {
-			r.CurrentQuestion.AttachmentRevealEndsAt = r.CurrentQuestion.AttachmentRevealEndsAt.Add(elapsed)
-		}
-		r.CurrentQuestion.TimerStartsAt = r.CurrentQuestion.TimerStartsAt.Add(elapsed)
-	case ShowingQuestion:
-		r.CurrentQuestion.TimerEndsAt = r.CurrentQuestion.TimerEndsAt.Add(elapsed)
-	case Answering:
-		r.AnsweringPlayer.TimerStartsAt = r.AnsweringPlayer.TimerStartsAt.Add(elapsed)
-		r.AnsweringPlayer.TimerEndsAt = r.AnsweringPlayer.TimerEndsAt.Add(elapsed)
-	case Betting:
-		r.CurrentQuestion.BettingEndsAt = r.CurrentQuestion.BettingEndsAt.Add(elapsed)
-	case Passing:
-		r.CurrentQuestion.PassingEndsAt = r.CurrentQuestion.PassingEndsAt.Add(elapsed)
-	case FinalRoundBetting:
-		newBettingEndsAt := r.FinalRoundState.BettingEndsAt.Add(elapsed)
-		r.FinalRoundState.BettingEndsAt = &newBettingEndsAt
-	case ShowingFinalRoundQuestion:
-		newTimerEndsAt := r.FinalRoundState.TimerEndsAt.Add(elapsed)
-		r.FinalRoundState.TimerEndsAt = &newTimerEndsAt
-	}
+	r.shiftTimers(elapsed)
 	return nil
 }
 

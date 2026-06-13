@@ -26,7 +26,8 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
   const [passwordModal, setPasswordModal] = useState<{
     roomId: string | undefined;
     isOpen: boolean;
-  }>({ roomId: undefined, isOpen: false });
+    mode: "join" | "spectate";
+  }>({ roomId: undefined, isOpen: false, mode: "join" });
 
   useEffect(() => {
     if (!lastError) return;
@@ -105,7 +106,10 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
           <RoomsList
             rooms={filteredRooms}
             openPasswordModal={(roomId: string) =>
-              setPasswordModal({ roomId, isOpen: true })
+              setPasswordModal({ roomId, isOpen: true, mode: "join" })
+            }
+            openSpectateModal={(roomId: string) =>
+              setPasswordModal({ roomId, isOpen: true, mode: "spectate" })
             }
           />
         </div>
@@ -132,6 +136,7 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
         isOpen={passwordModal.isOpen}
         close={() => setPasswordModal({ ...passwordModal, isOpen: false })}
         roomId={passwordModal.roomId}
+        mode={passwordModal.mode}
       />
       <ToastContainer
         containerId="lobby"
