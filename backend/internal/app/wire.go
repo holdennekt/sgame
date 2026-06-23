@@ -47,15 +47,15 @@ type PersistentStreamsChannelGetter struct {
 }
 
 func providePubSubChannelGetter(client *redis.Client) PubSubChannelGetter {
-	return PubSubChannelGetter{pubsub.NewServerChannelGetter(client)}
+	return PubSubChannelGetter{pubsub.NewManagedServerChannelGetter(client, pubsub.NewManager(client))}
 }
 
-func provideStreamsChannelGetter(client *redis.Client) StreamsChannelGetter {
-	return StreamsChannelGetter{streams.NewServerChannelGetter(client)}
+func provideStreamsChannelGetter(client *redis.Client, manager *streams.StreamManager) StreamsChannelGetter {
+	return StreamsChannelGetter{streams.NewManagedServerChannelGetter(client, manager, false)}
 }
 
-func providePersistentStreamsChannelGetter(client *redis.Client) PersistentStreamsChannelGetter {
-	return PersistentStreamsChannelGetter{streams.NewPersistentServerChannelGetter(client)}
+func providePersistentStreamsChannelGetter(client *redis.Client, manager *streams.StreamManager) PersistentStreamsChannelGetter {
+	return PersistentStreamsChannelGetter{streams.NewManagedServerChannelGetter(client, manager, true)}
 }
 
 func provideLobbyEventsProcessorGetter(roomCache cache.Room, pubsubGetter PubSubChannelGetter) eventsprocessor.LobbyEventsProcessorGetter {

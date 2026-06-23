@@ -48,8 +48,9 @@ func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage2 storage.Stor
 	packDraftController := http.NewPackDraftController(packDraftService)
 	repositoryRoom := mongo2.NewRoomRepository(mdb)
 	pubSubChannelGetter := providePubSubChannelGetter(rds)
-	streamsChannelGetter := provideStreamsChannelGetter(rds)
-	persistentStreamsChannelGetter := providePersistentStreamsChannelGetter(rds)
+	streamManager := streams.NewStreamManager(rds)
+	streamsChannelGetter := provideStreamsChannelGetter(rds, streamManager)
+	persistentStreamsChannelGetter := providePersistentStreamsChannelGetter(rds, streamManager)
 	roomInternalEventsProcessorGetter := provideRoomInternalEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter)
 	roomService := provideRoomService(pack, repositoryRoom, room, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter, roomInternalEventsProcessorGetter)
 	roomController := http.NewRoomController(packService, roomService)
@@ -80,15 +81,15 @@ type PersistentStreamsChannelGetter struct {
 }
 
 func providePubSubChannelGetter(client *redis.Client) PubSubChannelGetter {
-	return PubSubChannelGetter{pubsub.NewServerChannelGetter(client)}
+	return PubSubChannelGetter{pubsub.NewManagedServerChannelGetter(client, pubsub.NewManager(client))}
 }
 
-func provideStreamsChannelGetter(client *redis.Client) StreamsChannelGetter {
-	return StreamsChannelGetter{streams.NewServerChannelGetter(client)}
+func provideStreamsChannelGetter(client *redis.Client, manager *streams.StreamManager) StreamsChannelGetter {
+	return StreamsChannelGetter{streams.NewManagedServerChannelGetter(client, manager, false)}
 }
 
-func providePersistentStreamsChannelGetter(client *redis.Client) PersistentStreamsChannelGetter {
-	return PersistentStreamsChannelGetter{streams.NewPersistentServerChannelGetter(client)}
+func providePersistentStreamsChannelGetter(client *redis.Client, manager *streams.StreamManager) PersistentStreamsChannelGetter {
+	return PersistentStreamsChannelGetter{streams.NewManagedServerChannelGetter(client, manager, true)}
 }
 
 func provideLobbyEventsProcessorGetter(roomCache cache.Room, pubsubGetter PubSubChannelGetter) eventsprocessor.LobbyEventsProcessorGetter {
