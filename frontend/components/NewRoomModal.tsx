@@ -5,7 +5,7 @@ import Modal from "./Modal";
 import { useDebounce } from "use-debounce";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { createRoom, getPacksPreviews } from "@/app/api";
+import { createRoom, getPacksPreviews, joinRoom } from "@/app/api";
 import { isError } from "@/middleware";
 import { PackPreview, PrivacyType } from "@/types/pack";
 import { CreateRoomRequest } from "@/types/room";
@@ -156,6 +156,7 @@ export default function NewRoomModal({
 
     try {
       const { id } = await createRoom(params);
+      await joinRoom(id, params.options.password ?? undefined);
       setError(null);
       close();
       const pwd = params.options.password;
