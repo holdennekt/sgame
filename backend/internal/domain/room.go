@@ -19,8 +19,6 @@ const (
 	INTERNAL_POSTFIX = ":internal"
 
 	ExtraQuestionThinkingTime = time.Second
-	TimeToBet                 = 60 * time.Second
-	TimeToPass                = 60 * time.Second
 	MaxPauseDuration          = time.Hour
 )
 
@@ -54,6 +52,8 @@ type RoomOptions struct {
 	AnswerThinkingTime        int         `json:"answerThinkingTime" bson:"answerThinkingTime" binding:"min=1,max=30"`
 	QuestionThinkingTimeFinal int         `json:"questionThinkingTimeFinal" bson:"questionThinkingTimeFinal" binding:"min=1,max=120"`
 	FalseStartAllowed         bool        `json:"falseStartAllowed" bson:"falseStartAllowed"`
+	TimeToBet                 int         `json:"timeToBet,omitempty" bson:"timeToBet"`
+	TimeToPass                int         `json:"timeToPass,omitempty" bson:"timeToPass"`
 }
 
 type PrivacyType string
@@ -234,7 +234,7 @@ func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index 
 			r.startNonRegularQuestion(canPassTo[0].Id)
 		} else {
 			r.State = Passing
-			r.CurrentQuestion.PassingEndsAt = time.Now().Add(TimeToPass)
+			r.CurrentQuestion.PassingEndsAt = time.Now().Add(time.Duration(r.Options.TimeToPass) * time.Second)
 		}
 	case Auction:
 		canBet := make([]Player, 0)
@@ -245,7 +245,7 @@ func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index 
 		}
 		if len(canBet) > 0 {
 			r.State = Betting
-			r.CurrentQuestion.BettingEndsAt = time.Now().Add(TimeToBet)
+			r.CurrentQuestion.BettingEndsAt = time.Now().Add(time.Duration(r.Options.TimeToBet) * time.Second)
 		} else {
 			allowedToAnswer := make([]string, len(r.Players))
 			for i, player := range r.Players {
@@ -609,7 +609,7 @@ func (r *Room) chooseFinalRoundCategory(pack *Pack, category string, getAttachme
 	}
 	r.CurrentPlayer = nil
 	r.State = FinalRoundBetting
-	bettingEndsAt := time.Now().Add(TimeToBet)
+	bettingEndsAt := time.Now().Add(time.Duration(r.Options.TimeToBet) * time.Second)
 	r.FinalRoundState.BettingEndsAt = &bettingEndsAt
 	return nil
 }

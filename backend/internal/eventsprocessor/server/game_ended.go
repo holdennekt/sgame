@@ -17,7 +17,7 @@ func NewGameEndedMessage() message.Message {
 	return message.Message{Event: domain.GameEnded}
 }
 
-func HandleGameEndedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, lobbyServer realtime.Channel, roomCache cache.Room, roomRepository repository.Room, roomId string) error {
+func HandleGameEndedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, lobbyServer realtime.Channel, roomCache cache.Room, roomRepository repository.Room, roomId string, idleRoomTTL time.Duration) error {
 	room, err := roomCache.GetById(ctx, roomId)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func HandleGameEndedMessage(ctx context.Context, server realtime.Channel, intern
 	if err := roomRepository.Create(ctx, room); err != nil {
 		return err
 	}
-	time.AfterFunc(IDLE_ROOM_TTL, func() {
+	time.AfterFunc(idleRoomTTL, func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 

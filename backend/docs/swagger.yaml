@@ -39,13 +39,10 @@ definitions:
     properties:
       hasBeenPlayed:
         type: boolean
-      index:
-        type: integer
       value:
         type: integer
     required:
     - hasBeenPlayed
-    - index
     - value
     type: object
   github_com_holdennekt_sgame_backend_internal_domain.Category:
@@ -103,8 +100,6 @@ definitions:
         type: string
       comment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment'
-      index:
-        type: integer
       passingEndsAt:
         type: string
       text:
@@ -129,7 +124,6 @@ definitions:
     - bettingEndsAt
     - category
     - comment
-    - index
     - passingEndsAt
     - text
     - textRevealLastProgress
@@ -251,8 +245,6 @@ definitions:
         type: string
       category:
         type: string
-      index:
-        type: integer
       passingEndsAt:
         type: string
       text:
@@ -275,7 +267,6 @@ definitions:
     - attachmentRevealLastProgress
     - bettingEndsAt
     - category
-    - index
     - passingEndsAt
     - text
     - textRevealLastProgress
@@ -347,6 +338,8 @@ definitions:
     type: object
   github_com_holdennekt_sgame_backend_internal_domain.Pack:
     properties:
+      createdAt:
+        type: string
       createdBy:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.User'
       finalRound:
@@ -361,13 +354,17 @@ definitions:
         type: array
       type:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
+      updatedAt:
+        type: string
     required:
+    - createdAt
     - createdBy
     - finalRound
     - id
     - name
     - rounds
     - type
+    - updatedAt
     type: object
   github_com_holdennekt_sgame_backend_internal_domain.PackPreview:
     properties:
@@ -434,8 +431,6 @@ definitions:
         type: string
       comment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment'
-      index:
-        type: integer
       text:
         type: string
       type:
@@ -447,7 +442,6 @@ definitions:
     - attachment
     - category
     - comment
-    - index
     - text
     - type
     - value
@@ -638,6 +632,10 @@ definitions:
         maximum: 50
         minimum: 10
         type: integer
+      timeToBet:
+        type: integer
+      timeToPass:
+        type: integer
       type:
         allOf:
         - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
@@ -740,13 +738,10 @@ definitions:
         items:
           $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Category'
         type: array
-      comment:
-        type: string
       name:
         type: string
     required:
     - categories
-    - comment
     - name
     type: object
   github_com_holdennekt_sgame_backend_internal_domain.User:
@@ -807,7 +802,7 @@ definitions:
       attachment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
       text:
-        maxLength: 400
+        maxLength: 500
         type: string
     required:
     - text
@@ -901,12 +896,9 @@ definitions:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
       comment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCommentRequest'
-      index:
-        maximum: 9
-        minimum: 0
-        type: integer
       text:
-        maxLength: 1000
+        maxLength: 500
+        minLength: 1
         type: string
       type:
         allOf:
@@ -920,7 +912,6 @@ definitions:
         type: integer
     required:
     - answers
-    - index
     - type
     - value
     type: object
@@ -956,9 +947,6 @@ definitions:
         minItems: 1
         type: array
         uniqueItems: true
-      comment:
-        maxLength: 200
-        type: string
       name:
         maxLength: 100
         minLength: 1

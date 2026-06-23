@@ -30,7 +30,7 @@ func NewUserDisconnectedMessage(userId string) message.Message {
 	return message.Message{Event: domain.UserDisconnected, Payload: payload}
 }
 
-func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, lobbyServer realtime.Channel, roomCache cache.Room, roomRepository repository.Room, roomId string, msg message.Message) error {
+func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, lobbyServer realtime.Channel, roomCache cache.Room, roomRepository repository.Room, roomId string, msg message.Message, idleRoomTTL time.Duration) error {
 	var udp userDisconnectedPayload
 	if err := json.Unmarshal(msg.Payload, &udp); err != nil {
 		return err
@@ -45,10 +45,10 @@ func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel,
 		return p.IsConnected
 	})
 	if !isHostConnected && connectedPlayerIndex == -1 {
-		if err := roomCache.Expire(ctx, roomId, IDLE_ROOM_TTL); err != nil {
+		if err := roomCache.Expire(ctx, roomId, idleRoomTTL); err != nil {
 			return err
 		}
-		time.AfterFunc(IDLE_ROOM_TTL+EXPIRE_GRACE_PERIOD, func() {
+		time.AfterFunc(idleRoomTTL+EXPIRE_GRACE_PERIOD, func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 

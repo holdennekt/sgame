@@ -29,6 +29,8 @@ func buildRoom(opts ...func(*Room)) Room {
 			QuestionThinkingTime:      10,
 			AnswerThinkingTime:        10,
 			QuestionThinkingTimeFinal: 60,
+			TimeToBet:                 60,
+			TimeToPass:                60,
 		},
 		State:           SelectingQuestion,
 		AllowedToAnswer: []string{},
@@ -819,7 +821,7 @@ func TestPlaceBetsAuto_AllZeroBets_EndsQuestion(t *testing.T) {
 // ---- 9. PlaceFinalRoundBet ----
 
 func withFinalRoundBetting() func(*Room) {
-	bettingEndsAt := time.Now().Add(TimeToBet)
+	bettingEndsAt := time.Now().Add(60 * time.Second)
 	return func(r *Room) {
 		r.State = FinalRoundBetting
 		r.FinalRoundState = &FinalRoundState{
@@ -985,7 +987,7 @@ func withPassingState() func(*Room) {
 	return func(r *Room) {
 		r.State = Passing
 		r.CurrentPlayer = ptr("p1")
-		r.CurrentQuestion = &CurrentQuestion{PassingEndsAt: time.Now().Add(TimeToPass)}
+		r.CurrentQuestion = &CurrentQuestion{PassingEndsAt: time.Now().Add(60 * time.Second)}
 	}
 }
 

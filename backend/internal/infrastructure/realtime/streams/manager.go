@@ -17,15 +17,12 @@ type StreamManager struct {
 	streams  map[string]*managedStream
 	subIDGen atomic.Uint64
 
-	cancelMu sync.Mutex
-	cancel   context.CancelFunc
-
-	wake chan struct{}
+	cancel atomic.Pointer[context.CancelFunc]
+	wake   chan struct{}
 }
 
 type managedStream struct {
 	subs       map[uint64]chan message.Message
-	refcount   int
 	lastId     string
 	persistent bool
 }
@@ -34,9 +31,10 @@ func NewStreamManager(client *redis.Client) *StreamManager {
 	m := &StreamManager{
 		client:  client,
 		streams: make(map[string]*managedStream),
-		cancel:  func() {},
 		wake:    make(chan struct{}, 1),
 	}
+	noop := context.CancelFunc(func() {})
+	m.cancel.Store(&noop)
 	go m.run()
 	return m
 }
@@ -46,9 +44,7 @@ func (m *StreamManager) interrupt() {
 	case m.wake <- struct{}{}:
 	default:
 	}
-	m.cancelMu.Lock()
-	m.cancel()
-	m.cancelMu.Unlock()
+	(*m.cancel.Load())()
 }
 
 func (m *StreamManager) subscribe(channel string, persistent bool) (<-chan message.Message, uint64) {
@@ -61,6 +57,15 @@ func (m *StreamManager) subscribe(channel string, persistent bool) (<-chan messa
 	if persistent {
 		if stored, err := m.client.Get(context.Background(), channel+LAST_ID_POSTFIX).Result(); err == nil {
 			lastId = stored
+		}
+	} else {
+		// Resolve "$" to the actual last entry ID at subscribe time.
+		// Using the literal "$" would cause XRead to re-evaluate it after each
+		// interrupt/restart, skipping any messages written between subscribe and
+		// the next XRead call. A concrete ID means messages written during that
+		// window still have a greater ID and will be returned.
+		if msgs, err := m.client.XRevRangeN(context.Background(), channel, "+", "-", 1).Result(); err == nil && len(msgs) > 0 {
+			lastId = msgs[0].ID
 		}
 	}
 
@@ -75,48 +80,69 @@ func (m *StreamManager) subscribe(channel string, persistent bool) (<-chan messa
 		m.streams[channel] = ms
 	}
 	ms.subs[id] = ch
-	ms.refcount++
+	isNew := len(ms.subs) == 1
 	m.mu.Unlock()
 
-	m.interrupt()
+	if isNew {
+		m.interrupt()
+	}
 
 	return ch, id
 }
 
 func (m *StreamManager) unsubscribe(channel string, id uint64) {
+	removed := false
 	m.mu.Lock()
 	ms := m.streams[channel]
 	if ms != nil {
 		delete(ms.subs, id)
-		ms.refcount--
-		if ms.refcount == 0 {
+		if len(ms.subs) == 0 {
 			delete(m.streams, channel)
+			removed = true
 		}
 	}
 	m.mu.Unlock()
-	m.interrupt()
+	if removed {
+		m.interrupt()
+	}
 }
 
 func (m *StreamManager) run() {
-	for {
+	var names []string
+	var ids []string
+
+	rebuild := func() {
 		m.mu.RLock()
-		names := make([]string, 0, len(m.streams))
-		ids := make([]string, 0, len(m.streams))
+		defer m.mu.RUnlock()
+		names = names[:0]
+		ids = ids[:0]
 		for name, ms := range m.streams {
 			names = append(names, name)
 			ids = append(ids, ms.lastId)
 		}
-		m.mu.RUnlock()
+	}
 
+	syncIds := func() {
+		m.mu.RLock()
+		defer m.mu.RUnlock()
+		for i, name := range names {
+			if ms := m.streams[name]; ms != nil {
+				ids[i] = ms.lastId
+			}
+		}
+	}
+
+	rebuild()
+
+	for {
 		if len(names) == 0 {
 			<-m.wake
+			rebuild()
 			continue
 		}
 
 		xctx, cancel := context.WithCancel(context.Background())
-		m.cancelMu.Lock()
-		m.cancel = cancel
-		m.cancelMu.Unlock()
+		m.cancel.Store(&cancel)
 
 		result, err := m.client.XRead(xctx, &redis.XReadArgs{
 			Streams: append(names, ids...),
@@ -126,6 +152,7 @@ func (m *StreamManager) run() {
 
 		if err != nil {
 			if xctx.Err() != nil {
+				rebuild()
 				continue
 			}
 			slog.Error("stream manager: XRead error", "err", err)
@@ -133,6 +160,15 @@ func (m *StreamManager) run() {
 		}
 
 		m.fanOut(result)
+
+		// If a stream was added/removed while we were in fanOut, rebuild.
+		// Otherwise just sync the updated lastIds into the ids slice.
+		select {
+		case <-m.wake:
+			rebuild()
+		default:
+			syncIds()
+		}
 	}
 }
 

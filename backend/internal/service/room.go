@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
+	"github.com/holdennekt/sgame/backend/internal/config"
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/dto"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor"
@@ -25,10 +26,11 @@ type RoomService struct {
 	roomChannelGetter                 realtime.ServerChannelGetter
 	roomInternalChannelGetter         realtime.ServerChannelGetter
 	roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter
+	cfg                               *config.Config
 }
 
-func NewRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter) *RoomService {
-	return &RoomService{packRepository, roomRepository, roomCache, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomInternalEventsProcessorGetter}
+func NewRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter, cfg *config.Config) *RoomService {
+	return &RoomService{packRepository, roomRepository, roomCache, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomInternalEventsProcessorGetter, cfg}
 }
 
 func (s *RoomService) Create(ctx context.Context, userId string, crr dto.CreateRoomRequest) (string, error) {
@@ -42,14 +44,18 @@ func (s *RoomService) Create(ctx context.Context, userId string, crr dto.CreateR
 		return "", custerr.NewInternalErr(err)
 	}
 
+	options := crr.Options
+	options.TimeToBet = s.cfg.TimeToBet
+	options.TimeToPass = s.cfg.TimeToPass
+
 	room := &domain.Room{
-		Id:      id.String(),
-		Name:    crr.Name,
-		Options: crr.Options,
+		Id:   id.String(),
+		Name: crr.Name,
 		PackPreview: domain.PackPreview{
 			Id:   pack.Id,
 			Name: pack.Name,
 		},
+		Options:   options,
 		CreatedBy: userId,
 		Players:   make([]domain.Player, 0),
 		State:     domain.WaitingForStart,

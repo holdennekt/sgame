@@ -1441,15 +1441,11 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "hasBeenPlayed",
-                "index",
                 "value"
             ],
             "properties": {
                 "hasBeenPlayed": {
                     "type": "boolean"
-                },
-                "index": {
-                    "type": "integer"
                 },
                 "value": {
                     "type": "integer"
@@ -1521,7 +1517,6 @@ const docTemplate = `{
                 "bettingEndsAt",
                 "category",
                 "comment",
-                "index",
                 "passingEndsAt",
                 "text",
                 "textRevealLastProgress",
@@ -1555,9 +1550,6 @@ const docTemplate = `{
                 },
                 "comment": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment"
-                },
-                "index": {
-                    "type": "integer"
                 },
                 "passingEndsAt": {
                     "type": "string"
@@ -1736,7 +1728,6 @@ const docTemplate = `{
                 "attachmentRevealLastProgress",
                 "bettingEndsAt",
                 "category",
-                "index",
                 "passingEndsAt",
                 "text",
                 "textRevealLastProgress",
@@ -1761,9 +1752,6 @@ const docTemplate = `{
                 },
                 "category": {
                     "type": "string"
-                },
-                "index": {
-                    "type": "integer"
                 },
                 "passingEndsAt": {
                     "type": "string"
@@ -1880,14 +1868,19 @@ const docTemplate = `{
         "github_com_holdennekt_sgame_backend_internal_domain.Pack": {
             "type": "object",
             "required": [
+                "createdAt",
                 "createdBy",
                 "finalRound",
                 "id",
                 "name",
                 "rounds",
-                "type"
+                "type",
+                "updatedAt"
             ],
             "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
                 "createdBy": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.User"
                 },
@@ -1908,6 +1901,9 @@ const docTemplate = `{
                 },
                 "type": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType"
+                },
+                "updatedAt": {
+                    "type": "string"
                 }
             }
         },
@@ -1994,7 +1990,6 @@ const docTemplate = `{
                 "attachment",
                 "category",
                 "comment",
-                "index",
                 "text",
                 "type",
                 "value"
@@ -2014,9 +2009,6 @@ const docTemplate = `{
                 },
                 "comment": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment"
-                },
-                "index": {
-                    "type": "integer"
                 },
                 "text": {
                     "type": "string"
@@ -2293,6 +2285,12 @@ const docTemplate = `{
                     "maximum": 50,
                     "minimum": 10
                 },
+                "timeToBet": {
+                    "type": "integer"
+                },
+                "timeToPass": {
+                    "type": "integer"
+                },
                 "type": {
                     "enum": [
                         "public",
@@ -2413,7 +2411,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "categories",
-                "comment",
                 "name"
             ],
             "properties": {
@@ -2422,9 +2419,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Category"
                     }
-                },
-                "comment": {
-                    "type": "string"
                 },
                 "name": {
                     "type": "string"
@@ -2518,7 +2512,7 @@ const docTemplate = `{
                 },
                 "text": {
                     "type": "string",
-                    "maxLength": 400
+                    "maxLength": 500
                 }
             }
         },
@@ -2637,7 +2631,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "answers",
-                "index",
                 "type",
                 "value"
             ],
@@ -2656,14 +2649,10 @@ const docTemplate = `{
                 "comment": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCommentRequest"
                 },
-                "index": {
-                    "type": "integer",
-                    "maximum": 9,
-                    "minimum": 0
-                },
                 "text": {
                     "type": "string",
-                    "maxLength": 1000
+                    "maxLength": 500,
+                    "minLength": 1
                 },
                 "type": {
                     "enum": [
@@ -2731,10 +2720,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCategoryRequest"
                     }
-                },
-                "comment": {
-                    "type": "string",
-                    "maxLength": 200
                 },
                 "name": {
                     "type": "string",

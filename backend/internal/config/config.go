@@ -33,11 +33,33 @@ type Config struct {
 	AppEnv string
 	Host   string
 	Port   string
+
+	TimeToBet            int // seconds; env: TIME_TO_BET, default 60
+	TimeToPass           int // seconds; env: TIME_TO_PASS, default 60
+	QuestionDemoDuration int // seconds; env: QUESTION_DEMO_DURATION, default 5
+	IdleRoomTTL          int // seconds; env: IDLE_ROOM_TTL, default 600
 }
 
 func Load() (*Config, error) {
 	redisDB, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
 	minioUseSSL, _ := strconv.ParseBool(os.Getenv("MINIO_USE_SSL"))
+
+	timeToBet, _ := strconv.Atoi(os.Getenv("TIME_TO_BET"))
+	if timeToBet == 0 {
+		timeToBet = 60
+	}
+	timeToPass, _ := strconv.Atoi(os.Getenv("TIME_TO_PASS"))
+	if timeToPass == 0 {
+		timeToPass = 60
+	}
+	questionDemoDuration, _ := strconv.Atoi(os.Getenv("QUESTION_DEMO_DURATION"))
+	if questionDemoDuration == 0 {
+		questionDemoDuration = 5
+	}
+	idleRoomTTL, _ := strconv.Atoi(os.Getenv("IDLE_ROOM_TTL"))
+	if idleRoomTTL == 0 {
+		idleRoomTTL = 600
+	}
 
 	cfg := &Config{
 		MongoHost:     os.Getenv("MONGO_HOST"),
@@ -65,6 +87,11 @@ func Load() (*Config, error) {
 		Port:        os.Getenv("PORT"),
 		FrontendURL: os.Getenv("FRONTEND_URL"),
 		UserAgent:   os.Getenv("USER_AGENT"),
+
+		TimeToBet:            timeToBet,
+		TimeToPass:           timeToPass,
+		QuestionDemoDuration: questionDemoDuration,
+		IdleRoomTTL:          idleRoomTTL,
 	}
 
 	return cfg, cfg.validate()

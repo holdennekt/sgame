@@ -19,7 +19,7 @@ type SelectQuestionPayload struct {
 	Index    int    `json:"index"`
 }
 
-func HandleSelectQuestionMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, getAttachmentUrl func(key string) (string, error), roomId string, user domain.User, pack *domain.Pack, msg message.Message) error {
+func HandleSelectQuestionMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, getAttachmentUrl func(key string) (string, error), roomId string, user domain.User, pack *domain.Pack, demoDuration int, msg message.Message) error {
 	var qsp SelectQuestionPayload
 	if err := json.Unmarshal(msg.Payload, &qsp); err != nil {
 		return err
@@ -37,12 +37,12 @@ func HandleSelectQuestionMessage(ctx context.Context, server realtime.Channel, i
 	if err != nil {
 		return err
 	}
-	questionDemoMessage := outgoing.NewQuestionDemoMessage(*question, category.Comment)
+	questionDemoMessage := outgoing.NewQuestionDemoMessage(*question, category.Comment, demoDuration)
 	if err := server.Send(ctx, questionDemoMessage); err != nil {
 		return err
 	}
 
-	time.AfterFunc(outgoing.QuestionDemoDuration*time.Second, func() {
+	time.AfterFunc(time.Duration(demoDuration)*time.Second, func() {
 		newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
 			return room.SelectQuestion(user.Id, pack, qsp.Category, qsp.Index, getAttachmentUrl)
 		})

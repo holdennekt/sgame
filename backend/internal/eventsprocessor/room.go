@@ -7,6 +7,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/holdennekt/sgame/backend/internal/config"
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/incoming"
@@ -27,22 +28,23 @@ const (
 )
 
 type RoomEventsProcessor struct {
-	client             realtime.Channel
-	lobbyServer        realtime.Channel
-	roomServer         realtime.Channel
-	roomInternalServer realtime.Channel
-	roomCache          cache.Room
-	roomRepository     repository.Room
-	storage            storage.Storage
-	id                 string
-	user               domain.User
-	pack               *domain.Pack
-	isSpectator        bool
+	client               realtime.Channel
+	lobbyServer          realtime.Channel
+	roomServer           realtime.Channel
+	roomInternalServer   realtime.Channel
+	roomCache            cache.Room
+	roomRepository       repository.Room
+	storage              storage.Storage
+	id                   string
+	user                 domain.User
+	pack                 *domain.Pack
+	isSpectator bool
+	cfg         *config.Config
 }
 
 type RoomEventsProcessorGetter func(client realtime.Channel, id string, user domain.User, isSpectator bool) (*RoomEventsProcessor, error)
 
-func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage) RoomEventsProcessorGetter {
+func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage, cfg *config.Config) RoomEventsProcessorGetter {
 	return func(client realtime.Channel, id string, user domain.User, isSpectator bool) (*RoomEventsProcessor, error) {
 		room, err := roomCache.GetById(context.Background(), id)
 		if err != nil {
@@ -53,17 +55,18 @@ func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInt
 			return nil, err
 		}
 		return &RoomEventsProcessor{
-			client,
-			lobbyChannelGetter.Get(domain.LOBBY),
-			roomChannelGetter.Get(domain.ROOM_PREFIX + id),
-			roomInternalChannelGetter.Get(domain.ROOM_PREFIX + id + domain.INTERNAL_POSTFIX),
-			roomCache,
-			roomRepository,
-			storage,
-			id,
-			user,
-			pack,
-			isSpectator,
+			client:               client,
+			lobbyServer:          lobbyChannelGetter.Get(domain.LOBBY),
+			roomServer:           roomChannelGetter.Get(domain.ROOM_PREFIX + id),
+			roomInternalServer:   roomInternalChannelGetter.Get(domain.ROOM_PREFIX + id + domain.INTERNAL_POSTFIX),
+			roomCache:            roomCache,
+			roomRepository:       roomRepository,
+			storage:              storage,
+			id:                   id,
+			user:                 user,
+			pack:                 pack,
+			isSpectator: isSpectator,
+			cfg:         cfg,
 		}, nil
 	}
 }
@@ -75,9 +78,9 @@ func (p *RoomEventsProcessor) Listen(ctx context.Context) {
 		select {
 		case msg, ok := <-clientMessages:
 			if !ok {
-				ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
-				if err := p.handleClientClosure(ctx); err != nil {
+				if err := p.handleClientClosure(cleanupCtx); err != nil {
 					slog.Error("error while handling client closure", "err", err)
 				}
 				_ = p.roomServer.Close()
@@ -91,9 +94,9 @@ func (p *RoomEventsProcessor) Listen(ctx context.Context) {
 			}
 		case msg, ok := <-serverMessages:
 			if !ok {
-				ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
-				if err := p.handleServerClosure(ctx); err != nil {
+				if err := p.handleServerClosure(cleanupCtx); err != nil {
 					slog.Error("error while handling roomServer closure", "err", err)
 				}
 				_ = p.client.Close()
@@ -121,7 +124,7 @@ func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg messa
 	case domain.StartGame:
 		return incoming.HandleStartGameMessage(ctx, p.lobbyServer, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, p.pack, msg)
 	case domain.SelectQuestion:
-		return incoming.HandleSelectQuestionMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, getURL, p.id, p.user, p.pack, msg)
+		return incoming.HandleSelectQuestionMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, getURL, p.id, p.user, p.pack, p.cfg.QuestionDemoDuration, msg)
 	case domain.SubmitAnswer:
 		return incoming.HandleSubmitAnswerMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
 	case domain.ValidateAnswer:
@@ -230,11 +233,12 @@ type RoomInternalEventsProcessor struct {
 	storage            storage.Storage
 	id                 string
 	pack               *domain.Pack
+	cfg                *config.Config
 }
 
 type RoomInternalEventsProcessorGetter func(id string) (*RoomInternalEventsProcessor, error)
 
-func NewRoomInternalEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage) RoomInternalEventsProcessorGetter {
+func NewRoomInternalEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage, cfg *config.Config) RoomInternalEventsProcessorGetter {
 	return func(id string) (*RoomInternalEventsProcessor, error) {
 		room, err := roomCache.GetById(context.Background(), id)
 		if err != nil {
@@ -245,14 +249,15 @@ func NewRoomInternalEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter,
 			return nil, err
 		}
 		return &RoomInternalEventsProcessor{
-			lobbyChannelGetter.Get(domain.LOBBY),
-			roomChannelGetter.Get(domain.ROOM_PREFIX + id),
-			roomInternalChannelGetter.Get(domain.ROOM_PREFIX + id + domain.INTERNAL_POSTFIX),
-			roomCache,
-			roomRepository,
-			storage,
-			id,
-			pack,
+			lobbyServer:        lobbyChannelGetter.Get(domain.LOBBY),
+			roomServer:         roomChannelGetter.Get(domain.ROOM_PREFIX + id),
+			roomInternalServer: roomInternalChannelGetter.Get(domain.ROOM_PREFIX + id + domain.INTERNAL_POSTFIX),
+			roomCache:          roomCache,
+			roomRepository:     roomRepository,
+			storage:            storage,
+			id:                 id,
+			pack:               pack,
+			cfg:                cfg,
 		}, nil
 	}
 }
@@ -322,9 +327,9 @@ func (p *RoomInternalEventsProcessor) handleMessage(ctx context.Context, msg mes
 	case domain.FinalRoundQuestionStarted:
 		return server.HandleFinalRoundQuestionStartedMessage(ctx, p.roomServer, p.roomCache, p.id)
 	case domain.GameEnded:
-		return server.HandleGameEndedMessage(ctx, p.roomServer, p.lobbyServer, p.roomInternalServer, p.roomCache, p.roomRepository, p.id)
+		return server.HandleGameEndedMessage(ctx, p.roomServer, p.roomInternalServer, p.lobbyServer, p.roomCache, p.roomRepository, p.id, time.Duration(p.cfg.IdleRoomTTL)*time.Second)
 	case domain.UserDisconnected:
-		return server.HandleUserDisconnectedMessage(ctx, p.roomServer, p.roomInternalServer, p.lobbyServer, p.roomCache, p.roomRepository, p.id, msg)
+		return server.HandleUserDisconnectedMessage(ctx, p.roomServer, p.roomInternalServer, p.lobbyServer, p.roomCache, p.roomRepository, p.id, msg, time.Duration(p.cfg.IdleRoomTTL)*time.Second)
 	case domain.RoomDeleted:
 		slog.Info("internal room server got room_deleted event")
 		_ = p.lobbyServer.Close()

@@ -21,6 +21,7 @@ func HandleFinalRoundBettingStartedMessage(ctx context.Context, server realtime.
 	if err != nil {
 		return err
 	}
+
 	time.AfterFunc(time.Until(*room.FinalRoundState.BettingEndsAt), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()

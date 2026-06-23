@@ -57,12 +57,12 @@ func NewApp(cfg *config.Config, roomCache cache.Room, authController *myHttp.Aut
 	return &app{cfg, roomCache, authController, userController, packController, packDraftController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter}
 }
 
-func (a *app) Run() {
-	appCtx, appCancel := context.WithCancel(context.Background())
-
-	rooms, _ := a.roomCache.Get(appCtx)
+// Start sets up background goroutines and returns the HTTP handler.
+// The caller is responsible for canceling ctx to stop background work.
+func (a *app) Start(ctx context.Context) http.Handler {
+	rooms, _ := a.roomCache.Get(ctx)
 	for _, room := range rooms {
-		ok, err := a.roomCache.TrySetOwner(appCtx, room.Id, eventsprocessor.OWNER_TTL)
+		ok, err := a.roomCache.TrySetOwner(ctx, room.Id, eventsprocessor.OWNER_TTL)
 		if err != nil || !ok {
 			continue
 		}
@@ -72,15 +72,15 @@ func (a *app) Run() {
 			slog.Error("error creating room internal events processor", "err", err)
 			continue
 		}
-		go processor.Listen(appCtx)
+		go processor.Listen(ctx)
 	}
 
-	go a.roomCache.ListenForExpiredOwners(appCtx, func(roomId string) {
-		if _, err := a.roomCache.GetById(appCtx, roomId); err != nil {
+	go a.roomCache.ListenForExpiredOwners(ctx, func(roomId string) {
+		if _, err := a.roomCache.GetById(ctx, roomId); err != nil {
 			return
 		}
 
-		ok, err := a.roomCache.TrySetOwner(appCtx, roomId, eventsprocessor.OWNER_TTL)
+		ok, err := a.roomCache.TrySetOwner(ctx, roomId, eventsprocessor.OWNER_TTL)
 		if err != nil || !ok {
 			return
 		}
@@ -90,11 +90,11 @@ func (a *app) Run() {
 			slog.Error("error creating room internal events processor", "err", err)
 			return
 		}
-		go processor.Listen(appCtx)
+		go processor.Listen(ctx)
 	})
 
-	a.lobbyHandler.SetShutdownCtx(appCtx)
-	a.roomHandler.SetShutdownCtx(appCtx)
+	a.lobbyHandler.SetShutdownCtx(ctx)
+	a.roomHandler.SetShutdownCtx(ctx)
 
 	corsConfig := cors.DefaultConfig()
 	if a.cfg.AppEnv == "development" {
@@ -129,11 +129,19 @@ func (a *app) Run() {
 	a.lobbyHandler.RegisterRoute(wsGroup)
 	a.roomHandler.RegisterRoute(wsGroup)
 
-	servAddres := a.cfg.Host + ":" + a.cfg.Port
+	return engine
+}
 
+func (a *app) Run() {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	handler := a.Start(ctx)
+
+	servAddres := a.cfg.Host + ":" + a.cfg.Port
 	srv := &http.Server{
 		Addr:    servAddres,
-		Handler: engine,
+		Handler: handler,
 	}
 
 	go func() {
@@ -144,17 +152,13 @@ func (a *app) Run() {
 		}
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
-
+	<-ctx.Done()
 	slog.Info("shutting down server")
-	appCancel()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("failed to shutdown gracefully", "err", err)
 		os.Exit(1)
 	}

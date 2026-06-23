@@ -54,6 +54,9 @@ services:
       MINIO_USE_SSL: false
       FRONTEND_URL: http://localhost
       USER_AGENT: "SGame/1.0"
+      TIME_TO_BET: 60
+      TIME_TO_PASS: 60
+      QUESTION_DEMO_DURATION: 5
 
   mongodb:
     image: mongo:6.0

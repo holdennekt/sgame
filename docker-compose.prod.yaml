@@ -45,6 +45,9 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: /app/smart-altar-496311-p4-5cf9bc5fd4e7.json
       FRONTEND_URL: https://sgame.sgame.dedyn.io
       USER_AGENT: "SGame/1.0"
+      TIME_TO_BET: 60
+      TIME_TO_PASS: 60
+      QUESTION_DEMO_DURATION: 5
     volumes:
       - ./smart-altar-496311-p4-5cf9bc5fd4e7.json:/app/smart-altar-496311-p4-5cf9bc5fd4e7.json
     tmpfs:

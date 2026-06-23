@@ -9,8 +9,6 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
-const QuestionDemoDuration = 5
-
 type QuestionDemoPayload struct {
 	Category        string              `json:"category"`
 	CategoryComment *string             `json:"categoryComment"`
@@ -19,13 +17,13 @@ type QuestionDemoPayload struct {
 	Duration        int                 `json:"duration"`
 }
 
-func NewQuestionDemoMessage(question domain.Question, categoryComment *string) message.Message {
+func NewQuestionDemoMessage(question domain.Question, categoryComment *string, demoDuration int) message.Message {
 	payload, _ := json.Marshal(QuestionDemoPayload{
 		Category:        question.Category,
 		CategoryComment: categoryComment,
 		Value:           question.Value,
 		Type:            question.Type,
-		Duration:        QuestionDemoDuration,
+		Duration:        demoDuration,
 	})
 	return message.Message{
 		Event:   domain.QuestionDemo,
