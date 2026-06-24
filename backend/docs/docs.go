@@ -2141,6 +2141,7 @@ const docTemplate = `{
                 "packPreview",
                 "pausedState",
                 "players",
+                "spectatorCount",
                 "state"
             ],
             "properties": {
@@ -2191,6 +2192,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player"
                     }
+                },
+                "spectatorCount": {
+                    "type": "integer"
                 },
                 "state": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomState"
@@ -2320,6 +2324,7 @@ const docTemplate = `{
                 "packPreview",
                 "pausedState",
                 "players",
+                "spectatorCount",
                 "state"
             ],
             "properties": {
@@ -2370,6 +2375,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player"
                     }
+                },
+                "spectatorCount": {
+                    "type": "integer"
                 },
                 "state": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomState"

@@ -24,6 +24,10 @@ func getLockKey(id string) string {
 	return domain.ROOM_PREFIX + id + domain.STATE_POSTFIX + domain.LOCK_POSTFIX
 }
 
+func getSpectatorsKey(id string) string {
+	return domain.ROOM_PREFIX + id + domain.SPECTATORS_POSTFIX
+}
+
 type roomCache struct {
 	client *redis.Client
 	locker *redislock.Client
@@ -101,10 +105,28 @@ func (c *roomCache) SafeUpdate(ctx context.Context, roomId string, updateFunc fu
 }
 
 func (c *roomCache) Delete(ctx context.Context, roomId string) error {
-	if err := c.client.Del(ctx, getKey(roomId), getLockKey(roomId)).Err(); err != nil {
+	if err := c.client.Del(ctx, getKey(roomId), getLockKey(roomId), getSpectatorsKey(roomId)).Err(); err != nil {
 		return custerr.NewInternalErr(err)
 	}
 	return nil
+}
+
+func (c *roomCache) IncrSpectators(ctx context.Context, roomId string) (int, error) {
+	n, err := c.client.Incr(ctx, getSpectatorsKey(roomId)).Result()
+	return int(n), err
+}
+
+func (c *roomCache) DecrSpectators(ctx context.Context, roomId string) (int, error) {
+	n, err := c.client.Decr(ctx, getSpectatorsKey(roomId)).Result()
+	return int(n), err
+}
+
+func (c *roomCache) GetSpectatorCount(ctx context.Context, roomId string) (int, error) {
+	n, err := c.client.Get(ctx, getSpectatorsKey(roomId)).Int()
+	if err == redis.Nil {
+		return 0, nil
+	}
+	return n, err
 }
 
 func (c *roomCache) Expire(ctx context.Context, roomId string, duration time.Duration) error {

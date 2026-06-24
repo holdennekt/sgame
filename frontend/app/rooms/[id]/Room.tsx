@@ -113,14 +113,14 @@ export default function RoomPage({
                   <p className="text-base font-semibold truncate text-on-surface">
                     {room.name}
                   </p>
-                  {isSpectator && (
-                    <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-secondary/15 text-secondary">
+                  {room.spectatorCount > 0 && (
+                    <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-raised text-on-surface-muted">
                       <FiEye size={11} />
-                      Spectating
+                      {room.spectatorCount}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1 text-xs text-on-surface-muted min-w-0">
+                <div className="flex items-center gap-1.5 text-xs text-on-surface-muted min-w-0">
                   <span className="shrink-0">Pack:</span>
                   <Link
                     className="text-primary underline underline-offset-2 hover:text-primary-hover truncate"
@@ -129,6 +129,14 @@ export default function RoomPage({
                   >
                     {room.packPreview.name}
                   </Link>
+                  {isSpectator && (
+                    <>
+                      <span className="shrink-0">·</span>
+                      <span className="shrink-0 text-secondary font-medium">
+                        Spectating
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
               <div

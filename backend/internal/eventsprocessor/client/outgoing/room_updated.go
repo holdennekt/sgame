@@ -25,7 +25,8 @@ func HandleRoomUpdatedMessage(ctx context.Context, roomCache cache.Room, client 
 		return err
 	}
 	room, _ := roomCache.GetById(ctx, roomUpdatedPayload.Id)
-	payload, _ := json.Marshal(room.GetProjection(user.Id))
+	spectatorCount, _ := roomCache.GetSpectatorCount(ctx, roomUpdatedPayload.Id)
+	payload, _ := json.Marshal(room.GetProjection(user.Id, spectatorCount))
 	return client.Send(ctx, message.Message{Event: msg.Event, Payload: payload})
 }
 

@@ -1349,12 +1349,12 @@ func TestIsUserHost(t *testing.T) {
 	assert.False(t, rNoHost.IsUserHost("host1"))
 }
 
-func TestIsUserPlayer(t *testing.T) {
+func TestUsersPlayerIndex(t *testing.T) {
 	r := buildRoom()
-	assert.True(t, r.IsUserPlayer("p1"))
-	assert.True(t, r.IsUserPlayer("p2"))
-	assert.False(t, r.IsUserPlayer("host1"))
-	assert.False(t, r.IsUserPlayer("nobody"))
+	assert.NotEqual(t, -1, r.UsersPlayerIndex("p1"))
+	assert.NotEqual(t, -1, r.UsersPlayerIndex("p2"))
+	assert.Equal(t, -1, r.UsersPlayerIndex("host1"))
+	assert.Equal(t, -1, r.UsersPlayerIndex("nobody"))
 }
 
 func TestIsUserIn(t *testing.T) {
@@ -1494,13 +1494,13 @@ func TestStartGame_SetsCurrentPlayerAndStartsRound(t *testing.T) {
 
 func TestGetProjection_Host_ReturnsRoomHost(t *testing.T) {
 	r := buildRoom()
-	_, ok := r.GetProjection("host1").(RoomHost)
+	_, ok := r.GetProjection("host1", 0).(RoomHost)
 	assert.True(t, ok)
 }
 
 func TestGetProjection_Player_ReturnsRoomPlayer(t *testing.T) {
 	r := buildRoom()
-	_, ok := r.GetProjection("p1").(RoomPlayer)
+	_, ok := r.GetProjection("p1", 0).(RoomPlayer)
 	assert.True(t, ok)
 }
 
@@ -1508,7 +1508,7 @@ func TestGetProjection_Outsider_ReturnsRoomPlayer(t *testing.T) {
 	r := buildRoom()
 	// Non-members (spectators) receive the same live player view as players —
 	// board, scores, timers — never the lobby card or host view.
-	_, ok := r.GetProjection("nobody").(RoomPlayer)
+	_, ok := r.GetProjection("nobody", 0).(RoomPlayer)
 	assert.True(t, ok)
 }
 

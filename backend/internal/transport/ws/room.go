@@ -63,10 +63,6 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 
 	isSpectator := !room.IsUserIn(user.Id)
 	if isSpectator {
-		if room.IsUserBanned(user.Id) {
-			_ = ctx.Error(custerr.NewForbiddenErr("you were banned from this room"))
-			return
-		}
 		if room.Options.Type == domain.Private {
 			password := ctx.Query(http.PASSWORD_QUERY_PARAM)
 			if *room.Options.Password != password {
@@ -87,29 +83,21 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 
 	clientChannel := ws.NewChannel(conn)
 
-	if isSpectator {
-		// Spectators are invisible: no membership update, no presence broadcast,
-		// no connect chat. They only receive the read-only spectator projection.
-		payload, _ := json.Marshal(room.GetProjection(user.Id))
-		clientRoomUpdatedMessage := message.Message{Event: domain.RoomUpdated, Payload: payload}
-		if err := clientChannel.Send(ctx, clientRoomUpdatedMessage); err != nil {
-			slog.Error("error", "err", err)
-			return
-		}
-	} else {
-		newRoom, err := h.roomService.Connect(ctx, user.Id, id)
-		if err != nil {
-			slog.Error("error", "err", err)
-			return
-		}
+	newRoom, err := h.roomService.Connect(ctx, user.Id, id)
+	if err != nil {
+		slog.Error("error", "err", err)
+		return
+	}
 
-		payload, _ := json.Marshal(newRoom.GetProjection(user.Id))
-		clientRoomUpdatedMessage := message.Message{Event: domain.RoomUpdated, Payload: payload}
-		if err := clientChannel.Send(ctx, clientRoomUpdatedMessage); err != nil {
-			slog.Error("error", "err", err)
-			return
-		}
+	spectatorCount, _ := h.roomService.GetSpectatorCount(ctx, id)
+	payload, _ := json.Marshal(newRoom.GetProjection(user.Id, spectatorCount))
+	clientRoomUpdatedMessage := message.Message{Event: domain.RoomUpdated, Payload: payload}
+	if err := clientChannel.Send(ctx, clientRoomUpdatedMessage); err != nil {
+		slog.Error("error", "err", err)
+		return
+	}
 
+	if !isSpectator {
 		serverRoomUpdatedMessage := outgoing.NewRoomUpdatedMessage(id)
 		roomServerChannel := h.roomChannelGetter.Get(domain.ROOM_PREFIX + id)
 		if err := roomServerChannel.Send(ctx, serverRoomUpdatedMessage); err != nil {
@@ -138,5 +126,6 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 		slog.Error("error while creation roomEventsProcessor", "err", err)
 		return
 	}
+
 	go processor.Listen(h.shutdownCtx)
 }

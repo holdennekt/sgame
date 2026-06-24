@@ -556,6 +556,8 @@ definitions:
         items:
           $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player'
         type: array
+      spectatorCount:
+        type: integer
       state:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomState'
     required:
@@ -572,6 +574,7 @@ definitions:
     - packPreview
     - pausedState
     - players
+    - spectatorCount
     - state
     type: object
   github_com_holdennekt_sgame_backend_internal_domain.RoomLobby:
@@ -686,6 +689,8 @@ definitions:
         items:
           $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player'
         type: array
+      spectatorCount:
+        type: integer
       state:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomState'
     required:
@@ -702,6 +707,7 @@ definitions:
     - packPreview
     - pausedState
     - players
+    - spectatorCount
     - state
     type: object
   github_com_holdennekt_sgame_backend_internal_domain.RoomState:

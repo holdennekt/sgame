@@ -17,6 +17,7 @@ type RoomPlayer struct {
 	AllowedToAnswer       []string               `json:"allowedToAnswer"`
 	FinalRoundState       *HiddenFinalRoundState `json:"finalRoundState"`
 	PausedState           PausedState            `json:"pausedState"`
+	SpectatorCount        int                    `json:"spectatorCount"`
 }
 
 type HiddenCurrentQuestion struct {
@@ -43,7 +44,7 @@ type HiddenFinalRoundState struct {
 	TimerEndsAt         *time.Time                `json:"timerEndsAt"`
 }
 
-func NewPlayerRoom(room *Room) RoomPlayer {
+func NewPlayerRoom(room *Room, spectatorCount int) RoomPlayer {
 	var currentQuestion *HiddenCurrentQuestion
 	if room.CurrentQuestion != nil {
 		currentQuestion = &HiddenCurrentQuestion{
@@ -104,5 +105,6 @@ func NewPlayerRoom(room *Room) RoomPlayer {
 		AllowedToAnswer:       room.AllowedToAnswer,
 		FinalRoundState:       finalRoundState,
 		PausedState:           room.PausedState,
+		SpectatorCount:        spectatorCount,
 	}
 }

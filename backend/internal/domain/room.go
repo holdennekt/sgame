@@ -11,12 +11,13 @@ import (
 )
 
 const (
-	LOBBY            = "lobby"
-	ROOM_PREFIX      = "room:"
-	STATE_POSTFIX    = ":state"
-	LOCK_POSTFIX     = ":lock"
-	OWNER_POSTFIX    = ":owner"
-	INTERNAL_POSTFIX = ":internal"
+	LOBBY              = "lobby"
+	ROOM_PREFIX        = "room:"
+	STATE_POSTFIX      = ":state"
+	LOCK_POSTFIX       = ":lock"
+	OWNER_POSTFIX      = ":owner"
+	INTERNAL_POSTFIX   = ":internal"
+	SPECTATORS_POSTFIX = ":spectators"
 
 	ExtraQuestionThinkingTime = time.Second
 	MaxPauseDuration          = time.Hour
@@ -138,14 +139,14 @@ func (r *Room) IsUserHost(userId string) bool {
 	return userId == r.Host.Id
 }
 
-func (r *Room) IsUserPlayer(userId string) bool {
-	return slices.ContainsFunc(r.Players, func(player Player) bool {
-		return userId == player.Id
+func (r *Room) UsersPlayerIndex(userId string) int {
+	return slices.IndexFunc(r.Players, func(p Player) bool {
+		return userId == p.Id
 	})
 }
 
 func (r *Room) IsUserIn(userId string) bool {
-	return r.IsUserHost(userId) || r.IsUserPlayer(userId)
+	return r.IsUserHost(userId) || r.UsersPlayerIndex(userId) != -1
 }
 
 func (r *Room) IsUserBanned(userId string) bool {
@@ -154,11 +155,11 @@ func (r *Room) IsUserBanned(userId string) bool {
 	})
 }
 
-func (r *Room) GetProjection(userId string) any {
+func (r *Room) GetProjection(userId string, spectatorCount int) any {
 	if r.IsUserHost(userId) {
-		return NewHostRoom(r)
+		return NewHostRoom(r, spectatorCount)
 	}
-	return NewPlayerRoom(r)
+	return NewPlayerRoom(r, spectatorCount)
 }
 
 func (r *Room) StartGame(pack *Pack) {

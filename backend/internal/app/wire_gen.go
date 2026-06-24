@@ -56,7 +56,7 @@ func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage2 storage.Stor
 	roomController := http.NewRoomController(packService, roomService)
 	lobbyEventsProcessorGetter := provideLobbyEventsProcessorGetter(room, pubSubChannelGetter)
 	lobbyHandler := provideLobbyHandler(pubSubChannelGetter, lobbyEventsProcessorGetter)
-	roomEventsProcessorGetter := provideRoomEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter, cfg)
+	roomEventsProcessorGetter := provideRoomEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter, cfg, roomService)
 	roomHandler := provideRoomHandler(roomService, roomEventsProcessorGetter, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter)
 	appApp := NewApp(cfg, room, authController, userController, packController, packDraftController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter)
 	return appApp
@@ -96,8 +96,8 @@ func provideLobbyEventsProcessorGetter(roomCache cache.Room, pubsubGetter PubSub
 	return eventsprocessor.NewLobbyEventsProcessorGetter(pubsubGetter.ServerChannelGetter, roomCache)
 }
 
-func provideRoomEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter, cfg *config.Config) eventsprocessor.RoomEventsProcessorGetter {
-	return eventsprocessor.NewRoomEventsProcessorGetter(pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, persistentStreamsGetter.ServerChannelGetter, roomCache, roomRepo, packRepo, storage2, cfg)
+func provideRoomEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter, cfg *config.Config, roomService *service.RoomService) eventsprocessor.RoomEventsProcessorGetter {
+	return eventsprocessor.NewRoomEventsProcessorGetter(pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, persistentStreamsGetter.ServerChannelGetter, roomCache, roomRepo, packRepo, storage2, cfg, roomService.Disconnect)
 }
 
 func provideRoomInternalEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter, cfg *config.Config) eventsprocessor.RoomInternalEventsProcessorGetter {

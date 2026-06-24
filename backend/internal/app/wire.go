@@ -62,8 +62,8 @@ func provideLobbyEventsProcessorGetter(roomCache cache.Room, pubsubGetter PubSub
 	return eventsprocessor.NewLobbyEventsProcessorGetter(pubsubGetter.ServerChannelGetter, roomCache)
 }
 
-func provideRoomEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter, cfg *config.Config) eventsprocessor.RoomEventsProcessorGetter {
-	return eventsprocessor.NewRoomEventsProcessorGetter(pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, persistentStreamsGetter.ServerChannelGetter, roomCache, roomRepo, packRepo, storage, cfg)
+func provideRoomEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter, cfg *config.Config, roomService *service.RoomService) eventsprocessor.RoomEventsProcessorGetter {
+	return eventsprocessor.NewRoomEventsProcessorGetter(pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, persistentStreamsGetter.ServerChannelGetter, roomCache, roomRepo, packRepo, storage, cfg, roomService.Disconnect)
 }
 
 func provideRoomInternalEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter, cfg *config.Config) eventsprocessor.RoomInternalEventsProcessorGetter {
@@ -113,6 +113,7 @@ func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage storage.Stora
 		HandlerSet,
 		streams.NewStreamManager,
 		providePubSubChannelGetter,
+		streams.NewStreamManager,
 		provideStreamsChannelGetter,
 		providePersistentStreamsChannelGetter,
 		provideLobbyEventsProcessorGetter,

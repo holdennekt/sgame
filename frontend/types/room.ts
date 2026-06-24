@@ -202,6 +202,7 @@ export interface RoomHost {
   allowedToAnswer: string[];
   finalRoundState: FinalRoundState | null;
   pausedState: PausedState;
+  spectatorCount: number;
 }
 
 const dummyRoomHost: RoomHost = {
@@ -229,6 +230,7 @@ const dummyRoomHost: RoomHost = {
     paused: false,
     pausedAt: null,
   },
+  spectatorCount: 0,
 };
 
 export const isRoomHost = (obj: unknown): obj is RoomHost => {
@@ -251,6 +253,7 @@ export interface RoomPlayer {
   allowedToAnswer: string[];
   finalRoundState: HiddenFinalRoundState | null;
   pausedState: PausedState;
+  spectatorCount: number;
 }
 
 const dummyRoomPlayer: RoomPlayer = {
@@ -278,6 +281,7 @@ const dummyRoomPlayer: RoomPlayer = {
     paused: false,
     pausedAt: null,
   },
+  spectatorCount: 0,
 };
 
 export const isRoomPlayer = (obj: unknown): obj is RoomPlayer => {

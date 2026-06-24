@@ -15,9 +15,10 @@ type RoomHost struct {
 	AllowedToAnswer       []string              `json:"allowedToAnswer"`
 	FinalRoundState       *FinalRoundState      `json:"finalRoundState"`
 	PausedState           PausedState           `json:"pausedState"`
+	SpectatorCount        int                   `json:"spectatorCount"`
 }
 
-func NewHostRoom(room *Room) RoomHost {
+func NewHostRoom(room *Room, spectatorCount int) RoomHost {
 	return RoomHost{
 		Id:                    room.Id,
 		Name:                  room.Name,
@@ -33,5 +34,6 @@ func NewHostRoom(room *Room) RoomHost {
 		AllowedToAnswer:       room.AllowedToAnswer,
 		FinalRoundState:       room.FinalRoundState,
 		PausedState:           room.PausedState,
+		SpectatorCount:        spectatorCount,
 	}
 }

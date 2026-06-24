@@ -102,18 +102,34 @@ func (s *RoomService) GetProjection(ctx context.Context, userId, id, password st
 		}
 	}
 
-	return room.GetProjection(userId), nil
+	spectatorCount, _ := s.roomCache.GetSpectatorCount(ctx, id)
+	return room.GetProjection(userId, spectatorCount), nil
 }
 
 func (s *RoomService) Get(ctx context.Context) ([]domain.RoomLobby, error) {
 	return s.roomCache.Get(ctx)
 }
 
+func (s *RoomService) GetSpectatorCount(ctx context.Context, id string) (int, error) {
+	return s.roomCache.GetSpectatorCount(ctx, id)
+}
+
+func (s *RoomService) GetHistory(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.Room, int, error) {
+	return s.roomRepository.GetByParticipant(ctx, userId, search)
+}
+
 func (s *RoomService) Join(ctx context.Context, user domain.User, id, password string) (any, error) {
+	room, err := s.roomCache.GetById(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if room.IsUserIn(user.Id) {
+		spectatorCount, _ := s.roomCache.GetSpectatorCount(ctx, id)
+		return room.GetProjection(user.Id, spectatorCount), nil
+	}
+
 	newRoom, err := s.roomCache.SafeUpdate(ctx, id, func(room *domain.Room) error {
-		if room.IsUserIn(user.Id) {
-			return nil
-		}
 		if room.IsUserBanned(user.Id) {
 			return custerr.NewForbiddenErr("you were banned from this room")
 		}
@@ -148,25 +164,8 @@ func (s *RoomService) Join(ctx context.Context, user domain.User, id, password s
 	if err := lobbyServerChannel.Send(ctx, roomUpdatedMessage); err != nil {
 		return nil, err
 	}
-	return newRoom.GetProjection(user.Id), nil
-}
-
-func (s *RoomService) Connect(ctx context.Context, userId, id string) (*domain.Room, error) {
-	if err := s.roomCache.Persist(ctx, id); err != nil {
-		return nil, err
-	}
-
-	return s.roomCache.SafeUpdate(ctx, id, func(room *domain.Room) error {
-		if room.IsUserHost(userId) {
-			room.Host.IsConnected = true
-		} else {
-			i := slices.IndexFunc(room.Players, func(p domain.Player) bool {
-				return p.Id == userId
-			})
-			room.Players[i].IsConnected = true
-		}
-		return nil
-	})
+	spectatorCount, _ := s.roomCache.GetSpectatorCount(ctx, id)
+	return newRoom.GetProjection(user.Id, spectatorCount), nil
 }
 
 func (s *RoomService) Leave(ctx context.Context, userId, id string) error {
@@ -200,6 +199,53 @@ func (s *RoomService) Leave(ctx context.Context, userId, id string) error {
 	return lobbyServerChannel.Send(ctx, roomUpdatedMessage)
 }
 
-func (s *RoomService) GetHistory(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.Room, int, error) {
-	return s.roomRepository.GetByParticipant(ctx, userId, search)
+func (s *RoomService) Connect(ctx context.Context, userId, roomId string) (*domain.Room, error) {
+	room, err := s.roomCache.GetById(ctx, roomId)
+	if err != nil {
+		return nil, err
+	}
+
+	if !room.IsUserIn(userId) {
+		_, err := s.roomCache.IncrSpectators(ctx, roomId)
+		return room, err
+	}
+
+	if err := s.roomCache.Persist(ctx, roomId); err != nil {
+		return nil, err
+	}
+
+	return s.roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
+		if room.IsUserHost(userId) {
+			room.Host.IsConnected = true
+		} else {
+			playerIndex := room.UsersPlayerIndex(userId)
+			room.Players[playerIndex].IsConnected = true
+		}
+		return nil
+	})
+}
+
+func (s *RoomService) Disconnect(ctx context.Context, userId, roomId string) (*domain.Room, error) {
+	room, err := s.roomCache.GetById(ctx, roomId)
+	if err != nil {
+		if _, ok := err.(custerr.NotFoundErr); ok {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if !room.IsUserIn(userId) {
+		_, err := s.roomCache.DecrSpectators(ctx, roomId)
+		return room, err
+	}
+
+	return s.roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
+		if room.IsUserHost(userId) {
+			room.Host.IsConnected = false
+		} else {
+			playerIndex := room.UsersPlayerIndex(userId)
+			room.Players[playerIndex].IsConnected = false
+		}
+		return nil
+	})
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/config"
@@ -18,7 +17,6 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/internal/message"
-	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
 const (
@@ -28,23 +26,24 @@ const (
 )
 
 type RoomEventsProcessor struct {
-	client               realtime.Channel
-	lobbyServer          realtime.Channel
-	roomServer           realtime.Channel
-	roomInternalServer   realtime.Channel
-	roomCache            cache.Room
-	roomRepository       repository.Room
-	storage              storage.Storage
-	id                   string
-	user                 domain.User
-	pack                 *domain.Pack
-	isSpectator bool
-	cfg         *config.Config
+	client             realtime.Channel
+	lobbyServer        realtime.Channel
+	roomServer         realtime.Channel
+	roomInternalServer realtime.Channel
+	roomCache          cache.Room
+	roomRepository     repository.Room
+	storage            storage.Storage
+	id                 string
+	user               domain.User
+	pack               *domain.Pack
+	cfg                *config.Config
+	isSpectator        bool
+	onDisconnect       func(ctx context.Context, userId, roomId string) (*domain.Room, error)
 }
 
 type RoomEventsProcessorGetter func(client realtime.Channel, id string, user domain.User, isSpectator bool) (*RoomEventsProcessor, error)
 
-func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage, cfg *config.Config) RoomEventsProcessorGetter {
+func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage, cfg *config.Config, onDisconnect func(ctx context.Context, userId, roomId string) (*domain.Room, error)) RoomEventsProcessorGetter {
 	return func(client realtime.Channel, id string, user domain.User, isSpectator bool) (*RoomEventsProcessor, error) {
 		room, err := roomCache.GetById(context.Background(), id)
 		if err != nil {
@@ -55,18 +54,19 @@ func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInt
 			return nil, err
 		}
 		return &RoomEventsProcessor{
-			client:               client,
-			lobbyServer:          lobbyChannelGetter.Get(domain.LOBBY),
-			roomServer:           roomChannelGetter.Get(domain.ROOM_PREFIX + id),
-			roomInternalServer:   roomInternalChannelGetter.Get(domain.ROOM_PREFIX + id + domain.INTERNAL_POSTFIX),
-			roomCache:            roomCache,
-			roomRepository:       roomRepository,
-			storage:              storage,
-			id:                   id,
-			user:                 user,
-			pack:                 pack,
-			isSpectator: isSpectator,
-			cfg:         cfg,
+			client:             client,
+			lobbyServer:        lobbyChannelGetter.Get(domain.LOBBY),
+			roomServer:         roomChannelGetter.Get(domain.ROOM_PREFIX + id),
+			roomInternalServer: roomInternalChannelGetter.Get(domain.ROOM_PREFIX + id + domain.INTERNAL_POSTFIX),
+			roomCache:          roomCache,
+			roomRepository:     roomRepository,
+			storage:            storage,
+			id:                 id,
+			user:               user,
+			pack:               pack,
+			isSpectator:        isSpectator,
+			cfg:                cfg,
+			onDisconnect:       onDisconnect,
 		}, nil
 	}
 }
@@ -155,46 +155,23 @@ func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg messa
 
 func (p *RoomEventsProcessor) handleClientClosure(ctx context.Context) error {
 	slog.Info("room client channel closed", "user", p.user.Name, "user_id", p.user.Id, "room_id", p.id)
+
+	if _, err := p.onDisconnect(ctx, p.user.Id, p.id); err != nil {
+		return err
+	}
+
 	if p.isSpectator {
 		return nil
-	}
-	_, err := p.roomCache.GetById(ctx, p.id)
-	if err != nil {
-		if _, ok := err.(custerr.NotFoundErr); ok {
-			return nil
-		}
-		return err
-	}
-	_, err = p.roomCache.SafeUpdate(ctx, p.id, func(room *domain.Room) error {
-		playerIndex := slices.IndexFunc(room.Players, func(player domain.Player) bool {
-			return p.user.Id == player.Id
-		})
-		userInRoom := room.IsUserHost(p.user.Id) || playerIndex != -1
-		if !userInRoom {
-			return nil
-		}
-
-		if room.IsUserHost(p.user.Id) {
-			room.Host.IsConnected = false
-		} else {
-			room.Players[playerIndex].IsConnected = false
-		}
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(p.id)
 	if err := p.roomServer.Send(ctx, roomUpdatedMessage); err != nil {
 		return err
 	}
-
 	chatMessage := client.NewSystemChatMessage(fmt.Sprintf("%s has disconnected", p.user.Name))
 	if err := p.roomServer.Send(ctx, chatMessage); err != nil {
 		return err
 	}
-
 	userDisconnected := server.NewUserDisconnectedMessage(p.id)
 	return p.roomInternalServer.Send(ctx, userDisconnected)
 }

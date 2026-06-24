@@ -18,4 +18,7 @@ type Room interface {
 	TrySetOwner(ctx context.Context, roomId string, ttl time.Duration) (bool, error)
 	UpdateOwner(ctx context.Context, roomId string, ttl time.Duration) error
 	ListenForExpiredOwners(ctx context.Context, handleExpiredOwner func(roomId string))
+	IncrSpectators(ctx context.Context, roomId string) (int, error)
+	DecrSpectators(ctx context.Context, roomId string) (int, error)
+	GetSpectatorCount(ctx context.Context, roomId string) (int, error)
 }
