@@ -5,18 +5,24 @@ import { HiddenPack, Pack } from "@/types/pack";
 import { PackDraft } from "@/types/pack_draft";
 import { RoomHost, RoomLobby, RoomPlayer } from "@/types/room";
 import { User } from "@/middleware";
+import { HttpError } from "@/types/error";
 
 const backendUrl = (path: string) =>
   `http://${process.env.BACKEND_HOST}${path}`;
 
 const cookieHeader = () => ({ cookie: cookies().toString() });
 
+const throwHttpError = async (resp: Response) => {
+  const body = await resp.json().catch(() => ({}));
+  throw new HttpError(resp.status, body.error ?? resp.statusText);
+};
+
 export const getRooms = async (): Promise<RoomLobby[]> => {
   const resp = await fetch(backendUrl("/api/rooms"), {
     cache: "no-store",
     headers: cookieHeader(),
   });
-  if (!resp.ok) throw await resp.json();
+  if (!resp.ok) await throwHttpError(resp);
   return resp.json();
 };
 
@@ -25,7 +31,7 @@ export const getUser = async (id: string): Promise<User> => {
     cache: "no-store",
     headers: cookieHeader(),
   });
-  if (!resp.ok) throw await resp.json();
+  if (!resp.ok) await throwHttpError(resp);
   return resp.json();
 };
 
@@ -37,7 +43,7 @@ export const getPack = async (
     headers: cookieHeader(),
   });
   if (resp.status === 403) return null;
-  if (!resp.ok) throw await resp.json();
+  if (!resp.ok) await throwHttpError(resp);
   return resp.json();
 };
 
@@ -46,7 +52,7 @@ export const getDraft = async (id: string): Promise<PackDraft> => {
     cache: "no-store",
     headers: cookieHeader(),
   });
-  if (!resp.ok) throw await resp.json();
+  if (!resp.ok) await throwHttpError(resp);
   return resp.json();
 };
 
@@ -63,6 +69,6 @@ export const getRoom = async (
     cache: "no-store",
     headers: cookieHeader(),
   });
-  if (!resp.ok) throw await resp.json();
+  if (!resp.ok) await throwHttpError(resp);
   return resp.json();
 };

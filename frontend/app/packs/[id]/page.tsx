@@ -1,15 +1,28 @@
 import { getPack } from "@/app/server-fetch";
+import ErrorPage from "@/app/error";
 import Navbar from "@/components/Navbar";
+import { notFound } from "next/navigation";
 import PackEditor from "../PackEditor";
 import HiddenPackView from "./HiddenPackView";
 import { convertPackToFormData, isHiddenPack } from "@/types/pack";
 import Link from "next/link";
 import { FiArrowLeft, FiLock } from "react-icons/fi";
+import { HttpError } from "@/types/error";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page({ params }: { params: { id: string } }) {
-  const pack = await getPack(params.id);
+  const result = await getPack(params.id).catch((e: unknown): HttpError => {
+    if (e instanceof HttpError) return e;
+    throw e;
+  });
+
+  if (result instanceof HttpError) {
+    if (result.status === 404) notFound();
+    return <ErrorPage error={result} reset={() => {}} />;
+  }
+
+  const pack = result;
 
   return (
     <>
