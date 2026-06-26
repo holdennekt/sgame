@@ -7,18 +7,32 @@ import (
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/infrastructure/realtime/pubsub"
 	"github.com/holdennekt/sgame/backend/internal/infrastructure/realtime/streams"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func newStreamGetter(t *testing.T) realtime.ChannelGetter {
+	t.Helper()
+	rds := newRedisClient(t)
+	mgr := pubsub.NewManager(rds)
+	return streams.NewManagedChannelGetter(rds, mgr)
+}
+
+func newPersistentStreamGetter(t *testing.T) realtime.ChannelGetter {
+	t.Helper()
+	rds := newRedisClient(t)
+	mgr := pubsub.NewManager(rds)
+	return streams.NewPersistentManagedChannelGetter(rds, mgr)
+}
 
 func TestStreamFanOut(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	rds := newRedisClient(t)
-	mgr := streams.NewStreamManager(rds)
-	getter := streams.NewManagedServerChannelGetter(rds, mgr, false)
+	getter := newStreamGetter(t)
 
 	ch1 := getter.Get("stream:fanout")
 	ch2 := getter.Get("stream:fanout")
@@ -42,9 +56,7 @@ func TestStreamIsolation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	rds := newRedisClient(t)
-	mgr := streams.NewStreamManager(rds)
-	getter := streams.NewManagedServerChannelGetter(rds, mgr, false)
+	getter := newStreamGetter(t)
 
 	chA := getter.Get("stream:isolation:a")
 	chB := getter.Get("stream:isolation:b")
@@ -63,15 +75,13 @@ func TestStreamIsolation(t *testing.T) {
 	}
 }
 
-func TestPersistentStreamResume(t *testing.T) {
+func TestStreamResumeFromLastId(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	rds := newRedisClient(t)
-	mgr := streams.NewStreamManager(rds)
-	getter := streams.NewManagedServerChannelGetter(rds, mgr, true)
+	getter := newPersistentStreamGetter(t)
 
-	streamName := "stream:persistent:resume"
+	streamName := "stream:resume"
 
 	// subscribe, receive first message, then close
 	ch1 := getter.Get(streamName)
@@ -95,57 +105,48 @@ func TestPersistentStreamResume(t *testing.T) {
 	// new subscriber resumes from stored lastId — gets only msg2, not msg1
 	ch3 := getter.Get(streamName)
 	recv3 := ch3.Receive(ctx)
-	time.Sleep(50 * time.Millisecond)
 
 	got2 := waitMsg(t, recv3, 5*time.Second)
-	assert.Equal(t, msg2.Event, got2.Event, "persistent subscriber should resume from last seen id")
+	assert.Equal(t, msg2.Event, got2.Event, "subscriber should resume from last seen id")
 }
 
-func TestNonPersistentStreamNoReplay(t *testing.T) {
+func TestStreamHistoryReplay(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	rds := newRedisClient(t)
-	mgr := streams.NewStreamManager(rds)
-	getter := streams.NewManagedServerChannelGetter(rds, mgr, false)
+	getter := newPersistentStreamGetter(t)
 
-	streamName := "stream:nonpersistent:noreplay"
+	streamName := "stream:history"
 
 	// write a message before any subscriber exists
 	ch := getter.Get(streamName)
-	require.NoError(t, ch.Send(ctx, testMsg(domain.RoomUpdated)))
+	sent := testMsg(domain.RoomUpdated)
+	require.NoError(t, ch.Send(ctx, sent))
 
-	// subscriber joining after the message was written should NOT receive it
+	// subscriber joining after the message should receive it via XRange
 	ch2 := getter.Get(streamName)
 	recv := ch2.Receive(ctx)
-	time.Sleep(50 * time.Millisecond)
 
-	select {
-	case msg := <-recv:
-		t.Fatalf("non-persistent subscriber received old message unexpectedly: %v", msg)
-	case <-time.After(400 * time.Millisecond):
-		// correct: no replay
-	}
+	got := waitMsg(t, recv, 5*time.Second)
+	assert.Equal(t, sent.Event, got.Event)
 }
 
 func TestStreamCleanup(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	rds := newRedisClient(t)
-	mgr := streams.NewStreamManager(rds)
-	getter := streams.NewManagedServerChannelGetter(rds, mgr, true)
+	getter := newStreamGetter(t)
 
 	streamName := "stream:cleanup"
 	ch := getter.Get(streamName)
 
 	// write something so the stream key exists
 	require.NoError(t, ch.Send(ctx, testMsg(domain.RoomUpdated)))
-	time.Sleep(50 * time.Millisecond)
 
 	require.NoError(t, ch.Delete(ctx))
 
 	// both the stream key and lastId key should be gone
+	rds := newRedisClient(t)
 	exists, err := rds.Exists(ctx, streamName, streamName+streams.LAST_ID_POSTFIX).Result()
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), exists)
@@ -155,9 +156,7 @@ func TestStreamConcurrent(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	rds := newRedisClient(t)
-	mgr := streams.NewStreamManager(rds)
-	getter := streams.NewManagedServerChannelGetter(rds, mgr, false)
+	getter := newStreamGetter(t)
 
 	const n = 20
 	var wg sync.WaitGroup

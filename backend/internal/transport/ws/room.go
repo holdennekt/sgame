@@ -23,14 +23,14 @@ import (
 
 type RoomHandler struct {
 	roomService               *service.RoomService
-	lobbyChannelGetter        realtime.ServerChannelGetter
-	roomChannelGetter         realtime.ServerChannelGetter
-	roomInternalChannelGetter realtime.ServerChannelGetter
+	lobbyChannelGetter        realtime.ChannelGetter
+	roomChannelGetter         realtime.ChannelGetter
+	roomInternalChannelGetter realtime.ChannelGetter
 	roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter
 	shutdownCtx               context.Context
 }
 
-func NewRoomHandler(roomService *service.RoomService, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter) *RoomHandler {
+func NewRoomHandler(roomService *service.RoomService, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ChannelGetter, roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter) *RoomHandler {
 	return &RoomHandler{roomService: roomService, lobbyChannelGetter: lobbyChannelGetter, roomChannelGetter: roomChannelGetter, roomInternalChannelGetter: roomInternalChannelGetter, roomEventsProcessorGetter: roomEventsProcessorGetter, shutdownCtx: context.Background()}
 }
 
@@ -89,6 +89,19 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 		return
 	}
 
+	processor, err := h.roomEventsProcessorGetter(
+		clientChannel,
+		id,
+		user,
+		isSpectator,
+	)
+	if err != nil {
+		slog.Error("error while creation roomEventsProcessor", "err", err)
+		return
+	}
+
+	go processor.Listen(h.shutdownCtx)
+
 	spectatorCount, _ := h.roomService.GetSpectatorCount(ctx, id)
 	payload, _ := json.Marshal(newRoom.GetProjection(user.Id, spectatorCount))
 	clientRoomUpdatedMessage := message.Message{Event: domain.RoomUpdated, Payload: payload}
@@ -115,17 +128,4 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 			return
 		}
 	}
-
-	processor, err := h.roomEventsProcessorGetter(
-		clientChannel,
-		id,
-		user,
-		isSpectator,
-	)
-	if err != nil {
-		slog.Error("error while creation roomEventsProcessor", "err", err)
-		return
-	}
-
-	go processor.Listen(h.shutdownCtx)
 }

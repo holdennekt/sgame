@@ -12,3 +12,7 @@ type Channel interface {
 	Close() error
 	Delete(ctx context.Context) error
 }
+
+type ChannelGetter interface {
+	Get(name string) Channel
+}

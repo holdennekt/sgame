@@ -3,7 +3,9 @@ package ws
 import (
 	"context"
 	"errors"
+	"io"
 	"log/slog"
+	"net"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -39,10 +41,10 @@ func (c *channel) Receive(ctx context.Context) <-chan message.Message {
 			err := wsjson.Read(ctx, c.conn, &msg)
 			if err != nil {
 				var closeErr websocket.CloseError
-				if !errors.As(err, &closeErr) {
-					slog.Error("read error", "err", err)
+				if errors.As(err, &closeErr) || errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
+					return
 				}
-				return
+				slog.Error("read error", "err", err)
 			}
 			select {
 			case messages <- msg:

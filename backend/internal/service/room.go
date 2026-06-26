@@ -22,14 +22,14 @@ type RoomService struct {
 	packRepository                    repository.Pack
 	roomRepository                    repository.Room
 	roomCache                         cache.Room
-	lobbyChannelGetter                realtime.ServerChannelGetter
-	roomChannelGetter                 realtime.ServerChannelGetter
-	roomInternalChannelGetter         realtime.ServerChannelGetter
+	lobbyChannelGetter                realtime.ChannelGetter
+	roomChannelGetter                 realtime.ChannelGetter
+	roomInternalChannelGetter         realtime.ChannelGetter
 	roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter
 	cfg                               *config.Config
 }
 
-func NewRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter, cfg *config.Config) *RoomService {
+func NewRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter, cfg *config.Config) *RoomService {
 	return &RoomService{packRepository, roomRepository, roomCache, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomInternalEventsProcessorGetter, cfg}
 }
 

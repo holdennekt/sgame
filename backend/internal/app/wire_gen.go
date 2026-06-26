@@ -47,17 +47,17 @@ func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage2 storage.Stor
 	packDraftService := service.NewPackDraftService(packDraft, pack, storage2, attachmentService, packService)
 	packDraftController := http.NewPackDraftController(packDraftService)
 	repositoryRoom := mongo2.NewRoomRepository(mdb)
-	pubSubChannelGetter := providePubSubChannelGetter(rds)
-	streamManager := streams.NewStreamManager(rds)
-	streamsChannelGetter := provideStreamsChannelGetter(rds, streamManager)
-	persistentStreamsChannelGetter := providePersistentStreamsChannelGetter(rds, streamManager)
-	roomInternalEventsProcessorGetter := provideRoomInternalEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter, cfg)
-	roomService := provideRoomService(pack, repositoryRoom, room, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter, roomInternalEventsProcessorGetter, cfg)
+	manager := provideManager(rds)
+	pubSubChannelGetter := providePubSubChannelGetter(rds, manager)
+	streamsChannelGetter := provideStreamsChannelGetter(rds, manager)
+	streamsPersistentChannelGetter := provideStreamsPersistentChannelGetter(rds, manager)
+	roomInternalEventsProcessorGetter := provideRoomInternalEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, cfg)
+	roomService := provideRoomService(pack, repositoryRoom, room, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, roomInternalEventsProcessorGetter, cfg)
 	roomController := http.NewRoomController(packService, roomService)
 	lobbyEventsProcessorGetter := provideLobbyEventsProcessorGetter(room, pubSubChannelGetter)
 	lobbyHandler := provideLobbyHandler(pubSubChannelGetter, lobbyEventsProcessorGetter)
-	roomEventsProcessorGetter := provideRoomEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter, cfg, roomService)
-	roomHandler := provideRoomHandler(roomService, roomEventsProcessorGetter, pubSubChannelGetter, streamsChannelGetter, persistentStreamsChannelGetter)
+	roomEventsProcessorGetter := provideRoomEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, cfg, roomService)
+	roomHandler := provideRoomHandler(roomService, roomEventsProcessorGetter, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter)
 	appApp := NewApp(cfg, room, authController, userController, packController, packDraftController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter)
 	return appApp
 }
@@ -69,43 +69,47 @@ var RepoSet = wire.NewSet(mongo2.NewUserRepository, mongo2.NewRoomRepository, mo
 var CacheSet = wire.NewSet(redis2.NewSessionCache, redis2.NewRoomCache)
 
 type PubSubChannelGetter struct {
-	realtime.ServerChannelGetter
+	realtime.ChannelGetter
 }
 
 type StreamsChannelGetter struct {
-	realtime.ServerChannelGetter
+	realtime.ChannelGetter
 }
 
-type PersistentStreamsChannelGetter struct {
-	realtime.ServerChannelGetter
+type StreamsPersistentChannelGetter struct {
+	realtime.ChannelGetter
 }
 
-func providePubSubChannelGetter(client *redis.Client) PubSubChannelGetter {
-	return PubSubChannelGetter{pubsub.NewManagedServerChannelGetter(client, pubsub.NewManager(client))}
+func provideManager(client *redis.Client) *pubsub.Manager {
+	return pubsub.NewManager(client)
 }
 
-func provideStreamsChannelGetter(client *redis.Client, manager *streams.StreamManager) StreamsChannelGetter {
-	return StreamsChannelGetter{streams.NewManagedServerChannelGetter(client, manager, false)}
+func providePubSubChannelGetter(client *redis.Client, manager *pubsub.Manager) PubSubChannelGetter {
+	return PubSubChannelGetter{pubsub.NewManagedChannelGetter(client, manager)}
 }
 
-func providePersistentStreamsChannelGetter(client *redis.Client, manager *streams.StreamManager) PersistentStreamsChannelGetter {
-	return PersistentStreamsChannelGetter{streams.NewManagedServerChannelGetter(client, manager, true)}
+func provideStreamsChannelGetter(client *redis.Client, manager *pubsub.Manager) StreamsChannelGetter {
+	return StreamsChannelGetter{streams.NewManagedChannelGetter(client, manager)}
+}
+
+func provideStreamsPersistentChannelGetter(client *redis.Client, manager *pubsub.Manager) StreamsPersistentChannelGetter {
+	return StreamsPersistentChannelGetter{streams.NewPersistentManagedChannelGetter(client, manager)}
 }
 
 func provideLobbyEventsProcessorGetter(roomCache cache.Room, pubsubGetter PubSubChannelGetter) eventsprocessor.LobbyEventsProcessorGetter {
-	return eventsprocessor.NewLobbyEventsProcessorGetter(pubsubGetter.ServerChannelGetter, roomCache)
+	return eventsprocessor.NewLobbyEventsProcessorGetter(pubsubGetter.ChannelGetter, roomCache)
 }
 
-func provideRoomEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter, cfg *config.Config, roomService *service.RoomService) eventsprocessor.RoomEventsProcessorGetter {
-	return eventsprocessor.NewRoomEventsProcessorGetter(pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, persistentStreamsGetter.ServerChannelGetter, roomCache, roomRepo, packRepo, storage2, cfg, roomService.Disconnect)
+func provideRoomEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentGetter StreamsPersistentChannelGetter, cfg *config.Config, roomService *service.RoomService) eventsprocessor.RoomEventsProcessorGetter {
+	return eventsprocessor.NewRoomEventsProcessorGetter(pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomCache, roomRepo, packRepo, storage2, cfg, roomService.Disconnect)
 }
 
-func provideRoomInternalEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter, cfg *config.Config) eventsprocessor.RoomInternalEventsProcessorGetter {
-	return eventsprocessor.NewRoomInternalEventsProcessorGetter(pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, persistentStreamsGetter.ServerChannelGetter, roomCache, roomRepo, packRepo, storage2, cfg)
+func provideRoomInternalEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentGetter StreamsPersistentChannelGetter, cfg *config.Config) eventsprocessor.RoomInternalEventsProcessorGetter {
+	return eventsprocessor.NewRoomInternalEventsProcessorGetter(pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomCache, roomRepo, packRepo, storage2, cfg)
 }
 
-func provideRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter, cfg *config.Config) *service.RoomService {
-	return service.NewRoomService(packRepository, roomRepository, roomCache, pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, persistentStreamsGetter.ServerChannelGetter, roomInternalEventsProcessorGetter, cfg)
+func provideRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentGetter StreamsPersistentChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter, cfg *config.Config) *service.RoomService {
+	return service.NewRoomService(packRepository, roomRepository, roomCache, pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomInternalEventsProcessorGetter, cfg)
 }
 
 var ServiceSet = wire.NewSet(service.NewAuthService, service.NewUserService, provideRoomService, service.NewAttachmentService, service.NewPackService, service.NewPackDraftService)
@@ -113,11 +117,11 @@ var ServiceSet = wire.NewSet(service.NewAuthService, service.NewUserService, pro
 var ControllerSet = wire.NewSet(http.NewAuthController, http.NewUserController, http.NewPackController, http.NewPackDraftController, http.NewRoomController)
 
 func provideLobbyHandler(pubsubGetter PubSubChannelGetter, lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter) *ws.LobbyHandler {
-	return ws.NewLobbyHandler(pubsubGetter.ServerChannelGetter, lobbyEventsProcessorGetter)
+	return ws.NewLobbyHandler(pubsubGetter.ChannelGetter, lobbyEventsProcessorGetter)
 }
 
-func provideRoomHandler(roomService *service.RoomService, roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentStreamsGetter PersistentStreamsChannelGetter) *ws.RoomHandler {
-	return ws.NewRoomHandler(roomService, pubsubGetter.ServerChannelGetter, streamsGetter.ServerChannelGetter, persistentStreamsGetter.ServerChannelGetter, roomEventsProcessorGetter)
+func provideRoomHandler(roomService *service.RoomService, roomEventsProcessorGetter eventsprocessor.RoomEventsProcessorGetter, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentGetter StreamsPersistentChannelGetter) *ws.RoomHandler {
+	return ws.NewRoomHandler(roomService, pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomEventsProcessorGetter)
 }
 
 var HandlerSet = wire.NewSet(

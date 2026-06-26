@@ -114,6 +114,7 @@ export function useRoom(
   const validateFinalRoundAnswer = (isCorrect: boolean) =>
     send("validate_final_round_answer", { isCorrect });
   const skipQuestion = () => send("skip_question");
+  const skipRound = () => send("skip_round");
   const changeScore = (playerId: string, score: number) =>
     send("change_score", { playerId, score });
 
@@ -168,6 +169,7 @@ export function useRoom(
       validateAnswer,
       validateFinalRoundAnswer,
       skipQuestion,
+      skipRound,
       changeScore,
     },
   };

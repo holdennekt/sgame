@@ -747,6 +747,16 @@ func (r *Room) SkipQuestion(userId string) error {
 	return nil
 }
 
+func (r *Room) SkipRound(userId string) error {
+	if !r.IsUserHost(userId) {
+		return custerr.NewForbiddenErr("not allowed to skip round")
+	}
+	if r.State != SelectingQuestion {
+		return custerr.NewConflictErr("can not skip round now")
+	}
+	return nil
+}
+
 func (r *Room) ChangeScore(userId string, playerId string, score int) error {
 	if !r.IsUserHost(userId) {
 		return custerr.NewForbiddenErr("not allowed to change score")

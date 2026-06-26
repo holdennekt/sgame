@@ -43,7 +43,7 @@ type RoomEventsProcessor struct {
 
 type RoomEventsProcessorGetter func(client realtime.Channel, id string, user domain.User, isSpectator bool) (*RoomEventsProcessor, error)
 
-func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage, cfg *config.Config, onDisconnect func(ctx context.Context, userId, roomId string) (*domain.Room, error)) RoomEventsProcessorGetter {
+func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage, cfg *config.Config, onDisconnect func(ctx context.Context, userId, roomId string) (*domain.Room, error)) RoomEventsProcessorGetter {
 	return func(client realtime.Channel, id string, user domain.User, isSpectator bool) (*RoomEventsProcessor, error) {
 		room, err := roomCache.GetById(context.Background(), id)
 		if err != nil {
@@ -143,6 +143,8 @@ func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg messa
 		return incoming.HandleValidateFinalRoundAnswerMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, getURL, p.id, p.user, msg)
 	case domain.SkipQuestion:
 		return incoming.HandleSkipQuestionMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
+	case domain.SkipRound:
+		return incoming.HandleSkipRoundMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, getURL, p.id, p.user, p.pack)
 	case domain.ChangeScore:
 		return incoming.HandleChangeScoreMessage(ctx, p.roomServer, p.roomCache, p.id, p.user, msg)
 	case domain.Pause:
@@ -215,7 +217,7 @@ type RoomInternalEventsProcessor struct {
 
 type RoomInternalEventsProcessorGetter func(id string) (*RoomInternalEventsProcessor, error)
 
-func NewRoomInternalEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ServerChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage, cfg *config.Config) RoomInternalEventsProcessorGetter {
+func NewRoomInternalEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage, cfg *config.Config) RoomInternalEventsProcessorGetter {
 	return func(id string) (*RoomInternalEventsProcessor, error) {
 		room, err := roomCache.GetById(context.Background(), id)
 		if err != nil {

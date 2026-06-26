@@ -27,6 +27,7 @@ export type RoomContextValue = {
   validateAnswer: (isCorrect: boolean) => void;
   validateFinalRoundAnswer: (isCorrect: boolean) => void;
   skipQuestion: () => void;
+  skipRound: () => void;
   changeScore: (playerId: string, score: number) => void;
 };
 

@@ -20,11 +20,17 @@ const SKIPPABLE_STATES = new Set([
 
 export default function MainPanel() {
   const user = useRequiredUser();
-  const { room, validateAnswer, validateFinalRoundAnswer, skipQuestion } =
-    useRoomContext();
+  const {
+    room,
+    validateAnswer,
+    validateFinalRoundAnswer,
+    skipQuestion,
+    skipRound,
+  } = useRoomContext();
   const isHost = user.id === room.host?.id;
   const player = room.players.find((p) => p.id === user.id);
   const canSkip = isHost && SKIPPABLE_STATES.has(room.state);
+  const canSkipRound = isHost && room.state === "selecting_question";
 
   return (
     <>
@@ -58,6 +64,16 @@ export default function MainPanel() {
           >
             <FiSkipForward size={12} />
             Skip question
+          </button>
+        )}
+
+        {canSkipRound && (
+          <button
+            className="w-full h-12 inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium bg-surface border border-border text-on-surface hover:bg-surface-raised transition-colors duration-150"
+            onClick={skipRound}
+          >
+            <FiSkipForward size={12} />
+            Skip round
           </button>
         )}
       </div>

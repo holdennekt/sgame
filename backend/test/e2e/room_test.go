@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/message"
@@ -65,6 +66,9 @@ func setupRoom(t *testing.T) (app *testhelper.TestApp, host, p1, p2 roomActor, r
 	hostWS.Expect(t, domain.RoomUpdated)
 	p1WS.Expect(t, domain.RoomUpdated)
 	p2WS.Expect(t, domain.RoomUpdated)
+
+	// give processor goroutines time to subscribe to the broadcast channel
+	time.Sleep(50 * time.Millisecond)
 
 	host = roomActor{hostSession, hostId, hostWS}
 	p1 = roomActor{p1Session, p1Id, p1WS}

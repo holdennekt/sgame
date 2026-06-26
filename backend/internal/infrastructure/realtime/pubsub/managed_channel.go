@@ -10,16 +10,16 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type managedServerChannelGetter struct {
+type managedChannelGetter struct {
 	client  *redis.Client
 	manager *Manager
 }
 
-func NewManagedServerChannelGetter(client *redis.Client, manager *Manager) realtime.ServerChannelGetter {
-	return &managedServerChannelGetter{client, manager}
+func NewManagedChannelGetter(client *redis.Client, manager *Manager) realtime.ChannelGetter {
+	return &managedChannelGetter{client, manager}
 }
 
-func (g *managedServerChannelGetter) Get(name string) realtime.Channel {
+func (g *managedChannelGetter) Get(name string) realtime.Channel {
 	return &managedChannel{client: g.client, manager: g.manager, name: name}
 }
 
@@ -41,23 +41,30 @@ func (c *managedChannel) Send(ctx context.Context, msg message.Message) error {
 	return nil
 }
 
-func (c *managedChannel) Receive(outerCtx context.Context) <-chan message.Message {
-	ctx, cancel := context.WithCancel(outerCtx)
-	c.cancel = cancel
-
-	inner := c.manager.subscribe(ctx, c.name)
-
+func (c *managedChannel) Receive(ctx context.Context) <-chan message.Message {
 	out := make(chan message.Message)
+	ctx, c.cancel = context.WithCancel(ctx)
+
+	inner, id := c.manager.Subscribe(c.name)
+
 	go func() {
 		defer func() {
-			cancel()
+			c.cancel()
+			c.manager.Unsubscribe(c.name, id)
 			close(out)
 		}()
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case msg := <-inner:
+			case payload, ok := <-inner:
+				if !ok {
+					return
+				}
+				var msg message.Message
+				if err := json.Unmarshal(payload, &msg); err != nil {
+					continue
+				}
 				select {
 				case out <- msg:
 				case <-ctx.Done():

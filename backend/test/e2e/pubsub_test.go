@@ -35,7 +35,7 @@ func TestPubSubFanOut(t *testing.T) {
 
 	rds := newRedisClient(t)
 	mgr := pubsub.NewManager(rds)
-	getter := pubsub.NewManagedServerChannelGetter(rds, mgr)
+	getter := pubsub.NewManagedChannelGetter(rds, mgr)
 
 	ch1 := getter.Get("test:fanout")
 	ch2 := getter.Get("test:fanout")
@@ -62,7 +62,7 @@ func TestPubSubIsolation(t *testing.T) {
 
 	rds := newRedisClient(t)
 	mgr := pubsub.NewManager(rds)
-	getter := pubsub.NewManagedServerChannelGetter(rds, mgr)
+	getter := pubsub.NewManagedChannelGetter(rds, mgr)
 
 	chA := getter.Get("test:isolation:a")
 	chB := getter.Get("test:isolation:b")
@@ -88,7 +88,7 @@ func TestPubSubRefcount(t *testing.T) {
 
 	rds := newRedisClient(t)
 	mgr := pubsub.NewManager(rds)
-	getter := pubsub.NewManagedServerChannelGetter(rds, mgr)
+	getter := pubsub.NewManagedChannelGetter(rds, mgr)
 
 	ch := getter.Get("test:refcount")
 
@@ -120,7 +120,7 @@ func TestPubSubConcurrent(t *testing.T) {
 
 	rds := newRedisClient(t)
 	mgr := pubsub.NewManager(rds)
-	getter := pubsub.NewManagedServerChannelGetter(rds, mgr)
+	getter := pubsub.NewManagedChannelGetter(rds, mgr)
 
 	const n = 20
 	var wg sync.WaitGroup

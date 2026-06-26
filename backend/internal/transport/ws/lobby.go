@@ -18,12 +18,12 @@ import (
 )
 
 type LobbyHandler struct {
-	lobbyChannelGetter         realtime.ServerChannelGetter
+	lobbyChannelGetter         realtime.ChannelGetter
 	lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter
 	shutdownCtx                context.Context
 }
 
-func NewLobbyHandler(lobbyChannelGetter realtime.ServerChannelGetter, lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter) *LobbyHandler {
+func NewLobbyHandler(lobbyChannelGetter realtime.ChannelGetter, lobbyEventsProcessorGetter eventsprocessor.LobbyEventsProcessorGetter) *LobbyHandler {
 	return &LobbyHandler{lobbyChannelGetter: lobbyChannelGetter, lobbyEventsProcessorGetter: lobbyEventsProcessorGetter, shutdownCtx: context.Background()}
 }
 

@@ -27,6 +27,7 @@ const (
 	SubmitFinalRoundAnswer    Event = "submit_final_round_answer"
 	ValidateFinalRoundAnswer  Event = "validate_final_round_answer"
 	SkipQuestion              Event = "skip_question"
+	SkipRound                 Event = "skip_round"
 	ChangeScore               Event = "change_score"
 	Pause                     Event = "pause"
 	Unpause                   Event = "unpause"

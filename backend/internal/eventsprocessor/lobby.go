@@ -22,7 +22,7 @@ type LobbyEventsProcessor struct {
 
 type LobbyEventsProcessorGetter func(client realtime.Channel, user domain.User) *LobbyEventsProcessor
 
-func NewLobbyEventsProcessorGetter(lobbyChannelGetter realtime.ServerChannelGetter, roomCache cache.Room) LobbyEventsProcessorGetter {
+func NewLobbyEventsProcessorGetter(lobbyChannelGetter realtime.ChannelGetter, roomCache cache.Room) LobbyEventsProcessorGetter {
 	return func(client realtime.Channel, user domain.User) *LobbyEventsProcessor {
 		return &LobbyEventsProcessor{client, lobbyChannelGetter.Get(domain.LOBBY), roomCache, user}
 	}

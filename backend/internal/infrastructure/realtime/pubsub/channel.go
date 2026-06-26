@@ -11,14 +11,22 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type channelGetter struct {
+	client *redis.Client
+}
+
+func NewChannelGetter(client *redis.Client) realtime.ChannelGetter {
+	return &channelGetter{client}
+}
+
+func (g *channelGetter) Get(name string) realtime.Channel {
+	return &channel{client: g.client, name: name}
+}
+
 type channel struct {
 	client *redis.Client
 	name   string
 	pubSub *redis.PubSub
-}
-
-func NewChannel(client *redis.Client, name string) realtime.Channel {
-	return &channel{client: client, name: name}
 }
 
 func (c *channel) Send(ctx context.Context, msg message.Message) error {
