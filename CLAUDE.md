@@ -97,11 +97,11 @@ Google Wire is used. The canonical wiring is in `internal/app/wire.go`. After an
 
 The server maintains two Redis multiplexers injected as three typed channel getters:
 
-| Type | Implementation | Use |
-|------|---------------|-----|
-| `PubSubChannelGetter` | `pubsub.Manager` | Lobby broadcast; room server channel for notifying clients |
-| `StreamsChannelGetter` | `streams.StreamManager` (non-persistent) | Room broadcast stream; spectators start from `$` |
-| `PersistentStreamsChannelGetter` | `streams.StreamManager` (persistent) | Room internal events; late joiners resume from stored `lastId` |
+| Type                             | Implementation                           | Use                                                            |
+| -------------------------------- | ---------------------------------------- | -------------------------------------------------------------- |
+| `PubSubChannelGetter`            | `pubsub.Manager`                         | Lobby broadcast; room server channel for notifying clients     |
+| `StreamsChannelGetter`           | `streams.StreamManager` (non-persistent) | Room broadcast stream; spectators start from `$`               |
+| `PersistentStreamsChannelGetter` | `streams.StreamManager` (persistent)     | Room internal events; late joiners resume from stored `lastId` |
 
 Both managers multiplex a single Redis connection across N Go subscribers. When the last subscriber on a channel leaves, the manager unsubscribes from Redis automatically.
 
@@ -109,11 +109,42 @@ Both managers multiplex a single Redis connection across N Go subscribers. When 
 
 The `domain.Room` struct is the core entity. All state transitions are pure functions in `internal/domain/room.go`. The 12 states are:
 
-`WaitingForStart → SelectingQuestion → RevealingQuestion → ShowingQuestion → Answering → SelectingQuestion` (loop) then `→ SelectingFinalRoundCategory → FinalRoundBetting → ShowingFinalRoundQuestion → ValidatingFinalRoundAnswers → GameOver`
-
 Special question types alter the normal flow: **CatInBag** goes to `Passing`; **Auction** goes to `Betting` — both then converge to `Answering`.
 
 Timer-driven transitions (reveal timer, betting timer, pass timer) are triggered by `RoomInternalEventsProcessor`, which runs per room as a goroutine. On server restart, `app.Start()` recovers ownership of existing rooms from the cache and re-spawns these goroutines.
+
+### State Transition Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> WaitingForStart
+
+    WaitingForStart --> SelectingQuestion : start_game
+
+    SelectingQuestion --> RevealingQuestion           : select Regular question
+    SelectingQuestion --> Passing                     : select CatInBag
+    SelectingQuestion --> Betting                     : select Auction
+    SelectingQuestion --> SelectingFinalRoundCategory : all questions done [auto]
+
+    RevealingQuestion --> ShowingQuestion : reveal timer [auto]
+    ShowingQuestion   --> Answering       : submit_answer
+    Passing           --> Answering       : pass_question
+    Betting           --> Answering       : all bets placed
+
+    Answering --> SelectingQuestion : validate_answer correct
+    Answering --> ShowingQuestion   : validate_answer wrong (remaining players)
+
+    SelectingFinalRoundCategory --> SelectingFinalRoundCategory : remove_category
+    SelectingFinalRoundCategory --> FinalRoundBetting           : last category [auto]
+
+    FinalRoundBetting         --> ShowingFinalRoundQuestion   : all bets placed
+    ShowingFinalRoundQuestion --> ValidatingFinalRoundAnswers : all answers submitted
+
+    ValidatingFinalRoundAnswers --> ValidatingFinalRoundAnswers : validate_answer (more players)
+    ValidatingFinalRoundAnswers --> GameOver                   : validate_answer (last player)
+
+    GameOver --> [*]
+```
 
 ### WebSocket connection flow
 

@@ -6,8 +6,8 @@ This guide provides instructions on how to set up and run the project locally us
 
 Before you begin, ensure you have 1 of the following installed:
 
-* **Docker Desktop** (for Docker Compose)
-* **Minikube** + **kubectl** (for Kubernetes).
+- **Docker Desktop** (for Docker Compose)
+- **Minikube** + **kubectl** (for Kubernetes).
 
 ## Docker Compose:
 
@@ -22,14 +22,15 @@ cp .env.template .env
 2. Execute the following command in the project root directory:
 
 ```
-docker-compose up --build
+docker compose -f docker-compose.local.yaml up -d --build
 ```
 
 Testing
 
-* **Frontend:** **http://localhost:3000**
-* **Backend API:** **http://localhost:8080/api**
-* **Logs:** `docker-compose logs -f`
+- **Frontend:** **https://localhost**
+- **Backend API:** **https://localhost/api**
+- **Docs:** **https://localhost/api/swagger/index.html**
+- **Logs:** `docker compose -f docker-compose.local.yaml logs -f`
 
 ## Kubernetes
 
@@ -58,7 +59,7 @@ minikube image build -t sgame-frontend:local frontend
 4. Create a secrets file from the provided template and fill in the values:
 
 ```
-cp k8s/secret.template.yaml k8s/secret.yaml 
+cp k8s/secret.template.yaml k8s/secret.yaml
 ```
 
 5. Apply the Kubernetes manifests:
@@ -82,6 +83,6 @@ minikube ip
 
 Testing
 
-* **Frontend:** **http://sgame.local**
-* **Backend API:** **http://sgame.local/api**
-* **Deployment Logs:** `kubectl logs -f -l app=sgame-backend --prefix`
+- **Frontend:** **http://sgame.local**
+- **Backend API:** **http://sgame.local/api**
+- **Deployment Logs:** `kubectl logs -f -l app=sgame-backend --prefix`
