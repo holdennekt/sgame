@@ -394,6 +394,444 @@
                 }
             }
         },
+        "/packs/drafts": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Returns a paginated list of pack drafts belonging to the authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pack-drafts"
+                ],
+                "summary": "List user's pack drafts",
+                "parameters": [
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "limit",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "orderBy",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "name": "orderDir",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "maxLength": 30,
+                        "type": "string",
+                        "name": "search",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SearchResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized: Session missing or expired",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Returns an existing edit draft for the authenticated user, or creates a new one. Optionally clones from an existing pack by ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pack-drafts"
+                ],
+                "summary": "Create or get an edit draft",
+                "parameters": [
+                    {
+                        "description": "Optional source pack ID to clone from",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackDraftRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input data",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized: Session missing or expired",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/packs/drafts/import": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Accepts a multipart form upload with a \"siq\" field (max 500 MB) and creates a new pack draft from the SIQ archive",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pack-drafts"
+                ],
+                "summary": "Import SIQ file as a pack draft",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "SIQ archive file",
+                        "name": "siq",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or malformed SIQ file",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized: Session missing or expired",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/packs/drafts/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Retrieves a specific pack draft by its unique identifier; only the owning user can access it",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pack-drafts"
+                ],
+                "summary": "Get pack draft by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Draft ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackDraft"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized: Session missing or expired",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: Not the draft owner",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Draft not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Replaces the content of a pack draft by ID; only the owning user can update it",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pack-drafts"
+                ],
+                "summary": "Update pack draft",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Draft ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated draft content",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdatePackDraftRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackDraft"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input data",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized: Session missing or expired",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: Not the draft owner",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Draft not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Removes a pack draft by ID; only the owning user can delete it",
+                "tags": [
+                    "pack-drafts"
+                ],
+                "summary": "Delete pack draft",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Draft ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized: Session missing or expired",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: Not the draft owner",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Draft not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/packs/drafts/{id}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Validates and publishes a pack draft, creating a public pack from it and returning the new pack's ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pack-drafts"
+                ],
+                "summary": "Publish pack draft",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Draft ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized: Session missing or expired",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: Not the draft owner",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Draft not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Draft content is invalid for publishing",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/packs/previews": {
             "get": {
                 "security": [
@@ -1901,6 +2339,52 @@
                 }
             }
         },
+        "github_com_holdennekt_sgame_backend_internal_domain.PackDraft": {
+            "type": "object",
+            "required": [
+                "createdAt",
+                "createdBy",
+                "finalRound",
+                "id",
+                "linkedPackId",
+                "name",
+                "rounds",
+                "type",
+                "updatedAt"
+            ],
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.User"
+                },
+                "finalRound": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRound"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "linkedPackId": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rounds": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Round"
+                    }
+                },
+                "type": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_holdennekt_sgame_backend_internal_domain.PackPreview": {
             "type": "object",
             "required": [
@@ -2578,6 +3062,17 @@
                 }
             }
         },
+        "github_com_holdennekt_sgame_backend_internal_dto.CreatePackDraftRequest": {
+            "type": "object",
+            "required": [
+                "from"
+            ],
+            "properties": {
+                "from": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_holdennekt_sgame_backend_internal_dto.CreatePackRequest": {
             "type": "object",
             "required": [
@@ -2832,6 +3327,137 @@
                 }
             }
         },
+        "github_com_holdennekt_sgame_backend_internal_dto.UpdateCategoryDraftRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "questions"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "questions": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateQuestionDraftRequest"
+                    }
+                }
+            }
+        },
+        "github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest": {
+            "type": "object",
+            "properties": {
+                "attachment": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest"
+                },
+                "text": {
+                    "type": "string",
+                    "maxLength": 1000
+                }
+            }
+        },
+        "github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundCategoryDraftRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "question"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 25,
+                    "minLength": 1
+                },
+                "question": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundQuestionDraftRequest"
+                }
+            }
+        },
+        "github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundDraftRequest": {
+            "type": "object",
+            "required": [
+                "categories"
+            ],
+            "properties": {
+                "categories": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "uniqueItems": true,
+                    "items": {
+                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundCategoryDraftRequest"
+                    }
+                }
+            }
+        },
+        "github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundQuestionDraftRequest": {
+            "type": "object",
+            "required": [
+                "answers"
+            ],
+            "properties": {
+                "answers": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "attachment": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest"
+                },
+                "comment": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest"
+                },
+                "text": {
+                    "type": "string",
+                    "maxLength": 1000
+                }
+            }
+        },
+        "github_com_holdennekt_sgame_backend_internal_dto.UpdatePackDraftRequest": {
+            "type": "object",
+            "required": [
+                "finalRound",
+                "name",
+                "rounds",
+                "type"
+            ],
+            "properties": {
+                "finalRound": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundDraftRequest"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "rounds": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "uniqueItems": true,
+                    "items": {
+                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateRoundDraftRequest"
+                    }
+                },
+                "type": {
+                    "enum": [
+                        "public",
+                        "private"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType"
+                        }
+                    ]
+                }
+            }
+        },
         "github_com_holdennekt_sgame_backend_internal_dto.UpdatePackRequest": {
             "type": "object",
             "required": [
@@ -2872,6 +3498,69 @@
                             "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType"
                         }
                     ]
+                }
+            }
+        },
+        "github_com_holdennekt_sgame_backend_internal_dto.UpdateQuestionDraftRequest": {
+            "type": "object",
+            "required": [
+                "answers",
+                "type",
+                "value"
+            ],
+            "properties": {
+                "answers": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "attachment": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest"
+                },
+                "comment": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest"
+                },
+                "text": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "type": {
+                    "enum": [
+                        "regular",
+                        "catInBag",
+                        "auction"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType"
+                        }
+                    ]
+                },
+                "value": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_holdennekt_sgame_backend_internal_dto.UpdateRoundDraftRequest": {
+            "type": "object",
+            "required": [
+                "categories",
+                "name"
+            ],
+            "properties": {
+                "categories": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "uniqueItems": true,
+                    "items": {
+                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCategoryDraftRequest"
+                    }
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 200
                 }
             }
         }

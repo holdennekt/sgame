@@ -366,6 +366,39 @@ definitions:
     - type
     - updatedAt
     type: object
+  github_com_holdennekt_sgame_backend_internal_domain.PackDraft:
+    properties:
+      createdAt:
+        type: string
+      createdBy:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.User'
+      finalRound:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRound'
+      id:
+        type: string
+      linkedPackId:
+        type: string
+      name:
+        type: string
+      rounds:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Round'
+        type: array
+      type:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
+      updatedAt:
+        type: string
+    required:
+    - createdAt
+    - createdBy
+    - finalRound
+    - id
+    - linkedPackId
+    - name
+    - rounds
+    - type
+    - updatedAt
+    type: object
   github_com_holdennekt_sgame_backend_internal_domain.PackPreview:
     properties:
       id:
@@ -855,6 +888,13 @@ definitions:
     required:
     - categories
     type: object
+  github_com_holdennekt_sgame_backend_internal_dto.CreatePackDraftRequest:
+    properties:
+      from:
+        type: string
+    required:
+    - from
+    type: object
   github_com_holdennekt_sgame_backend_internal_dto.CreatePackRequest:
     properties:
       finalRound:
@@ -1032,6 +1072,96 @@ definitions:
     - formData
     - url
     type: object
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateCategoryDraftRequest:
+    properties:
+      comment:
+        maxLength: 1000
+        type: string
+      name:
+        maxLength: 200
+        type: string
+      questions:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateQuestionDraftRequest'
+        maxItems: 20
+        type: array
+    required:
+    - name
+    - questions
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest:
+    properties:
+      attachment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
+      text:
+        maxLength: 1000
+        type: string
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundCategoryDraftRequest:
+    properties:
+      name:
+        maxLength: 25
+        minLength: 1
+        type: string
+      question:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundQuestionDraftRequest'
+    required:
+    - name
+    - question
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundDraftRequest:
+    properties:
+      categories:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundCategoryDraftRequest'
+        maxItems: 10
+        type: array
+        uniqueItems: true
+    required:
+    - categories
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundQuestionDraftRequest:
+    properties:
+      answers:
+        items:
+          type: string
+        maxItems: 50
+        type: array
+      attachment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
+      comment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest'
+      text:
+        maxLength: 1000
+        type: string
+    required:
+    - answers
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.UpdatePackDraftRequest:
+    properties:
+      finalRound:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundDraftRequest'
+      name:
+        maxLength: 200
+        type: string
+      rounds:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateRoundDraftRequest'
+        maxItems: 20
+        type: array
+        uniqueItems: true
+      type:
+        allOf:
+        - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
+        enum:
+        - public
+        - private
+    required:
+    - finalRound
+    - name
+    - rounds
+    - type
+    type: object
   github_com_holdennekt_sgame_backend_internal_dto.UpdatePackRequest:
     properties:
       finalRound:
@@ -1061,6 +1191,49 @@ definitions:
     - name
     - rounds
     - type
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateQuestionDraftRequest:
+    properties:
+      answers:
+        items:
+          type: string
+        maxItems: 50
+        type: array
+      attachment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
+      comment:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest'
+      text:
+        maxLength: 1000
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType'
+        enum:
+        - regular
+        - catInBag
+        - auction
+      value:
+        type: integer
+    required:
+    - answers
+    - type
+    - value
+    type: object
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateRoundDraftRequest:
+    properties:
+      categories:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCategoryDraftRequest'
+        maxItems: 20
+        type: array
+        uniqueItems: true
+      name:
+        maxLength: 200
+        type: string
+    required:
+    - categories
+    - name
     type: object
 host: localhost:8080
 info:
@@ -1434,6 +1607,294 @@ paths:
       summary: Get packs created by user
       tags:
       - packs
+  /packs/drafts:
+    get:
+      description: Returns a paginated list of pack drafts belonging to the authenticated
+        user
+      parameters:
+      - in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        required: true
+        type: integer
+      - in: query
+        name: orderBy
+        required: true
+        type: string
+      - enum:
+        - ASC
+        - DESC
+        in: query
+        name: orderDir
+        required: true
+        type: string
+      - in: query
+        minimum: 1
+        name: page
+        required: true
+        type: integer
+      - in: query
+        maxLength: 30
+        name: search
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SearchResponse'
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "401":
+          description: 'Unauthorized: Session missing or expired'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: List user's pack drafts
+      tags:
+      - pack-drafts
+    post:
+      consumes:
+      - application/json
+      description: Returns an existing edit draft for the authenticated user, or creates
+        a new one. Optionally clones from an existing pack by ID.
+      parameters:
+      - description: Optional source pack ID to clone from
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackDraftRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse'
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "401":
+          description: 'Unauthorized: Session missing or expired'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Create or get an edit draft
+      tags:
+      - pack-drafts
+  /packs/drafts/{id}:
+    delete:
+      description: Removes a pack draft by ID; only the owning user can delete it
+      parameters:
+      - description: Draft ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: 'Unauthorized: Session missing or expired'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "403":
+          description: 'Forbidden: Not the draft owner'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "404":
+          description: Draft not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Delete pack draft
+      tags:
+      - pack-drafts
+    get:
+      description: Retrieves a specific pack draft by its unique identifier; only
+        the owning user can access it
+      parameters:
+      - description: Draft ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackDraft'
+        "401":
+          description: 'Unauthorized: Session missing or expired'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "403":
+          description: 'Forbidden: Not the draft owner'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "404":
+          description: Draft not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get pack draft by ID
+      tags:
+      - pack-drafts
+    put:
+      consumes:
+      - application/json
+      description: Replaces the content of a pack draft by ID; only the owning user
+        can update it
+      parameters:
+      - description: Draft ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated draft content
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdatePackDraftRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackDraft'
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "401":
+          description: 'Unauthorized: Session missing or expired'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "403":
+          description: 'Forbidden: Not the draft owner'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "404":
+          description: Draft not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Update pack draft
+      tags:
+      - pack-drafts
+  /packs/drafts/{id}/publish:
+    post:
+      description: Validates and publishes a pack draft, creating a public pack from
+        it and returning the new pack's ID
+      parameters:
+      - description: Draft ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse'
+        "401":
+          description: 'Unauthorized: Session missing or expired'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "403":
+          description: 'Forbidden: Not the draft owner'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "404":
+          description: Draft not found
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "422":
+          description: Draft content is invalid for publishing
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Publish pack draft
+      tags:
+      - pack-drafts
+  /packs/drafts/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Accepts a multipart form upload with a "siq" field (max 500 MB)
+        and creates a new pack draft from the SIQ archive
+      parameters:
+      - description: SIQ archive file
+        in: formData
+        name: siq
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse'
+        "400":
+          description: Missing or malformed SIQ file
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "401":
+          description: 'Unauthorized: Session missing or expired'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Import SIQ file as a pack draft
+      tags:
+      - pack-drafts
   /packs/previews:
     get:
       description: Retrieves a list of pack previews based on search query

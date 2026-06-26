@@ -33,6 +33,18 @@ func (c *PackDraftController) RegisterRoutes(r *gin.RouterGroup) {
 	drafts.POST("/:id/publish", c.publish)
 }
 
+// @Summary      Create or get an edit draft
+// @Description  Returns an existing edit draft for the authenticated user, or creates a new one. Optionally clones from an existing pack by ID.
+// @Tags         pack-drafts
+// @Accept       json
+// @Produce      json
+// @Param        request body     dto.CreatePackDraftRequest false "Optional source pack ID to clone from"
+// @Success      200  {object}  dto.CreatePackResponse
+// @Failure      400  {object}  dto.ErrorResponse "Invalid input data"
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized: Session missing or expired"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs/drafts [post]
 func (c *PackDraftController) create(ctx *gin.Context) {
 	user := ctx.MustGet(USER_CONTEXT_KEY).(domain.User)
 
@@ -51,6 +63,17 @@ func (c *PackDraftController) create(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.CreatePackResponse{Id: draftId})
 }
 
+// @Summary      List user's pack drafts
+// @Description  Returns a paginated list of pack drafts belonging to the authenticated user
+// @Tags         pack-drafts
+// @Produce      json
+// @Param        query query     dto.SearchRequest false "Pagination parameters"
+// @Success      200  {object}  dto.SearchResponse
+// @Failure      400  {object}  dto.ErrorResponse "Invalid query parameters"
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized: Session missing or expired"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs/drafts [get]
 func (c *PackDraftController) list(ctx *gin.Context) {
 	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 
@@ -81,6 +104,18 @@ func (c *PackDraftController) list(ctx *gin.Context) {
 	})
 }
 
+// @Summary      Get pack draft by ID
+// @Description  Retrieves a specific pack draft by its unique identifier; only the owning user can access it
+// @Tags         pack-drafts
+// @Produce      json
+// @Param        id   path      string  true  "Draft ID"
+// @Success      200  {object}  domain.PackDraft
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized: Session missing or expired"
+// @Failure      403  {object}  dto.ErrorResponse "Forbidden: Not the draft owner"
+// @Failure      404  {object}  dto.ErrorResponse "Draft not found"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs/drafts/{id} [get]
 func (c *PackDraftController) getById(ctx *gin.Context) {
 	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 	id := ctx.Param("id")
@@ -94,6 +129,21 @@ func (c *PackDraftController) getById(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, draft)
 }
 
+// @Summary      Update pack draft
+// @Description  Replaces the content of a pack draft by ID; only the owning user can update it
+// @Tags         pack-drafts
+// @Accept       json
+// @Produce      json
+// @Param        id      path    string                       true  "Draft ID"
+// @Param        request body    dto.UpdatePackDraftRequest   true  "Updated draft content"
+// @Success      200  {object}  domain.PackDraft
+// @Failure      400  {object}  dto.ErrorResponse "Invalid input data"
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized: Session missing or expired"
+// @Failure      403  {object}  dto.ErrorResponse "Forbidden: Not the draft owner"
+// @Failure      404  {object}  dto.ErrorResponse "Draft not found"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs/drafts/{id} [put]
 func (c *PackDraftController) update(ctx *gin.Context) {
 	user := ctx.MustGet(USER_CONTEXT_KEY).(domain.User)
 	id := ctx.Param("id")
@@ -113,6 +163,17 @@ func (c *PackDraftController) update(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, newDraft)
 }
 
+// @Summary      Delete pack draft
+// @Description  Removes a pack draft by ID; only the owning user can delete it
+// @Tags         pack-drafts
+// @Param        id   path      string  true  "Draft ID"
+// @Success      204  "No Content"
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized: Session missing or expired"
+// @Failure      403  {object}  dto.ErrorResponse "Forbidden: Not the draft owner"
+// @Failure      404  {object}  dto.ErrorResponse "Draft not found"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs/drafts/{id} [delete]
 func (c *PackDraftController) delete(ctx *gin.Context) {
 	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
 	id := ctx.Param("id")
@@ -125,6 +186,18 @@ func (c *PackDraftController) delete(ctx *gin.Context) {
 	ctx.Status(http.StatusNoContent)
 }
 
+// @Summary      Import SIQ file as a pack draft
+// @Description  Accepts a multipart form upload with a "siq" field (max 500 MB) and creates a new pack draft from the SIQ archive
+// @Tags         pack-drafts
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        siq  formData  file  true  "SIQ archive file"
+// @Success      201  {object}  dto.CreatePackResponse
+// @Failure      400  {object}  dto.ErrorResponse "Missing or malformed SIQ file"
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized: Session missing or expired"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs/drafts/import [post]
 func (c *PackDraftController) importSIQ(ctx *gin.Context) {
 	user := ctx.MustGet(USER_CONTEXT_KEY).(domain.User)
 
@@ -172,6 +245,19 @@ func (c *PackDraftController) importSIQ(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, dto.CreatePackResponse{Id: id})
 }
 
+// @Summary      Publish pack draft
+// @Description  Validates and publishes a pack draft, creating a public pack from it and returning the new pack's ID
+// @Tags         pack-drafts
+// @Produce      json
+// @Param        id   path      string  true  "Draft ID"
+// @Success      201  {object}  dto.CreatePackResponse
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized: Session missing or expired"
+// @Failure      403  {object}  dto.ErrorResponse "Forbidden: Not the draft owner"
+// @Failure      404  {object}  dto.ErrorResponse "Draft not found"
+// @Failure      422  {object}  dto.ErrorResponse "Draft content is invalid for publishing"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /packs/drafts/{id}/publish [post]
 func (c *PackDraftController) publish(ctx *gin.Context) {
 	user := ctx.MustGet(USER_CONTEXT_KEY).(domain.User)
 	id := ctx.Param("id")
