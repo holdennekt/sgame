@@ -8,19 +8,20 @@ import CategoryEditor from "./CategoryEditor";
 import SortableRound from "./SortableRound";
 import SortableCategory from "./SortableCategory";
 import PasteCategoryModal from "./PasteCategoryModal";
+import PasteJsonModal from "./PasteJsonModal";
 import { toast, ToastContainer } from "react-toastify";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FaTrashCan } from "react-icons/fa6";
 import { FiArrowLeft, FiCopy } from "react-icons/fi";
-import { MdContentPaste } from "react-icons/md";
+import { MdContentPaste, MdOutlineContentCopy } from "react-icons/md";
 import { RiDraggable } from "react-icons/ri";
 import {
   IoIosAdd,
   IoIosArrowDown as ChevronDown,
   IoIosArrowDown as SelectArrow,
 } from "react-icons/io";
-import { DndContext, closestCenter } from "@dnd-kit/core";
+import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
@@ -35,6 +36,18 @@ import {
   QuestionFormData,
   convertPackFormDataToRequest,
 } from "@/types/pack";
+
+function isFinalRoundCategoryFormData(
+  obj: unknown
+): obj is FinalRoundCategoryFormData {
+  if (typeof obj !== "object" || obj === null) return false;
+  const c = obj as Record<string, unknown>;
+  return (
+    typeof c.name === "string" &&
+    typeof c.question === "object" &&
+    c.question !== null
+  );
+}
 import { signURL, createDraft, updateDraft, publishDraft } from "@/app/api";
 import { isError, isValidationErrors, ValidationError } from "@/middleware";
 import { usePack } from "@/hooks/usePack";
@@ -63,6 +76,22 @@ function formatErrorPath(path: string): string {
 
 function stripFileFromAttachment(att: AttachmentFormData): AttachmentFormData {
   return att.type === "file" ? { type: "file" } : att;
+}
+
+function serializeFinalRoundCategoryForClipboard(
+  cat: FinalRoundCategoryFormData
+): string {
+  return JSON.stringify({
+    ...cat,
+    question: {
+      ...cat.question,
+      attachment: stripFileFromAttachment(cat.question.attachment),
+      comment: {
+        ...cat.question.comment,
+        attachment: stripFileFromAttachment(cat.question.comment.attachment),
+      },
+    },
+  });
 }
 
 function serializeCategoryForClipboard(category: CategoryFormData): string {
@@ -98,6 +127,7 @@ function SortableFinalCategoryItem({
   readOnly,
   onOpen,
   onDuplicate,
+  onCopyJson,
   onDelete,
 }: {
   id: string;
@@ -105,6 +135,7 @@ function SortableFinalCategoryItem({
   readOnly: boolean;
   onOpen: () => void;
   onDuplicate: () => void;
+  onCopyJson: () => void;
   onDelete: () => void;
 }) {
   const {
@@ -132,12 +163,26 @@ function SortableFinalCategoryItem({
     >
       <span className="truncate flex-1 min-w-0">{cat.name}</span>
       {!readOnly && (
-        <div className="flex items-center gap-0.5 shrink-0 overflow-hidden transition-[max-width] duration-150 can-hover:max-w-0 group-hover:max-w-20">
+        <div className="flex items-center gap-0.5 shrink-0 overflow-hidden transition-[max-width] duration-150 can-hover:max-w-0 group-hover:max-w-28">
+          <button
+            type="button"
+            className={iconBtnCls}
+            title="Copy JSON"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopyJson();
+            }}
+          >
+            <MdOutlineContentCopy size={10} />
+          </button>
           <button
             type="button"
             className={iconBtnCls}
             title="Duplicate"
-            onClick={onDuplicate}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate();
+            }}
           >
             <FiCopy size={10} />
           </button>
@@ -200,8 +245,12 @@ export default function PackEditor({
     changeFinalRoundCategory,
     duplicateFinalRoundCategory,
     deleteFinalRoundCategory,
-    onDragEndRounds,
-    onDragEndCategories,
+    categoryStableIds,
+    activeId,
+    onDragStart,
+    onDragOver,
+    onDragEnd,
+    collisionDetection,
     onDragEndFinalRoundCategories,
   } = usePack(initialPack);
 
@@ -211,6 +260,17 @@ export default function PackEditor({
     );
     toast.success("Category copied to clipboard", { containerId: "editor" });
   };
+
+  const handleCopyFinalRoundCategoryJson = async (
+    cat: FinalRoundCategoryFormData
+  ) => {
+    await navigator.clipboard.writeText(
+      serializeFinalRoundCategoryForClipboard(cat)
+    );
+    toast.success("Category copied to clipboard", { containerId: "editor" });
+  };
+
+  const [pasteFinalRoundModal, setPasteFinalRoundModal] = useState(false);
 
   const [pasteModal, setPasteModal] = useState<{ isOpen: boolean; ri: number }>(
     { isOpen: false, ri: 0 }
@@ -584,17 +644,19 @@ export default function PackEditor({
               <div className="flex flex-col gap-0.5">
                 <DndContext
                   sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={onDragEndRounds}
+                  collisionDetection={collisionDetection}
+                  onDragStart={onDragStart}
+                  onDragOver={onDragOver}
+                  onDragEnd={onDragEnd}
                 >
                   <SortableContext
-                    items={pack.rounds.map((_, i) => String(i))}
+                    items={pack.rounds.map((_, i) => `round-${i}`)}
                     strategy={verticalListSortingStrategy}
                   >
                     {pack.rounds.map((round, ri) => (
                       <SortableRound
                         key={ri}
-                        id={String(ri)}
+                        id={`round-${ri}`}
                         round={round}
                         expanded={expandedRounds[ri]}
                         readOnly={readOnly}
@@ -610,36 +672,29 @@ export default function PackEditor({
                                 No categories
                               </p>
                             )}
-                            <DndContext
-                              sensors={sensors}
-                              collisionDetection={closestCenter}
-                              onDragEnd={(e) => onDragEndCategories(ri, e)}
+                            <SortableContext
+                              items={categoryStableIds[ri] ?? []}
+                              strategy={verticalListSortingStrategy}
                             >
-                              <SortableContext
-                                items={round.categories.map((_, i) =>
-                                  String(i)
-                                )}
-                                strategy={verticalListSortingStrategy}
-                              >
-                                {round.categories.map((cat, ci) => (
-                                  <SortableCategory
-                                    key={ci}
-                                    id={String(ci)}
-                                    category={cat}
-                                    selected={
-                                      selectedRoundIndex === ri &&
-                                      selectedCategoryIndex === ci
-                                    }
-                                    readOnly={readOnly}
-                                    onSelect={() => selectCategory(ri, ci)}
-                                    onDuplicate={() =>
-                                      duplicateCategory(ri, ci)
-                                    }
-                                    onDelete={() => deleteCategory(ri, ci)}
-                                  />
-                                ))}
-                              </SortableContext>
-                            </DndContext>
+                              {round.categories.map((cat, ci) => (
+                                <SortableCategory
+                                  key={categoryStableIds[ri]?.[ci] ?? ci}
+                                  id={
+                                    categoryStableIds[ri]?.[ci] ??
+                                    `r${ri}-c${ci}`
+                                  }
+                                  category={cat}
+                                  selected={
+                                    selectedRoundIndex === ri &&
+                                    selectedCategoryIndex === ci
+                                  }
+                                  readOnly={readOnly}
+                                  onSelect={() => selectCategory(ri, ci)}
+                                  onDuplicate={() => duplicateCategory(ri, ci)}
+                                  onDelete={() => deleteCategory(ri, ci)}
+                                />
+                              ))}
+                            </SortableContext>
                             {!readOnly && (
                               <div className="flex flex-col">
                                 <button
@@ -665,6 +720,37 @@ export default function PackEditor({
                       </SortableRound>
                     ))}
                   </SortableContext>
+                  <DragOverlay dropAnimation={null}>
+                    {activeId && !String(activeId).startsWith("round-")
+                      ? (() => {
+                          let cat: CategoryFormData | undefined;
+                          const sid = String(activeId);
+                          for (
+                            let ri = 0;
+                            ri < categoryStableIds.length;
+                            ri++
+                          ) {
+                            const ci = categoryStableIds[ri].indexOf(sid);
+                            if (ci !== -1) {
+                              cat = pack.rounds[ri].categories[ci];
+                              break;
+                            }
+                          }
+                          return cat ? (
+                            <div className="flex items-center gap-1.5 rounded-md text-sm pl-5 py-1 bg-surface-raised text-primary font-medium shadow-md opacity-90 cursor-grabbing">
+                              <span className="truncate flex-1 min-w-0">
+                                {cat.name || (
+                                  <em className="opacity-50">Unnamed</em>
+                                )}
+                              </span>
+                              <span className="shrink-0 text-[10px] font-medium px-1 rounded leading-4">
+                                {cat.questions.length}
+                              </span>
+                            </div>
+                          ) : null;
+                        })()
+                      : null}
+                  </DragOverlay>
                 </DndContext>
               </div>
             </div>
@@ -719,6 +805,9 @@ export default function PackEditor({
                             })
                           }
                           onDuplicate={() => duplicateFinalRoundCategory(i)}
+                          onCopyJson={() =>
+                            handleCopyFinalRoundCategoryJson(cat)
+                          }
                           onDelete={() => deleteFinalRoundCategory(i)}
                         />
                       ))}
@@ -726,31 +815,41 @@ export default function PackEditor({
                   </DndContext>
 
                   {!readOnly && (
-                    <button
-                      type="button"
-                      className="pl-3 pr-1 py-1 text-xs text-on-surface-muted hover:text-primary flex items-center gap-1 transition-colors duration-150"
-                      onClick={() =>
-                        setFinalRoundCategoryModal({
-                          isOpen: true,
-                          category: {
-                            name: "",
-                            question: {
-                              text: "",
-                              attachment: { type: "file" },
-                              answers: [],
-                              comment: {
+                    <div className="flex flex-col">
+                      <button
+                        type="button"
+                        className="pl-3 pr-1 py-1 text-xs text-on-surface-muted hover:text-primary flex items-center gap-1 transition-colors duration-150"
+                        onClick={() =>
+                          setFinalRoundCategoryModal({
+                            isOpen: true,
+                            category: {
+                              name: "",
+                              question: {
                                 text: "",
                                 attachment: { type: "file" },
+                                answers: [],
+                                comment: {
+                                  text: "",
+                                  attachment: { type: "file" },
+                                },
                               },
                             },
-                          },
-                          saveCategory: addFinalRoundCategory,
-                        })
-                      }
-                    >
-                      <IoIosAdd size={13} />
-                      Add category
-                    </button>
+                            saveCategory: addFinalRoundCategory,
+                          })
+                        }
+                      >
+                        <IoIosAdd size={13} />
+                        Add category
+                      </button>
+                      <button
+                        type="button"
+                        className="pl-3 pr-1 py-1 text-xs text-on-surface-muted hover:text-primary flex items-center gap-1 transition-colors duration-150"
+                        onClick={() => setPasteFinalRoundModal(true)}
+                      >
+                        <MdContentPaste size={13} />
+                        Paste category
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -817,6 +916,19 @@ export default function PackEditor({
             name: category.name ? `${category.name} (copy)` : "",
           });
           closePasteModal();
+        }}
+      />
+      <PasteJsonModal
+        isOpen={pasteFinalRoundModal}
+        close={() => setPasteFinalRoundModal(false)}
+        title="Paste final round category JSON"
+        validate={(obj) => (isFinalRoundCategoryFormData(obj) ? obj : null)}
+        onInsert={(cat) => {
+          addFinalRoundCategory({
+            ...cat,
+            name: cat.name ? `${cat.name} (copy)` : "",
+          });
+          setPasteFinalRoundModal(false);
         }}
       />
       <ToastContainer

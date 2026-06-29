@@ -47,7 +47,7 @@ export default function SortableCategory({
         transition: transform ? transition : undefined,
       }}
       className={`group flex items-center gap-1.5 rounded-md cursor-pointer text-sm pl-5 py-1 ${
-        isDragging ? "opacity-50 z-50" : ""
+        isDragging ? "opacity-0" : ""
       } ${
         selected
           ? "bg-surface-raised text-primary font-medium"
