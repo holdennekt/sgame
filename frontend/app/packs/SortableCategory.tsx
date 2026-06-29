@@ -67,7 +67,10 @@ export default function SortableCategory({
             type="button"
             title="Duplicate category"
             className={iconBtnCls}
-            onClick={onDuplicate}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate();
+            }}
           >
             <FiCopy size={10} />
           </button>

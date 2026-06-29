@@ -6,7 +6,11 @@ import {
   DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
-import { FinalRoundCategoryFormData, PackFormData } from "@/types/pack";
+import {
+  CategoryFormData,
+  FinalRoundCategoryFormData,
+  PackFormData,
+} from "@/types/pack";
 
 export function usePack(initialPack: PackFormData) {
   const [pack, setPack] = useState(initialPack);
@@ -152,6 +156,15 @@ export function usePack(initialPack: PackFormData) {
     setPack({ ...pack });
   };
 
+  const addCategoryFromJson = (ri: number, category: CategoryFormData) => {
+    const ci = pack.rounds[ri].categories.length;
+    pack.rounds[ri].categories.push(category);
+    setExpandedRounds((prev) => prev.map((e, i) => (i === ri ? true : e)));
+    setSelectedRI(ri);
+    setSelectedCI(ci);
+    setPack({ ...pack });
+  };
+
   const addFinalRoundCategory = (category: FinalRoundCategoryFormData) => {
     pack.finalRound.categories.push(category);
     setPack({ ...pack });
@@ -250,6 +263,7 @@ export function usePack(initialPack: PackFormData) {
     toggleRoundExpand,
     selectCategory,
     addCategory,
+    addCategoryFromJson,
     duplicateCategory,
     deleteCategory,
     addFinalRoundCategory,

@@ -3,6 +3,7 @@
 import { CategoryFormData, PackFormData, QuestionFormData } from "@/types/pack";
 import React from "react";
 import { IoIosAdd } from "react-icons/io";
+import { MdOutlineContentCopy } from "react-icons/md";
 import {
   DndContext,
   closestCenter,
@@ -25,6 +26,7 @@ export default function CategoryEditor({
   pack,
   setPack,
   setQuestionModal,
+  onCopyJson,
   readOnly = false,
 }: {
   roundIndex: number;
@@ -39,6 +41,7 @@ export default function CategoryEditor({
       saveQuestion: (q: QuestionFormData) => void;
     }>
   >;
+  onCopyJson?: () => void;
   readOnly?: boolean;
 }) {
   const sensors = useSensors(
@@ -141,13 +144,25 @@ export default function CategoryEditor({
     <div className="h-full flex flex-col gap-3">
       {/* Category name + comment */}
       <div className="shrink-0 flex flex-col gap-1.5">
-        <input
-          className="w-full h-9 px-2.5 bg-background border border-border text-on-background rounded-lg text-sm font-semibold outline-none focus-ring placeholder:text-on-surface-muted transition-[border-color] duration-150"
-          placeholder="Category name"
-          value={category.name}
-          onChange={(e) => renameCategory(e.target.value)}
-          readOnly={readOnly}
-        />
+        <div className="flex items-center gap-1.5">
+          <input
+            className="flex-1 min-w-0 h-9 px-2.5 bg-background border border-border text-on-background rounded-lg text-sm font-semibold outline-none focus-ring placeholder:text-on-surface-muted transition-[border-color] duration-150"
+            placeholder="Category name"
+            value={category.name}
+            onChange={(e) => renameCategory(e.target.value)}
+            readOnly={readOnly}
+          />
+          {!readOnly && onCopyJson && (
+            <button
+              type="button"
+              className="h-9 px-2.5 shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-border text-xs text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
+              onClick={onCopyJson}
+            >
+              <MdOutlineContentCopy size={13} />
+              Copy category
+            </button>
+          )}
+        </div>
         <textarea
           className="w-full px-2.5 py-1.5 bg-background border border-border text-on-background rounded-lg text-sm outline-none focus-ring placeholder:text-on-surface-muted transition-[border-color] duration-150 resize-none"
           placeholder="Category comment (optional)"

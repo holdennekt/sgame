@@ -7,11 +7,13 @@ import FinalRoundCategoryModal from "./FinalRoundCategoryModal";
 import CategoryEditor from "./CategoryEditor";
 import SortableRound from "./SortableRound";
 import SortableCategory from "./SortableCategory";
+import PasteCategoryModal from "./PasteCategoryModal";
 import { toast, ToastContainer } from "react-toastify";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FaTrashCan } from "react-icons/fa6";
 import { FiArrowLeft, FiCopy } from "react-icons/fi";
+import { MdContentPaste } from "react-icons/md";
 import { RiDraggable } from "react-icons/ri";
 import {
   IoIosAdd,
@@ -26,6 +28,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  AttachmentFormData,
+  CategoryFormData,
   FinalRoundCategoryFormData,
   PackFormData,
   QuestionFormData,
@@ -55,6 +59,24 @@ function formatErrorPath(path: string): string {
       /\.(name|text|type|comment|answers|value|attachment|categories|questions)$/,
       (_, f) => ` › ${f.charAt(0).toUpperCase() + f.slice(1)}`
     );
+}
+
+function stripFileFromAttachment(att: AttachmentFormData): AttachmentFormData {
+  return att.type === "file" ? { type: "file" } : att;
+}
+
+function serializeCategoryForClipboard(category: CategoryFormData): string {
+  return JSON.stringify({
+    ...category,
+    questions: category.questions.map((q) => ({
+      ...q,
+      attachment: stripFileFromAttachment(q.attachment),
+      comment: {
+        ...q.comment,
+        attachment: stripFileFromAttachment(q.comment.attachment),
+      },
+    })),
+  });
 }
 
 const selectCls =
@@ -171,6 +193,7 @@ export default function PackEditor({
     toggleRoundExpand,
     selectCategory,
     addCategory,
+    addCategoryFromJson,
     duplicateCategory,
     deleteCategory,
     addFinalRoundCategory,
@@ -181,6 +204,21 @@ export default function PackEditor({
     onDragEndCategories,
     onDragEndFinalRoundCategories,
   } = usePack(initialPack);
+
+  const handleCopyJson = async (category: CategoryFormData) => {
+    await navigator.clipboard.writeText(
+      serializeCategoryForClipboard(category)
+    );
+    toast.success("Category copied to clipboard", { containerId: "editor" });
+  };
+
+  const [pasteModal, setPasteModal] = useState<{ isOpen: boolean; ri: number }>(
+    { isOpen: false, ri: 0 }
+  );
+
+  const openPasteModal = (ri: number) => setPasteModal({ isOpen: true, ri });
+
+  const closePasteModal = () => setPasteModal((s) => ({ ...s, isOpen: false }));
 
   const [questionModal, setQuestionModal] = useState<{
     isOpen: boolean;
@@ -564,7 +602,6 @@ export default function PackEditor({
                         onRename={(name) => renameRound(ri, name)}
                         onDuplicate={() => duplicateRound(ri)}
                         onDelete={() => deleteRound(ri)}
-                        onAddRound={addRound}
                       >
                         {expandedRounds[ri] && (
                           <div className="flex flex-col gap-0.5 mb-1">
@@ -604,14 +641,24 @@ export default function PackEditor({
                               </SortableContext>
                             </DndContext>
                             {!readOnly && (
-                              <button
-                                type="button"
-                                className="pl-5 pr-1 py-1 text-xs text-on-surface-muted hover:text-primary flex items-center gap-1 transition-colors duration-150"
-                                onClick={() => addCategory(ri)}
-                              >
-                                <IoIosAdd size={13} />
-                                Add category
-                              </button>
+                              <div className="flex flex-col">
+                                <button
+                                  type="button"
+                                  className="pl-5 pr-1 py-1 text-xs text-on-surface-muted hover:text-primary flex items-center gap-1 transition-colors duration-150"
+                                  onClick={() => addCategory(ri)}
+                                >
+                                  <IoIosAdd size={13} />
+                                  Add category
+                                </button>
+                                <button
+                                  type="button"
+                                  className="pl-5 pr-1 py-1 text-xs text-on-surface-muted hover:text-primary flex items-center gap-1 transition-colors duration-150"
+                                  onClick={() => openPasteModal(ri)}
+                                >
+                                  <MdContentPaste size={13} />
+                                  Paste category
+                                </button>
+                              </div>
                             )}
                           </div>
                         )}
@@ -736,6 +783,7 @@ export default function PackEditor({
                 pack={pack}
                 setPack={setPack}
                 setQuestionModal={setQuestionModal}
+                onCopyJson={() => handleCopyJson(selectedCategory)}
                 readOnly={readOnly}
               />
             )}
@@ -759,6 +807,17 @@ export default function PackEditor({
         category={finalRoundCategoryModal.category}
         saveCategory={finalRoundCategoryModal.saveCategory}
         readOnly={readOnly}
+      />
+      <PasteCategoryModal
+        isOpen={pasteModal.isOpen}
+        close={closePasteModal}
+        onInsert={(category) => {
+          addCategoryFromJson(pasteModal.ri, {
+            ...category,
+            name: category.name ? `${category.name} (copy)` : "",
+          });
+          closePasteModal();
+        }}
       />
       <ToastContainer
         containerId="editor"

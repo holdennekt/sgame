@@ -5,7 +5,7 @@ import { RoundFormData } from "@/types/pack";
 import { FaTrashCan } from "react-icons/fa6";
 import { RiDraggable } from "react-icons/ri";
 import { FiCopy } from "react-icons/fi";
-import { IoIosAdd, IoIosArrowDown as ChevronDown } from "react-icons/io";
+import { IoIosArrowDown as ChevronDown } from "react-icons/io";
 
 const iconBtnCls =
   "h-6 w-6 inline-flex items-center justify-center rounded-md text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150";
@@ -22,7 +22,6 @@ export default function SortableRound({
   onRename,
   onDuplicate,
   onDelete,
-  onAddRound,
 }: {
   id: string;
   round: RoundFormData;
@@ -33,7 +32,6 @@ export default function SortableRound({
   onRename: (name: string) => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  onAddRound: () => void;
 }) {
   const {
     attributes,
@@ -78,14 +76,6 @@ export default function SortableRound({
         />
         {!readOnly && (
           <div className="flex items-center gap-0.5 shrink-0 overflow-hidden transition-[max-width] duration-150 can-hover:max-w-0 group-hover:max-w-28">
-            <button
-              type="button"
-              title="Add round"
-              className={iconBtnCls}
-              onClick={onAddRound}
-            >
-              <IoIosAdd size={13} />
-            </button>
             <button
               type="button"
               title="Duplicate round"
