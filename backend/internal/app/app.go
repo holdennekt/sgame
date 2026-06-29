@@ -23,6 +23,7 @@ import (
 	myHttp "github.com/holdennekt/sgame/backend/internal/transport/http"
 	myWs "github.com/holdennekt/sgame/backend/internal/transport/ws"
 	"github.com/holdennekt/sgame/backend/pkg/custvalid"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -106,11 +107,13 @@ func (a *app) Start(ctx context.Context) http.Handler {
 
 	engine := gin.New()
 
+	engine.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	engine.GET("api/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	engine.Use(
 		gin.Recovery(),
 		myHttp.RequestIDMiddleware,
+		myHttp.PrometheusMiddleware,
 		myHttp.LoggingMiddleware,
 		cors.New(corsConfig),
 		myHttp.ErrorMiddleware,

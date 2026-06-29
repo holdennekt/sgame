@@ -19,6 +19,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/service"
 	"github.com/holdennekt/sgame/backend/internal/transport/http"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/pkg/metrics"
 )
 
 type RoomHandler struct {
@@ -100,7 +101,12 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 		return
 	}
 
-	go processor.Listen(h.shutdownCtx)
+	metrics.WSConnectionsTotal.WithLabelValues("room").Inc()
+	metrics.WSConnectionsActive.WithLabelValues("room").Inc()
+	go func() {
+		processor.Listen(h.shutdownCtx)
+		metrics.WSConnectionsActive.WithLabelValues("room").Dec()
+	}()
 
 	spectatorCount, _ := h.roomService.GetSpectatorCount(ctx, id)
 	payload, _ := json.Marshal(newRoom.GetProjection(user.Id, spectatorCount))

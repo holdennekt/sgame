@@ -15,6 +15,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
 	"github.com/holdennekt/sgame/backend/internal/transport/http"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/pkg/metrics"
 )
 
 type LobbyHandler struct {
@@ -73,5 +74,10 @@ func (h *LobbyHandler) connect(ctx *gin.Context) {
 		clientChannel,
 		user,
 	)
-	go processor.Listen(h.shutdownCtx)
+	metrics.WSConnectionsTotal.WithLabelValues("lobby").Inc()
+	metrics.WSConnectionsActive.WithLabelValues("lobby").Inc()
+	go func() {
+		processor.Listen(h.shutdownCtx)
+		metrics.WSConnectionsActive.WithLabelValues("lobby").Dec()
+	}()
 }

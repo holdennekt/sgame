@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/holdennekt/sgame/backend/internal/dto"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/pkg/metrics"
 )
 
 func baseKind(t reflect.Type) reflect.Kind {
@@ -67,6 +69,18 @@ func pathFromNamespace(ns string) string {
 		return after
 	}
 	return ns
+}
+
+func PrometheusMiddleware(ctx *gin.Context) {
+	start := time.Now()
+	ctx.Next()
+	path := ctx.FullPath()
+	if path == "" {
+		path = "unknown"
+	}
+	status := strconv.Itoa(ctx.Writer.Status())
+	metrics.HTTPRequestsTotal.WithLabelValues(ctx.Request.Method, path, status).Inc()
+	metrics.HTTPRequestDuration.WithLabelValues(ctx.Request.Method, path).Observe(time.Since(start).Seconds())
 }
 
 func ErrorMiddleware(ctx *gin.Context) {

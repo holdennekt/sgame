@@ -14,6 +14,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/internal/message"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/pkg/metrics"
 )
 
 const (
@@ -60,6 +61,7 @@ func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel,
 				slog.Error("error", "err", err)
 				return
 			}
+			metrics.RoomsActive.Dec()
 			deletedRoomMsg := outgoing.NewRoomDeletedMessage(roomId)
 			if err := lobbyServer.Send(ctx, deletedRoomMsg); err != nil {
 				slog.Error("error", "err", err)

@@ -14,6 +14,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
 	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/pkg/metrics"
 )
 
 const UPDATE_ROOM_RETRIES = 3
@@ -74,6 +75,8 @@ func (s *RoomService) Create(ctx context.Context, userId string, crr dto.CreateR
 		return "", custerr.NewInternalErr(err)
 	}
 	go processor.Listen(context.Background())
+
+	metrics.RoomsActive.Inc()
 
 	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(room.Id)
 	lobbyServerChannel := s.lobbyChannelGetter.Get(domain.LOBBY)
