@@ -36,15 +36,13 @@ export default function MainPanel() {
     <>
       <div className="flex-[3_0_0%] flex flex-col gap-2 min-w-0 min-h-0">
         <div className="relative flex-1 min-h-0 w-full bg-surface border border-border rounded-md p-2">
-          <GameTopSection />
           {room.pausedState.paused && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-md z-10">
-              <div className="flex flex-col items-center gap-2 text-on-surface">
-                <FiPause size={32} />
-                <p className="text-lg font-semibold">Paused</p>
-              </div>
+            <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-center gap-1.5 py-1 rounded-t-md bg-amber-400/15 text-amber-500 text-xs font-semibold tracking-wide">
+              <FiPause size={11} />
+              PAUSED
             </div>
           )}
+          <GameTopSection />
         </div>
 
         {room.players.length > 0 && (
