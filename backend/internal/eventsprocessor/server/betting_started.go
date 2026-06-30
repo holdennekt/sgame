@@ -68,7 +68,7 @@ func HandleBettingStartedMessage(ctx context.Context, server realtime.Channel, i
 				slog.Error("error", "err", err)
 				return
 			}
-		case domain.ShowingQuestion:
+		case domain.Answering:
 			answerStartedMessage := NewAnswerStartedMessage(bsp.Question, newerRoom.AnsweringPlayer.Id)
 			if err := internalServer.Send(ctx, answerStartedMessage); err != nil {
 				slog.Error("error", "err", err)

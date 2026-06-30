@@ -10,6 +10,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
 	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
 	"github.com/holdennekt/sgame/backend/internal/message"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
 type ValidateAnswerPayload struct {
@@ -23,6 +24,9 @@ func HandleValidateAnswerMessage(ctx context.Context, server realtime.Channel, i
 	}
 	var question domain.Question
 	newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
+		if room.CurrentQuestion == nil {
+			return custerr.NewConflictErr("can not validate answer now")
+		}
 		question = room.CurrentQuestion.Question
 		return room.ValidateAnswer(user.Id, vap.IsCorrect)
 	})
