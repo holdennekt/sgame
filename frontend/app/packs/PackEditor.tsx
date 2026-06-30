@@ -886,7 +886,6 @@ export default function PackEditor({
                 roundIndex={selectedRoundIndex}
                 categoryIndex={selectedCategoryIndex}
                 category={selectedCategory}
-                pack={pack}
                 setPack={setPack}
                 setQuestionModal={setQuestionModal}
                 onCopyJson={() => handleCopyJson(selectedCategory)}

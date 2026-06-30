@@ -1,7 +1,7 @@
 "use client";
 
 import { CategoryFormData, PackFormData, QuestionFormData } from "@/types/pack";
-import React from "react";
+import React, { useState } from "react";
 import { IoIosAdd } from "react-icons/io";
 import { MdOutlineContentCopy } from "react-icons/md";
 import {
@@ -23,7 +23,6 @@ export default function CategoryEditor({
   roundIndex,
   categoryIndex,
   category,
-  pack,
   setPack,
   setQuestionModal,
   onCopyJson,
@@ -32,7 +31,6 @@ export default function CategoryEditor({
   roundIndex: number;
   categoryIndex: number;
   category: CategoryFormData;
-  pack: PackFormData;
   setPack: React.Dispatch<React.SetStateAction<PackFormData>>;
   setQuestionModal: React.Dispatch<
     React.SetStateAction<{
@@ -65,8 +63,6 @@ export default function CategoryEditor({
   };
 
   const addQuestion = () => {
-    const qi =
-      pack.rounds[roundIndex].categories[categoryIndex].questions.length;
     setQuestionModal({
       isOpen: true,
       question: {
@@ -121,6 +117,21 @@ export default function CategoryEditor({
     });
   };
 
+  const [autoAssignModal, setAutoAssignModal] = useState(false);
+  const [autoAssignFactor, setAutoAssignStep] = useState(100);
+
+  const autoAssignValues = () => {
+    setPack((pack) => {
+      pack.rounds[roundIndex].categories[categoryIndex].questions.forEach(
+        (q, i) => {
+          q.value = (i + 1) * autoAssignFactor;
+        }
+      );
+      return { ...pack };
+    });
+    setAutoAssignModal(false);
+  };
+
   const onDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -152,17 +163,83 @@ export default function CategoryEditor({
             onChange={(e) => renameCategory(e.target.value)}
             readOnly={readOnly}
           />
-          {!readOnly && onCopyJson && (
-            <button
-              type="button"
-              className="h-9 px-2.5 shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-border text-xs text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
-              onClick={onCopyJson}
-            >
-              <MdOutlineContentCopy size={13} />
-              Copy category
-            </button>
+          {!readOnly && (
+            <div className="shrink-0 flex items-center gap-1.5">
+              {questions.length > 0 && (
+                <button
+                  type="button"
+                  className="h-9 px-2.5 inline-flex items-center gap-1.5 rounded-lg border border-border text-xs text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
+                  onClick={() => setAutoAssignModal(true)}
+                >
+                  Auto-assign values
+                </button>
+              )}
+              {onCopyJson && (
+                <button
+                  type="button"
+                  className="h-9 px-2.5 inline-flex items-center gap-1.5 rounded-lg border border-border text-xs text-on-surface-muted hover:bg-surface-raised hover:text-on-surface transition-colors duration-150"
+                  onClick={onCopyJson}
+                >
+                  <MdOutlineContentCopy size={13} />
+                  Copy category
+                </button>
+              )}
+            </div>
           )}
         </div>
+
+        {autoAssignModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={() => setAutoAssignModal(false)}
+          >
+            <div
+              className="bg-background border border-border rounded-xl p-5 flex flex-col gap-4 w-72 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-sm font-semibold text-on-background">
+                Auto-assign values
+              </p>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-on-surface-muted">Factor</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  className="h-9 px-2.5 bg-background border border-border text-on-background rounded-lg text-sm outline-none focus-ring"
+                  value={autoAssignFactor}
+                  onChange={(e) =>
+                    setAutoAssignStep(
+                      Number(e.target.value.replace(/[^0-9]/g, ""))
+                    )
+                  }
+                  autoFocus
+                  onKeyDown={(e) => e.key === "Enter" && autoAssignValues()}
+                />
+                <p className="text-xs text-on-surface-muted">
+                  Questions will be assigned {autoAssignFactor},{" "}
+                  {2 * autoAssignFactor}, {3 * autoAssignFactor}…
+                </p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  className="h-8 px-3 rounded-lg border border-border text-xs text-on-surface-muted hover:bg-surface-raised transition-colors duration-150"
+                  onClick={() => setAutoAssignModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="h-8 px-3 rounded-lg bg-primary text-on-primary text-xs font-medium hover:opacity-90 transition-opacity duration-150"
+                  onClick={autoAssignValues}
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <textarea
           className="w-full px-2.5 py-1.5 bg-background border border-border text-on-background rounded-lg text-sm outline-none focus-ring placeholder:text-on-surface-muted transition-[border-color] duration-150 resize-none"
           placeholder="Category comment (optional)"
