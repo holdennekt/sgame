@@ -45,16 +45,16 @@ type CreateRoundRequest struct {
 
 type CreateCategoryRequest struct {
 	Name      string                  `json:"name" binding:"min=1,max=50"`
-	Comment   *string                 `json:"comment,omitempty" binding:"omitnil,max=200"`
+	Comment   *string                 `json:"comment,omitempty" binding:"omitnil,max=250"`
 	Questions []CreateQuestionRequest `json:"questions" binding:"min=1,max=20,dive"`
 }
 
 type CreateQuestionRequest struct {
 	Value      int                      `json:"value" binding:"max=10000"`
 	Type       domain.QuestionType      `json:"type" binding:"oneof=regular catInBag auction"`
-	Text       *string                  `json:"text,omitempty" binding:"required_without=Attachment,omitnil,min=1,max=500"`
+	Text       *string                  `json:"text,omitempty" binding:"required_without=Attachment,omitnil,min=1,max=1000"`
 	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"required_without=Text"`
-	Answers    []string                 `json:"answers" binding:"min=1,max=10,dive,min=1,max=200"`
+	Answers    []string                 `json:"answers" binding:"min=1,max=10,dive,min=1,max=500"`
 	Comment    *CreateCommentRequest    `json:"comment,omitempty" binding:"omitnil"`
 }
 
@@ -64,7 +64,7 @@ type CreateAttachmentRequest struct {
 }
 
 type CreateCommentRequest struct {
-	Text       *string                  `json:"text" binding:"omitnil,max=500"`
+	Text       *string                  `json:"text" binding:"omitnil,max=1000"`
 	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"omitnil"`
 }
 
@@ -73,14 +73,14 @@ type CreateFinalRoundRequest struct {
 }
 
 type CreateFinalRoundCategoryRequest struct {
-	Name     string                          `json:"name" binding:"min=1,max=25"`
+	Name     string                          `json:"name" binding:"min=1,max=50"`
 	Question CreateFinalRoundQuestionRequest `json:"question"`
 }
 
 type CreateFinalRoundQuestionRequest struct {
 	Text       *string                  `json:"text,omitempty" binding:"required_without=Attachment,omitnil,max=1000"`
 	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"required_without=Text"`
-	Answers    []string                 `json:"answers" binding:"required,min=1,max=10,dive,min=1,max=50"`
+	Answers    []string                 `json:"answers" binding:"required,min=1,max=10,dive,min=1,max=500"`
 	Comment    *CreateCommentRequest    `json:"comment,omitempty" binding:"omitnil"`
 }
 

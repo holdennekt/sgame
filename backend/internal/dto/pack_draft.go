@@ -45,16 +45,16 @@ type UpdateRoundDraftRequest struct {
 
 type UpdateCategoryDraftRequest struct {
 	Name      string                       `json:"name" binding:"max=200"`
-	Comment   *string                      `json:"comment,omitempty" binding:"omitnil,max=1000"`
+	Comment   *string                      `json:"comment,omitempty" binding:"omitnil,max=2000"`
 	Questions []UpdateQuestionDraftRequest `json:"questions" binding:"max=20,dive"`
 }
 
 type UpdateQuestionDraftRequest struct {
 	Value      int                        `json:"value"`
 	Type       domain.QuestionType        `json:"type" binding:"oneof=regular catInBag auction"`
-	Text       *string                    `json:"text,omitempty" binding:"omitnil,max=1000"`
+	Text       *string                    `json:"text,omitempty" binding:"omitnil,max=2000"`
 	Attachment *CreateAttachmentRequest   `json:"attachment,omitempty"`
-	Answers    []string                   `json:"answers" binding:"max=50,dive,min=1,max=500"`
+	Answers    []string                   `json:"answers" binding:"max=50,dive,min=1,max=1000"`
 	Comment    *UpdateCommentDraftRequest `json:"comment,omitempty" binding:"omitnil"`
 }
 
@@ -68,13 +68,13 @@ type UpdateFinalRoundCategoryDraftRequest struct {
 }
 
 type UpdateFinalRoundQuestionDraftRequest struct {
-	Text       *string                    `json:"text,omitempty" binding:"omitnil,max=1000"`
+	Text       *string                    `json:"text,omitempty" binding:"omitnil,max=2000"`
 	Attachment *CreateAttachmentRequest   `json:"attachment,omitempty"`
-	Answers    []string                   `json:"answers" binding:"max=50,dive,min=1,max=500"`
+	Answers    []string                   `json:"answers" binding:"max=50,dive,min=1,max=1000"`
 	Comment    *UpdateCommentDraftRequest `json:"comment,omitempty" binding:"omitnil"`
 }
 
 type UpdateCommentDraftRequest struct {
-	Text       *string                  `json:"text,omitempty" binding:"omitnil,max=1000"`
+	Text       *string                  `json:"text,omitempty" binding:"omitnil,max=2000"`
 	Attachment *CreateAttachmentRequest `json:"attachment,omitempty" binding:"omitnil"`
 }
