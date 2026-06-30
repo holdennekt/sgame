@@ -334,6 +334,7 @@ export default function PackEditor({
   const nameInputRef = useRef<HTMLInputElement>(null);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout>>();
   const skipNextAutosave = useRef(false);
+  const uploadFileCache = useRef<Map<File, string>>(new Map());
 
   useEffect(() => {
     if (!mounted.current) {
@@ -367,7 +368,11 @@ export default function PackEditor({
     if (!draftId) return;
     setSaveStatus({ type: "saving" });
     try {
-      const req = await convertPackFormDataToRequest(packToSave, signURL);
+      const req = await convertPackFormDataToRequest(
+        packToSave,
+        signURL,
+        uploadFileCache.current
+      );
       const newDraft = await updateDraft(draftId, req);
       setSaveErrors([]);
       setSaveStatus({ type: "saved", at: new Date() });
@@ -389,7 +394,11 @@ export default function PackEditor({
     if (!draftId) return;
     setIsPublishing(true);
     try {
-      const req = await convertPackFormDataToRequest(pack, signURL);
+      const req = await convertPackFormDataToRequest(
+        pack,
+        signURL,
+        uploadFileCache.current
+      );
       await updateDraft(draftId, req);
       skipNextAutosave.current = true;
       setSaveErrors([]);

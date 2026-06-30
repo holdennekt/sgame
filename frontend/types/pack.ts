@@ -355,7 +355,8 @@ export async function convertPackFormDataToRequest(
   }) => Promise<
     | { url: string; formData: Record<string, string>; getUrl?: string }
     | { error: string }
-  >
+  >,
+  fileCache?: Map<File, string>
 ): Promise<CreatePackRequest> {
   const isPublic = false;
 
@@ -372,7 +373,8 @@ export async function convertPackFormDataToRequest(
               const commentAttachment = await convertAttachment(
                 question.comment.attachment,
                 isPublic,
-                signURL
+                signURL,
+                fileCache
               );
               return {
                 ...question,
@@ -387,7 +389,8 @@ export async function convertPackFormDataToRequest(
                 attachment: await convertAttachment(
                   question.attachment,
                   isPublic,
-                  signURL
+                  signURL,
+                  fileCache
                 ),
               };
             })
@@ -404,7 +407,8 @@ export async function convertPackFormDataToRequest(
         const commentAttachment = await convertAttachment(
           question.comment.attachment,
           isPublic,
-          signURL
+          signURL,
+          fileCache
         );
         return {
           name,
@@ -421,7 +425,8 @@ export async function convertPackFormDataToRequest(
             attachment: await convertAttachment(
               question.attachment,
               isPublic,
-              signURL
+              signURL,
+              fileCache
             ),
           },
         };
@@ -446,11 +451,16 @@ async function convertAttachment(
   }) => Promise<
     | { url: string; formData: Record<string, string>; getUrl?: string }
     | { error: string }
-  >
+  >,
+  fileCache?: Map<File, string>
 ): Promise<CreateAttachmentRequest | null> {
   switch (attachment.type) {
     case "file": {
       if (!attachment.file) return null;
+
+      if (fileCache?.has(attachment.file)) {
+        return { key: fileCache.get(attachment.file)! };
+      }
 
       const signResult = await signURL({
         filename: attachment.file.name,
@@ -474,6 +484,7 @@ async function convertAttachment(
         throw new Error(`Failed to upload ${attachment.file.name} to S3`);
       }
 
+      fileCache?.set(attachment.file, reqFormData.key);
       return { key: reqFormData.key };
     }
 
