@@ -57,10 +57,15 @@ export default function RevealingQuestionPanel({
 
     if (timeUntilEnd <= 0) return setCurrentText(text);
 
-    const remainingChars = text.length - currentText.length;
+    const startIndex = Math.floor(text.length * textLastProgress);
+    const remainingChars = text.length - startIndex;
+
+    if (remainingChars <= 0) return setCurrentText(text);
+
     const updateInterval = timeUntilEnd / remainingChars;
 
-    let charIndex = currentText.length;
+    setCurrentText(text.slice(0, startIndex));
+    let charIndex = startIndex;
 
     textIntervalRef.current = setInterval(() => {
       charIndex++;
