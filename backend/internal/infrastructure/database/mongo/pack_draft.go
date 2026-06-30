@@ -196,6 +196,51 @@ func (r *packDraftRepository) GetByUserAndLinkedPack(ctx context.Context, userId
 	return toDomainDraft(&m), nil
 }
 
+func (r *packDraftRepository) GetReferencedKeys(ctx context.Context, keys []string, excludeId string) (map[string]struct{}, error) {
+	if len(keys) == 0 {
+		return nil, nil
+	}
+	excludeObjId, err := primitive.ObjectIDFromHex(excludeId)
+	if err != nil {
+		return nil, custerr.NewBadRequestErr(fmt.Sprintf("%q is an invalid id", excludeId))
+	}
+	filter := bson.M{
+		"_id": bson.M{"$ne": excludeObjId},
+		"$or": bson.A{
+			bson.M{"rounds.categories.questions.attachment.key": bson.M{"$in": keys}},
+			bson.M{"rounds.categories.questions.comment.attachment.key": bson.M{"$in": keys}},
+			bson.M{"finalRound.categories.question.attachment.key": bson.M{"$in": keys}},
+			bson.M{"finalRound.categories.question.comment.attachment.key": bson.M{"$in": keys}},
+		},
+	}
+	cur, err := r.db.Collection(PACK_DRAFTS_COLLECTION).Find(ctx, filter, options.Find().SetProjection(bson.M{"rounds": 1, "finalRound": 1}))
+	if err != nil {
+		return nil, custerr.NewInternalErr(err)
+	}
+	defer func() { _ = cur.Close(ctx) }()
+
+	keysSet := make(map[string]struct{}, len(keys))
+	for _, k := range keys {
+		keysSet[k] = struct{}{}
+	}
+	referenced := make(map[string]struct{})
+	for cur.Next(ctx) {
+		var m mongoPackDraft
+		if err := cur.Decode(&m); err != nil {
+			return nil, custerr.NewInternalErr(err)
+		}
+		for k := range toDomainDraft(&m).AttachmentKeys() {
+			if _, ok := keysSet[k]; ok {
+				referenced[k] = struct{}{}
+			}
+		}
+	}
+	if err := cur.Err(); err != nil {
+		return nil, custerr.NewInternalErr(err)
+	}
+	return referenced, nil
+}
+
 func (r *packDraftRepository) Delete(ctx context.Context, id string) error {
 	objId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {

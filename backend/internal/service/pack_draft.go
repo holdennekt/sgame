@@ -31,7 +31,7 @@ func NewPackDraftService(packDraftRepo repository.PackDraft, packRepo repository
 	v := validator.New()
 	v.SetTagName("binding")
 	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
-		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		name, _, _ := strings.Cut(fld.Tag.Get("json"), ",")
 		if name == "-" {
 			return ""
 		}
@@ -222,7 +222,24 @@ func (s *PackDraftService) Delete(ctx context.Context, userId, id string) error 
 			}
 			linkedPackKeys = linkedPack.AttachmentKeys()
 		}
-		for key := range sets.Delta(draft.AttachmentKeys(), linkedPackKeys) {
+
+		candidateKeys := sets.Delta(draft.AttachmentKeys(), linkedPackKeys)
+		if len(candidateKeys) == 0 {
+			return
+		}
+
+		// Guard: skip keys referenced by other drafts to avoid breaking shared GCS objects.
+		keySlice := make([]string, 0, len(candidateKeys))
+		for k := range candidateKeys {
+			keySlice = append(keySlice, k)
+		}
+		referencedKeys, err := s.packDraftRepo.GetReferencedKeys(context.Background(), keySlice, draft.Id)
+		if err != nil {
+			slog.Error("draft delete: failed to check cross-draft key references, skipping attachment cleanup", "err", err)
+			return
+		}
+
+		for key := range sets.Delta(candidateKeys, referencedKeys) {
 			if err := s.storage.Delete(context.Background(), key); err != nil {
 				slog.Error("failed to cleanup attachment", "key", key, "err", err)
 			}

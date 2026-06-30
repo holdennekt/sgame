@@ -12,6 +12,8 @@ type PackDraft interface {
 	GetById(ctx context.Context, id string) (*domain.PackDraft, error)
 	GetByUser(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackDraft, int, error)
 	GetByUserAndLinkedPack(ctx context.Context, userId, packId string) (*domain.PackDraft, error)
+	// GetReferencedKeys returns the subset of keys that appear in any draft other than excludeId.
+	GetReferencedKeys(ctx context.Context, keys []string, excludeId string) (map[string]struct{}, error)
 	Update(ctx context.Context, draft *domain.PackDraft) error
 	Delete(ctx context.Context, id string) error
 }

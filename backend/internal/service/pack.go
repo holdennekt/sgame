@@ -27,12 +27,13 @@ const (
 
 type PackService struct {
 	packRepository    repository.Pack
+	packDraftRepo     repository.PackDraft
 	storage           storage.Storage
 	attachmentService *AttachmentService
 }
 
-func NewPackService(packRepository repository.Pack, storage storage.Storage, attachmentService *AttachmentService) *PackService {
-	return &PackService{packRepository, storage, attachmentService}
+func NewPackService(packRepository repository.Pack, packDraftRepo repository.PackDraft, storage storage.Storage, attachmentService *AttachmentService) *PackService {
+	return &PackService{packRepository, packDraftRepo, storage, attachmentService}
 }
 
 func (s *PackService) Create(ctx context.Context, user domain.User, cpr dto.CreatePackRequest) (string, error) {
@@ -239,6 +240,13 @@ func (s *PackService) Delete(ctx context.Context, userId, id string) error {
 
 	if pack.CreatedBy.Id != userId {
 		return custerr.NewForbiddenErr("can only delete your own packs")
+	}
+
+	// Refuse deletion if the user has an active linked draft; its media would be destroyed.
+	if _, err := s.packDraftRepo.GetByUserAndLinkedPack(ctx, userId, id); err == nil {
+		return custerr.NewConflictErr("cannot delete pack with an active draft; publish or discard the draft first")
+	} else if _, ok := err.(custerr.NotFoundErr); !ok {
+		return err
 	}
 
 	if err := s.packRepository.Delete(ctx, id); err != nil {
