@@ -75,7 +75,9 @@ function formatErrorPath(path: string): string {
 }
 
 function stripFileFromAttachment(att: AttachmentFormData): AttachmentFormData {
-  return att.type === "file" ? { type: "file" } : att;
+  if (att.type === "file") return { type: "file" };
+  if (att.type === "existing") return { type: "url", url: att.url };
+  return att;
 }
 
 function serializeFinalRoundCategoryForClipboard(
@@ -324,7 +326,7 @@ export default function PackEditor({
   const mounted = useRef(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout>>();
-  const serverSync = useRef(false);
+  const skipNextAutosave = useRef(false);
 
   useEffect(() => {
     if (!mounted.current) {
@@ -333,12 +335,11 @@ export default function PackEditor({
       return;
     }
     if (!draftId) return;
-    if (serverSync.current) {
-      serverSync.current = false;
+    if (skipNextAutosave.current) {
+      skipNextAutosave.current = false;
       return;
     }
 
-    setSaveStatus({ type: "saving" });
     autosaveTimer.current = setTimeout(() => saveDraft(pack), 1000);
     return () => clearTimeout(autosaveTimer.current);
   }, [pack, draftId]);
@@ -361,10 +362,16 @@ export default function PackEditor({
     try {
       const req = await convertPackFormDataToRequest(packToSave, signURL);
       const newDraft = await updateDraft(draftId, req);
-      serverSync.current = true;
-      setPack(convertDraftToFormData(newDraft));
       setSaveErrors([]);
       setSaveStatus({ type: "saved", at: new Date() });
+      skipNextAutosave.current = true;
+      setPack((current) => {
+        if (current !== packToSave) {
+          skipNextAutosave.current = false;
+          return current;
+        }
+        return convertDraftToFormData(newDraft);
+      });
     } catch (e) {
       if (isValidationErrors(e)) setSaveErrors(e.errors);
       setSaveStatus({ type: "error" });
@@ -377,7 +384,7 @@ export default function PackEditor({
     try {
       const req = await convertPackFormDataToRequest(pack, signURL);
       await updateDraft(draftId, req);
-      serverSync.current = true;
+      skipNextAutosave.current = true;
       setSaveErrors([]);
     } catch (e) {
       if (isValidationErrors(e)) {
