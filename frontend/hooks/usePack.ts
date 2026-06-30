@@ -356,6 +356,7 @@ export function usePack(initialPack: PackFormData) {
 
       setCategoryStableIds(newStableIds);
       setPack({ ...pack });
+      dragStateRef.current.categoryStableIds = newStableIds;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
