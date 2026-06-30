@@ -197,7 +197,14 @@ function SortableFinalCategoryItem({
           >
             <RiDraggable size={11} />
           </button>
-          <button type="button" className={dangerIconBtnCls} onClick={onDelete}>
+          <button
+            type="button"
+            className={dangerIconBtnCls}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+          >
             <FaTrashCan size={9} />
           </button>
         </div>
@@ -917,10 +924,7 @@ export default function PackEditor({
         isOpen={pasteModal.isOpen}
         close={closePasteModal}
         onInsert={(category) => {
-          addCategoryFromJson(pasteModal.ri, {
-            ...category,
-            name: category.name ? `${category.name} (copy)` : "",
-          });
+          addCategoryFromJson(pasteModal.ri, category);
           closePasteModal();
         }}
       />
@@ -930,10 +934,7 @@ export default function PackEditor({
         title="Paste final round category JSON"
         validate={(obj) => (isFinalRoundCategoryFormData(obj) ? obj : null)}
         onInsert={(cat) => {
-          addFinalRoundCategory({
-            ...cat,
-            name: cat.name ? `${cat.name} (copy)` : "",
-          });
+          addFinalRoundCategory(cat);
           setPasteFinalRoundModal(false);
         }}
       />
