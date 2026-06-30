@@ -139,7 +139,7 @@ export default function FinalRoundCategoryModal({
                 {answers.map((answer, index) => (
                   <span
                     key={index}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-raised text-on-surface text-xs border border-border"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-surface-raised text-on-surface text-xs border border-border"
                   >
                     {answer}
                     {!readOnly && (
