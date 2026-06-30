@@ -68,6 +68,7 @@ export default function RoomPage({
     if (
       isHost ||
       isSpectator ||
+      room.pausedState.paused ||
       (room.state !== "revealing_question" && room.state !== "showing_question")
     )
       return;

@@ -26,7 +26,9 @@ export default function GameBottomSection() {
       return (
         <BettingPanel
           player={player}
-          allowedToBet={player.score > 0 && !player.betAmount}
+          allowedToBet={
+            !room.pausedState.paused && player.score > 0 && !player.betAmount
+          }
           placeBet={room.state === "betting" ? placeBet : placeFinalRoundBet}
         />
       );
@@ -34,7 +36,7 @@ export default function GameBottomSection() {
     case "showing_final_round_question":
       return (
         <FinalRoundAnswerPanel
-          allowedToAnswer={allowedToAnswer}
+          allowedToAnswer={!room.pausedState.paused && allowedToAnswer}
           submitFinalRoundAnswer={submitFinalRoundAnswer}
         />
       );
@@ -45,7 +47,11 @@ export default function GameBottomSection() {
     default:
       return (
         <div
-          className="w-full h-12 rounded-md bg-primary text-on-primary hover:bg-primary-hover focus:outline-none transition-colors duration-150"
+          className={`w-full h-12 rounded-md bg-primary text-on-primary focus:outline-none transition-colors duration-150 ${
+            room.pausedState.paused
+              ? "opacity-50 cursor-default"
+              : "hover:bg-primary-hover cursor-pointer"
+          }`}
           tabIndex={-1}
           ref={answerButton}
           onClick={submitAnswer}

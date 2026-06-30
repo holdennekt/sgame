@@ -5,10 +5,12 @@ export default function BoardPanel({
   currentRoundQuestions,
   selectQuestion,
   canSelectQuestion,
+  isPaused = false,
 }: {
   currentRoundQuestions: CategoryQuestions[];
   selectQuestion: (question: { category: string; index: number }) => void;
   canSelectQuestion: boolean;
+  isPaused?: boolean;
 }) {
   const questionsInCategoryCount =
     currentRoundQuestions[0]?.questions.length ?? 0;
@@ -44,13 +46,16 @@ export default function BoardPanel({
             ) : (
               <button
                 key={i}
+                disabled={isPaused}
                 className={`w-full h-full rounded-lg flex items-center justify-center text-xs sm:text-base font-semibold bg-primary text-on-primary transition-opacity duration-150 ${
-                  canSelectQuestion
+                  isPaused
+                    ? "opacity-50 cursor-default"
+                    : canSelectQuestion
                     ? "cursor-pointer hover:bg-primary-hover"
                     : "cursor-default"
                 }`}
                 onClick={
-                  canSelectQuestion
+                  !isPaused && canSelectQuestion
                     ? () => selectQuestion({ category, index: i })
                     : undefined
                 }

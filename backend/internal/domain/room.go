@@ -188,6 +188,9 @@ func (r *Room) StartNextRegularRound(pack *Pack) bool {
 }
 
 func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index int, getAttachmentUrl func(key string) (string, error)) error {
+	if r.PausedState.Paused {
+		return custerr.NewConflictErr("game is paused")
+	}
 	if r.State != SelectingQuestion {
 		return custerr.NewConflictErr("can not select question now")
 	}
@@ -298,6 +301,9 @@ func (r *Room) startNonRegularQuestion(allowedToAnswer string) {
 func (r *Room) SubmitAnswer(userId string) error {
 	now := time.Now()
 
+	if r.PausedState.Paused {
+		return custerr.NewConflictErr("game is paused")
+	}
 	if r.State != RevealingQuestion && r.State != ShowingQuestion {
 		return custerr.NewConflictErr("can not submit answer now")
 	}
@@ -341,6 +347,9 @@ func (r *Room) SubmitAnswer(userId string) error {
 }
 
 func (r *Room) ValidateAnswer(userId string, isCorrect bool) error {
+	if r.PausedState.Paused {
+		return custerr.NewConflictErr("game is paused")
+	}
 	if r.State != Answering {
 		return custerr.NewConflictErr("can not validate answer now")
 	}
@@ -386,6 +395,9 @@ func (r *Room) continueRegularQuestion() {
 }
 
 func (r *Room) PassQuestion(fromUserId string, toUserId string) error {
+	if r.PausedState.Paused {
+		return custerr.NewConflictErr("game is paused")
+	}
 	if r.State != Passing {
 		return custerr.NewConflictErr("can not pass question now")
 	}
@@ -426,6 +438,9 @@ func (r *Room) PassQuestionAuto() {
 }
 
 func (r *Room) PlaceBet(userId string, amount int) error {
+	if r.PausedState.Paused {
+		return custerr.NewConflictErr("game is paused")
+	}
 	if r.State != Betting {
 		return custerr.NewConflictErr("can not place bet now")
 	}
@@ -562,6 +577,9 @@ func (r *Room) GetAvailableFinalRoundCategories() []string {
 }
 
 func (r *Room) RemoveFinalRoundCategory(pack *Pack, userId string, category string, getAttachmentUrl func(key string) (string, error)) error {
+	if r.PausedState.Paused {
+		return custerr.NewConflictErr("game is paused")
+	}
 	if r.State != SelectingFinalRoundCategory {
 		return custerr.NewConflictErr("cannot remove final round category now")
 	}
@@ -616,6 +634,9 @@ func (r *Room) chooseFinalRoundCategory(pack *Pack, category string, getAttachme
 }
 
 func (r *Room) PlaceFinalRoundBet(userId string, amount int) error {
+	if r.PausedState.Paused {
+		return custerr.NewConflictErr("game is paused")
+	}
 	if r.State != FinalRoundBetting {
 		return custerr.NewConflictErr("can not place final round bet now")
 	}
@@ -680,6 +701,9 @@ func (r *Room) startFinalRoundQuestion() {
 }
 
 func (r *Room) SubmitFinalRoundAnswer(userId string, answer string) error {
+	if r.PausedState.Paused {
+		return custerr.NewConflictErr("game is paused")
+	}
 	if r.State != ShowingFinalRoundQuestion {
 		return custerr.NewConflictErr("can not submit final round answer now")
 	}
@@ -705,6 +729,9 @@ func (r *Room) EndFinalRoundQuestion() {
 }
 
 func (r *Room) ValidateFinalRoundAnswer(userId string, isCorrect bool) error {
+	if r.PausedState.Paused {
+		return custerr.NewConflictErr("game is paused")
+	}
 	if r.State != ValidatingFinalRoundAnswers {
 		return custerr.NewConflictErr("can not validate final round answer now")
 	}
@@ -735,6 +762,9 @@ func (r *Room) ValidateFinalRoundAnswer(userId string, isCorrect bool) error {
 }
 
 func (r *Room) SkipQuestion(userId string) error {
+	if r.PausedState.Paused {
+		return custerr.NewConflictErr("game is paused")
+	}
 	skippable := r.State == RevealingQuestion || r.State == ShowingQuestion ||
 		r.State == Answering || r.State == Passing || r.State == Betting
 	if !skippable {
@@ -748,6 +778,9 @@ func (r *Room) SkipQuestion(userId string) error {
 }
 
 func (r *Room) SkipRound(userId string) error {
+	if r.PausedState.Paused {
+		return custerr.NewConflictErr("game is paused")
+	}
 	if !r.IsUserHost(userId) {
 		return custerr.NewForbiddenErr("not allowed to skip round")
 	}

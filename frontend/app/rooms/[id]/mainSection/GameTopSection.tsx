@@ -50,6 +50,7 @@ export default function GameTopSection() {
           currentRoundQuestions={room.currentRoundQuestions!}
           selectQuestion={selectQuestion}
           canSelectQuestion={isHost || user.id === room.currentPlayer}
+          isPaused={room.pausedState.paused}
         />
       );
 
@@ -142,6 +143,7 @@ export default function GameTopSection() {
           availableCategories={room.finalRoundState?.availableCategories!}
           canRemoveCategory={user.id === room.currentPlayer || isHost}
           removeCategory={removeFinalRoundCategory}
+          isPaused={room.pausedState.paused}
         />
       );
 

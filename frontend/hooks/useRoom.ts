@@ -49,8 +49,6 @@ export function useRoom(
   const setError = (msg: string) =>
     setLastError((prev) => ({ msg, count: (prev?.count ?? 0) + 1 }));
 
-  // Spectators are read-only: they receive broadcasts but never send game
-  // actions. The backend ignores their messages too; this is the client guard.
   const send = (event: string, payload?: unknown) => {
     if (isSpectator) return;
     wsConn.current?.send(JSON.stringify({ event, payload }));
