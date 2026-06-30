@@ -356,7 +356,8 @@ export async function convertPackFormDataToRequest(
     | { url: string; formData: Record<string, string>; getUrl?: string }
     | { error: string }
   >,
-  fileCache?: Map<File, string>
+  fileCache?: Map<File, string>,
+  urlCache?: Map<string, string>
 ): Promise<CreatePackRequest> {
   const isPublic = false;
 
@@ -374,7 +375,8 @@ export async function convertPackFormDataToRequest(
                 question.comment.attachment,
                 isPublic,
                 signURL,
-                fileCache
+                fileCache,
+                urlCache
               );
               return {
                 ...question,
@@ -390,7 +392,8 @@ export async function convertPackFormDataToRequest(
                   question.attachment,
                   isPublic,
                   signURL,
-                  fileCache
+                  fileCache,
+                  urlCache
                 ),
               };
             })
@@ -408,7 +411,8 @@ export async function convertPackFormDataToRequest(
           question.comment.attachment,
           isPublic,
           signURL,
-          fileCache
+          fileCache,
+          urlCache
         );
         return {
           name,
@@ -426,7 +430,8 @@ export async function convertPackFormDataToRequest(
               question.attachment,
               isPublic,
               signURL,
-              fileCache
+              fileCache,
+              urlCache
             ),
           },
         };
@@ -452,7 +457,8 @@ async function convertAttachment(
     | { url: string; formData: Record<string, string>; getUrl?: string }
     | { error: string }
   >,
-  fileCache?: Map<File, string>
+  fileCache?: Map<File, string>,
+  urlCache?: Map<string, string>
 ): Promise<CreateAttachmentRequest | null> {
   switch (attachment.type) {
     case "file": {
@@ -490,6 +496,9 @@ async function convertAttachment(
 
     case "url":
       if (!attachment.url) return null;
+      if (urlCache?.has(attachment.url)) {
+        return { key: urlCache.get(attachment.url)! };
+      }
       return { url: attachment.url };
 
     case "existing":

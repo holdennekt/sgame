@@ -110,6 +110,37 @@ function serializeCategoryForClipboard(category: CategoryFormData): string {
   });
 }
 
+function cacheUrlMappings(
+  saved: PackFormData,
+  server: PackFormData,
+  cache: Map<string, string>
+) {
+  const sync = (s: AttachmentFormData, r: AttachmentFormData) => {
+    if (s.type === "url" && s.url && r.type === "existing")
+      cache.set(s.url, r.key);
+  };
+  saved.rounds.forEach((round, ri) => {
+    const sr = server.rounds[ri];
+    if (!sr) return;
+    round.categories.forEach((cat, ci) => {
+      const sc = sr.categories[ci];
+      if (!sc) return;
+      cat.questions.forEach((q, qi) => {
+        const sq = sc.questions[qi];
+        if (!sq) return;
+        sync(q.attachment, sq.attachment);
+        sync(q.comment.attachment, sq.comment.attachment);
+      });
+    });
+  });
+  saved.finalRound.categories.forEach((cat, i) => {
+    const sc = server.finalRound.categories[i];
+    if (!sc) return;
+    sync(cat.question.attachment, sc.question.attachment);
+    sync(cat.question.comment.attachment, sc.question.comment.attachment);
+  });
+}
+
 const selectCls =
   "h-9 pl-2.5 pr-8 bg-background border border-border text-on-background rounded-lg text-sm outline-none focus-ring appearance-none";
 const iconBtnCls =
@@ -335,6 +366,7 @@ export default function PackEditor({
   const autosaveTimer = useRef<ReturnType<typeof setTimeout>>();
   const skipNextAutosave = useRef(false);
   const uploadFileCache = useRef<Map<File, string>>(new Map());
+  const uploadUrlCache = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
     if (!mounted.current) {
@@ -371,18 +403,21 @@ export default function PackEditor({
       const req = await convertPackFormDataToRequest(
         packToSave,
         signURL,
-        uploadFileCache.current
+        uploadFileCache.current,
+        uploadUrlCache.current
       );
       const newDraft = await updateDraft(draftId, req);
       setSaveErrors([]);
       setSaveStatus({ type: "saved", at: new Date() });
+      const serverFormData = convertDraftToFormData(newDraft);
+      cacheUrlMappings(packToSave, serverFormData, uploadUrlCache.current);
       skipNextAutosave.current = true;
       setPack((current) => {
         if (current !== packToSave) {
           skipNextAutosave.current = false;
           return current;
         }
-        return convertDraftToFormData(newDraft);
+        return serverFormData;
       });
     } catch (e) {
       if (isValidationErrors(e)) setSaveErrors(e.errors);
@@ -397,7 +432,8 @@ export default function PackEditor({
       const req = await convertPackFormDataToRequest(
         pack,
         signURL,
-        uploadFileCache.current
+        uploadFileCache.current,
+        uploadUrlCache.current
       );
       await updateDraft(draftId, req);
       skipNextAutosave.current = true;

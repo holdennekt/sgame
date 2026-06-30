@@ -155,6 +155,7 @@ func (s *PackDraftService) Update(ctx context.Context, user domain.User, id stri
 		return nil, custerr.NewForbiddenErr("cannot edit another user's draft")
 	}
 
+	// Determine linked pack keys once (needed for error-path cleanup only).
 	var linkedPackKeys map[string]struct{}
 	skipCleanup := false
 	if draft.LinkedPackId != nil {
@@ -167,6 +168,8 @@ func (s *PackDraftService) Update(ctx context.Context, user domain.User, id stri
 		}
 	}
 
+	// On error, clean up any keys that were freshly uploaded in this request
+	// (present in req but not in the old draft), excluding linked-pack keys.
 	defer func() {
 		if err != nil && !skipCleanup {
 			for key := range sets.Delta(sets.Delta(req.AttachmentKeys(), draft.AttachmentKeys()), linkedPackKeys) {
@@ -187,13 +190,10 @@ func (s *PackDraftService) Update(ctx context.Context, user domain.User, id stri
 		return nil, err
 	}
 
-	if !skipCleanup {
-		for key := range sets.Delta(sets.Delta(draft.AttachmentKeys(), req.AttachmentKeys()), linkedPackKeys) {
-			if err := s.storage.Delete(context.Background(), key); err != nil {
-				slog.Error("failed to cleanup attachment", "key", key, "err", err)
-			}
-		}
-	}
+	// No GCS cleanup on successful Update: concurrent autosaves can race and a
+	// stale save may overwrite a newer one, leaving the draft referencing a key
+	// that was already deleted. Cleanup of replaced/removed attachments is deferred
+	// to Delete (user deletes the draft) and Publish (UpdateFromDraft handles it).
 
 	populateAttachmentURLs(ctx, s.storage, newDraft)
 	return newDraft, nil
