@@ -25,20 +25,24 @@ type packDraftRepository struct {
 func NewPackDraftRepository(db *mongo.Database) repository.PackDraft {
 	repo := packDraftRepository{db}
 	if err := repo.init(context.Background()); err != nil {
-		var mongoErr mongo.CommandError
-		if errors.As(err, &mongoErr) {
-			const codeNamespaceExists = 48
-			if mongoErr.Code == codeNamespaceExists {
-				return &repo
-			}
-		}
 		panic(fmt.Errorf("failed to initialize pack draft repository: %w", err))
 	}
 	return &repo
 }
 
 func (r *packDraftRepository) init(ctx context.Context) error {
-	return r.db.CreateCollection(ctx, PACK_DRAFTS_COLLECTION)
+	if err := r.db.CreateCollection(ctx, PACK_DRAFTS_COLLECTION); err != nil {
+		var mongoErr mongo.CommandError
+		const codeNamespaceExists = 48
+		if !errors.As(err, &mongoErr) || mongoErr.Code != codeNamespaceExists {
+			return err
+		}
+		// collection already exists — still ensure the index below
+	}
+	_, err := r.db.Collection(PACK_DRAFTS_COLLECTION).Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{{Key: "createdBy.id", Value: 1}},
+	})
+	return err
 }
 
 type mongoPackDraft struct {
@@ -196,7 +200,7 @@ func (r *packDraftRepository) GetByUserAndLinkedPack(ctx context.Context, userId
 	return toDomainDraft(&m), nil
 }
 
-func (r *packDraftRepository) GetReferencedKeys(ctx context.Context, keys []string, excludeId string) (map[string]struct{}, error) {
+func (r *packDraftRepository) GetReferencedKeys(ctx context.Context, userId string, keys []string, excludeId string) (map[string]struct{}, error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}
@@ -205,7 +209,8 @@ func (r *packDraftRepository) GetReferencedKeys(ctx context.Context, keys []stri
 		return nil, custerr.NewBadRequestErr(fmt.Sprintf("%q is an invalid id", excludeId))
 	}
 	filter := bson.M{
-		"_id": bson.M{"$ne": excludeObjId},
+		"_id":          bson.M{"$ne": excludeObjId},
+		"createdBy.id": userId,
 		"$or": bson.A{
 			bson.M{"rounds.categories.questions.attachment.key": bson.M{"$in": keys}},
 			bson.M{"rounds.categories.questions.comment.attachment.key": bson.M{"$in": keys}},

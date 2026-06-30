@@ -233,7 +233,7 @@ func (s *PackDraftService) Delete(ctx context.Context, userId, id string) error 
 		for k := range candidateKeys {
 			keySlice = append(keySlice, k)
 		}
-		referencedKeys, err := s.packDraftRepo.GetReferencedKeys(context.Background(), keySlice, draft.Id)
+		referencedKeys, err := s.packDraftRepo.GetReferencedKeys(context.Background(), draft.CreatedBy.Id, keySlice, draft.Id)
 		if err != nil {
 			slog.Error("draft delete: failed to check cross-draft key references, skipping attachment cleanup", "err", err)
 			return
