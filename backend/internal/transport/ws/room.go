@@ -75,7 +75,6 @@ func (h *RoomHandler) connect(ctx *gin.Context) {
 
 	conn, err := websocket.Accept(ctx.Writer, ctx.Request, &websocket.AcceptOptions{
 		InsecureSkipVerify: true,
-		// CompressionMode:    websocket.CompressionContextTakeover,
 	})
 	if err != nil {
 		_ = ctx.Error(custerr.NewInternalErr(err))

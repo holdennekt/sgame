@@ -18,6 +18,13 @@ import {
 
 const genId = () => Math.random().toString(36).slice(2);
 
+function remapIndex(idx: number, oldIndex: number, newIndex: number) {
+  if (idx === oldIndex) return newIndex;
+  if (oldIndex < newIndex && idx > oldIndex && idx <= newIndex) return idx - 1;
+  if (oldIndex > newIndex && idx >= newIndex && idx < oldIndex) return idx + 1;
+  return idx;
+}
+
 export function usePack(initialPack: PackFormData) {
   const [pack, setPack] = useState(initialPack);
 
@@ -252,15 +259,6 @@ export function usePack(initialPack: PackFormData) {
     setPack({ ...pack });
   };
 
-  const remapIndex = (idx: number, oldIndex: number, newIndex: number) => {
-    if (idx === oldIndex) return newIndex;
-    if (oldIndex < newIndex && idx > oldIndex && idx <= newIndex)
-      return idx - 1;
-    if (oldIndex > newIndex && idx >= newIndex && idx < oldIndex)
-      return idx + 1;
-    return idx;
-  };
-
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
 
   const onDragStart = ({ active }: DragStartEvent) => setActiveId(active.id);
@@ -290,77 +288,71 @@ export function usePack(initialPack: PackFormData) {
   });
   dragStateRef.current = { categoryStableIds, pack, selectedRI, selectedCI };
 
-  const onDragOver = useCallback(
-    (event: DragOverEvent) => {
-      const { active, over } = event;
-      if (!over) return;
-      if (String(active.id).startsWith("round-")) return;
+  const onDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    if (String(active.id).startsWith("round-")) return;
 
-      const { categoryStableIds, pack, selectedRI, selectedCI } =
-        dragStateRef.current;
+    const { categoryStableIds, pack, selectedRI, selectedCI } =
+      dragStateRef.current;
 
-      // Find source
-      let srcRi = -1,
-        srcCi = -1;
-      outer: for (let ri = 0; ri < categoryStableIds.length; ri++) {
-        for (let ci = 0; ci < categoryStableIds[ri].length; ci++) {
-          if (categoryStableIds[ri][ci] === String(active.id)) {
-            srcRi = ri;
-            srcCi = ci;
-            break outer;
-          }
+    let srcRi = -1,
+      srcCi = -1;
+    outer: for (let ri = 0; ri < categoryStableIds.length; ri++) {
+      for (let ci = 0; ci < categoryStableIds[ri].length; ci++) {
+        if (categoryStableIds[ri][ci] === String(active.id)) {
+          srcRi = ri;
+          srcCi = ci;
+          break outer;
         }
       }
-      if (srcRi === -1) return;
+    }
+    if (srcRi === -1) return;
 
-      // Find destination
-      let dstRi = -1,
-        dstCi = -1;
-      outer: for (let ri = 0; ri < categoryStableIds.length; ri++) {
-        for (let ci = 0; ci < categoryStableIds[ri].length; ci++) {
-          if (categoryStableIds[ri][ci] === String(over.id)) {
-            dstRi = ri;
-            dstCi = ci;
-            break outer;
-          }
+    let dstRi = -1,
+      dstCi = -1;
+    outer: for (let ri = 0; ri < categoryStableIds.length; ri++) {
+      for (let ci = 0; ci < categoryStableIds[ri].length; ci++) {
+        if (categoryStableIds[ri][ci] === String(over.id)) {
+          dstRi = ri;
+          dstCi = ci;
+          break outer;
         }
       }
-      if (dstRi === -1 || (srcRi === dstRi && srcCi === dstCi)) return;
+    }
+    if (dstRi === -1 || (srcRi === dstRi && srcCi === dstCi)) return;
 
-      const newStableIds = categoryStableIds.map((arr) => [...arr]);
+    const newStableIds = categoryStableIds.map((arr) => [...arr]);
 
-      if (srcRi === dstRi) {
-        newStableIds[srcRi] = arrayMove(newStableIds[srcRi], srcCi, dstCi);
-        pack.rounds[srcRi].categories = arrayMove(
-          pack.rounds[srcRi].categories,
-          srcCi,
-          dstCi
-        );
-        if (selectedRI === srcRi)
-          setSelectedCI((ci) => remapIndex(ci, srcCi, dstCi));
-      } else {
-        const [stableId] = newStableIds[srcRi].splice(srcCi, 1);
-        newStableIds[dstRi].splice(dstCi, 0, stableId);
-        const [cat] = pack.rounds[srcRi].categories.splice(srcCi, 1);
-        pack.rounds[dstRi].categories.splice(dstCi, 0, cat);
+    if (srcRi === dstRi) {
+      newStableIds[srcRi] = arrayMove(newStableIds[srcRi], srcCi, dstCi);
+      pack.rounds[srcRi].categories = arrayMove(
+        pack.rounds[srcRi].categories,
+        srcCi,
+        dstCi
+      );
+      if (selectedRI === srcRi)
+        setSelectedCI((ci) => remapIndex(ci, srcCi, dstCi));
+    } else {
+      const [stableId] = newStableIds[srcRi].splice(srcCi, 1);
+      newStableIds[dstRi].splice(dstCi, 0, stableId);
+      const [cat] = pack.rounds[srcRi].categories.splice(srcCi, 1);
+      pack.rounds[dstRi].categories.splice(dstCi, 0, cat);
 
-        if (selectedRI === srcRi && selectedCI === srcCi) {
-          setSelectedRI(dstRi);
-          setSelectedCI(dstCi);
-        } else if (selectedRI === srcRi && selectedCI > srcCi) {
-          setSelectedCI((ci) => ci - 1);
-        } else if (selectedRI === dstRi && selectedCI >= dstCi) {
-          setSelectedCI((ci) => ci + 1);
-        }
+      if (selectedRI === srcRi && selectedCI === srcCi) {
+        setSelectedRI(dstRi);
+        setSelectedCI(dstCi);
+      } else if (selectedRI === srcRi && selectedCI > srcCi) {
+        setSelectedCI((ci) => ci - 1);
+      } else if (selectedRI === dstRi && selectedCI >= dstCi) {
+        setSelectedCI((ci) => ci + 1);
       }
+    }
 
-      setCategoryStableIds(newStableIds);
-      setPack({ ...pack });
-      dragStateRef.current.categoryStableIds = newStableIds;
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
+    setCategoryStableIds(newStableIds);
+    setPack({ ...pack });
+    dragStateRef.current.categoryStableIds = newStableIds;
+  }, []);
 
   const onDragEnd = (event: DragEndEvent) => {
     setActiveId(null);

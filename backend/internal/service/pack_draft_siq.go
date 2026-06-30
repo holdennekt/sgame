@@ -21,8 +21,6 @@ import (
 	"gopkg.in/vansante/go-ffprobe.v2"
 )
 
-// ── XML types (unexported) ────────────────────────────────────────────────────
-
 type siqPackage struct {
 	XMLName xml.Name  `xml:"package"`
 	Name    string    `xml:"name,attr"`
@@ -94,8 +92,6 @@ type siqRight struct {
 type siqAnswer struct {
 	Content string `xml:",chardata"`
 }
-
-// ── Small helpers ─────────────────────────────────────────────────────────────
 
 var whitespaceRe = regexp.MustCompile(`\s+`)
 

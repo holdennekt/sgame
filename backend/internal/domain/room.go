@@ -451,7 +451,6 @@ func (r *Room) PlaceBet(userId string, amount int) error {
 	if alreadyBet {
 		return custerr.NewConflictErr("can not place bet again")
 	}
-	// betIncreased := r.Players[playerIndex].BetAmount != nil && *r.Players[playerIndex].BetAmount < amount
 	insufficientScore := amount > r.Players[playerIndex].Score || amount < 0
 	if insufficientScore {
 		return custerr.NewConflictErr("insufficient bet size")

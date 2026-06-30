@@ -37,7 +37,6 @@ func (r *packDraftRepository) init(ctx context.Context) error {
 		if !errors.As(err, &mongoErr) || mongoErr.Code != codeNamespaceExists {
 			return err
 		}
-		// collection already exists — still ensure the index below
 	}
 	_, err := r.db.Collection(PACK_DRAFTS_COLLECTION).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.D{{Key: "createdBy.id", Value: 1}},
