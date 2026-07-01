@@ -19,7 +19,7 @@ func buildRoom(opts ...func(*Room)) Room {
 	r := Room{
 		Id:        "room1",
 		CreatedBy: "host1",
-		Host:      &Host{User: User{Id: "host1"}, IsConnected: true},
+		Moderator: &Moderator{User: User{Id: "host1"}, IsConnected: true},
 		Players: []Player{
 			{User: User{Id: "p1"}, Score: 1000, IsConnected: true},
 			{User: User{Id: "p2"}, Score: 1000, IsConnected: true},
@@ -1339,14 +1339,14 @@ func TestEndGame_SetsGameOverAndClearsTimers(t *testing.T) {
 
 // ---- 21. Role helpers ----
 
-func TestIsUserHost(t *testing.T) {
+func TestIsUserModerator(t *testing.T) {
 	r := buildRoom()
-	assert.True(t, r.IsUserHost("host1"))
-	assert.False(t, r.IsUserHost("p1"))
-	assert.False(t, r.IsUserHost("nobody"))
+	assert.True(t, r.IsUserModerator("host1"))
+	assert.False(t, r.IsUserModerator("p1"))
+	assert.False(t, r.IsUserModerator("nobody"))
 
-	rNoHost := buildRoom(func(r *Room) { r.Host = nil })
-	assert.False(t, rNoHost.IsUserHost("host1"))
+	rNoModerator := buildRoom(func(r *Room) { r.Moderator = nil })
+	assert.False(t, rNoModerator.IsUserModerator("host1"))
 }
 
 func TestUsersPlayerIndex(t *testing.T) {
@@ -1492,9 +1492,9 @@ func TestStartGame_SetsCurrentPlayerAndStartsRound(t *testing.T) {
 
 // ---- 25. GetProjection ----
 
-func TestGetProjection_Host_ReturnsRoomHost(t *testing.T) {
+func TestGetProjection_Moderator_ReturnsRoomModerator(t *testing.T) {
 	r := buildRoom()
-	_, ok := r.GetProjection("host1", 0).(RoomHost)
+	_, ok := r.GetProjection("host1", 0).(RoomModerator)
 	assert.True(t, ok)
 }
 

@@ -5,20 +5,29 @@ import { toast, ToastContainer } from "react-toastify";
 import Chat from "@/components/Chat";
 import { getAvatar } from "@/components/UserAvatar";
 import { FiEye } from "react-icons/fi";
+import { TbRobot } from "react-icons/tb";
 import Link from "next/link";
 import ControlButtons from "./ControlButtons";
 import MainPanel from "./mainSection/MainPanel";
-import { RoomHost, RoomPlayer } from "@/types/room";
+import { RoomModerator, RoomPlayer } from "@/types/room";
 import { useRoom } from "@/hooks/useRoom";
 import { RoomProvider } from "@/contexts/RoomContext";
 import { useRequiredUser } from "@/contexts/UserContext";
+
+const SKIPPABLE_STATES = new Set([
+  "revealing_question",
+  "showing_question",
+  "answering",
+  "passing",
+  "betting",
+]);
 
 export default function RoomPage({
   initialRoom,
   isSpectator = false,
   password,
 }: {
-  initialRoom: RoomHost | RoomPlayer;
+  initialRoom: RoomModerator | RoomPlayer;
   isSpectator?: boolean;
   password?: string;
 }) {
@@ -35,15 +44,22 @@ export default function RoomPage({
     togglePause,
     leave,
     joinAsPlayer,
-    submitAnswer,
+    startAnswer,
+    submitTypedAnswer,
+    banPlayer,
     skipQuestion,
+    skipRound,
     changeScore,
     ...gameContext
   } = game;
 
   const [mobileTab, setMobileTab] = useState<"game" | "chat">("game");
   const [unreadCount, setUnreadCount] = useState(0);
-  const isHost = user.id === room.host?.id;
+  const isModerator = room.moderator?.id === user.id;
+  const isAiHost = room.options.aiHost;
+  const canSkip = isModerator && isAiHost && SKIPPABLE_STATES.has(room.state);
+  const canSkipRound =
+    isModerator && isAiHost && room.state === "selecting_question";
   const mainContainer = useRef<HTMLDivElement>(null);
   const answerButton = useRef<HTMLDivElement>(null);
 
@@ -64,9 +80,9 @@ export default function RoomPage({
     setUnreadCount((c) => c + 1);
   }, [chat.messages.length]);
 
-  const handleSubmitAnswer = () => {
+  const handleStartAnswer = () => {
     if (
-      isHost ||
+      (isModerator && !room.options.aiHost) ||
       isSpectator ||
       room.pausedState.paused ||
       (room.state !== "revealing_question" && room.state !== "showing_question")
@@ -74,7 +90,7 @@ export default function RoomPage({
       return;
     answerButton.current?.blur();
     mainContainer.current?.focus();
-    submitAnswer();
+    startAnswer();
   };
 
   return (
@@ -83,8 +99,11 @@ export default function RoomPage({
         room,
         ...gameContext,
         answerButton,
-        submitAnswer: handleSubmitAnswer,
+        startAnswer: handleStartAnswer,
+        submitTypedAnswer,
+        banPlayer,
         skipQuestion,
+        skipRound,
         changeScore,
       }}
     >
@@ -98,7 +117,7 @@ export default function RoomPage({
         }}
         onKeyUp={(e) => {
           if (e.code !== "Space") return;
-          handleSubmitAnswer();
+          handleStartAnswer();
         }}
       >
         {/* Sidebar: room info + tabs (mobile) + chat */}
@@ -142,29 +161,41 @@ export default function RoomPage({
               </div>
               <div
                 className={`flex flex-col items-center gap-1 shrink-0${
-                  room.host?.isConnected ? "" : " opacity-50"
+                  room.moderator?.isConnected ? "" : " opacity-50"
                 }`}
               >
                 <div className="w-9 h-9 rounded-lg overflow-hidden border border-border">
-                  {getAvatar(room.host)}
+                  {getAvatar(room.moderator)}
                 </div>
-                <p
-                  className="text-xs text-on-surface-muted truncate max-w-16 text-center"
-                  title={room.host?.name}
-                >
-                  {room.host?.name}
-                </p>
+                <div className="flex items-center gap-1">
+                  <p
+                    className="text-xs text-on-surface-muted truncate max-w-16 text-center"
+                    title={room.moderator?.name}
+                  >
+                    {room.moderator?.name}
+                  </p>
+                  {room.options.aiHost && (
+                    <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-bold bg-primary/15 text-primary shrink-0">
+                      <TbRobot size={10} />
+                      AI
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <ControlButtons
-              isHost={isHost}
+              isModerator={isModerator}
               isSpectator={isSpectator}
               isGameStarted={room.state !== "waiting_for_start"}
               isPaused={room.pausedState.paused}
+              canSkip={canSkip}
+              canSkipRound={canSkipRound}
               start={startGame}
               togglePause={togglePause}
               leave={leave}
               joinAsPlayer={joinAsPlayer}
+              skipQuestion={skipQuestion}
+              skipRound={skipRound}
             />
           </div>
 

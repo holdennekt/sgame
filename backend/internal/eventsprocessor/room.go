@@ -13,6 +13,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/server"
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
+	ivalidator "github.com/holdennekt/sgame/backend/internal/interface/validator"
 	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
 	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
@@ -37,13 +38,14 @@ type RoomEventsProcessor struct {
 	user               domain.User
 	pack               *domain.Pack
 	cfg                *config.Config
+	validator          ivalidator.AnswerValidator
 	isSpectator        bool
 	onDisconnect       func(ctx context.Context, userId, roomId string) (*domain.Room, error)
 }
 
 type RoomEventsProcessorGetter func(client realtime.Channel, id string, user domain.User, isSpectator bool) (*RoomEventsProcessor, error)
 
-func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage, cfg *config.Config, onDisconnect func(ctx context.Context, userId, roomId string) (*domain.Room, error)) RoomEventsProcessorGetter {
+func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage, cfg *config.Config, answerValidator ivalidator.AnswerValidator, onDisconnect func(ctx context.Context, userId, roomId string) (*domain.Room, error)) RoomEventsProcessorGetter {
 	return func(client realtime.Channel, id string, user domain.User, isSpectator bool) (*RoomEventsProcessor, error) {
 		room, err := roomCache.GetById(context.Background(), id)
 		if err != nil {
@@ -66,6 +68,7 @@ func NewRoomEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInt
 			pack:               pack,
 			isSpectator:        isSpectator,
 			cfg:                cfg,
+			validator:          answerValidator,
 			onDisconnect:       onDisconnect,
 		}, nil
 	}
@@ -125,8 +128,10 @@ func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg messa
 		return incoming.HandleStartGameMessage(ctx, p.lobbyServer, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, p.pack, msg)
 	case domain.SelectQuestion:
 		return incoming.HandleSelectQuestionMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, getURL, p.id, p.user, p.pack, p.cfg.QuestionDemoDuration, msg)
+	case domain.StartAnswer:
+		return incoming.HandleStartAnswerMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
 	case domain.SubmitAnswer:
-		return incoming.HandleSubmitAnswerMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
+		return incoming.HandleSubmitAnswerMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, p.validator, p.cfg, msg)
 	case domain.ValidateAnswer:
 		return incoming.HandleValidateAnswerMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
 	case domain.PassQuestion:
@@ -151,6 +156,8 @@ func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg messa
 		return incoming.HandlePauseMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
 	case domain.Unpause:
 		return incoming.HandleUnpauseMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
+	case domain.BanPlayer:
+		return incoming.HandleBanPlayerMessage(ctx, p.roomServer, p.roomCache, p.id, p.user, msg)
 	}
 	return nil
 }

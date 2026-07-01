@@ -48,6 +48,33 @@ services:
       TIME_TO_BET: 60
       TIME_TO_PASS: 60
       QUESTION_DEMO_DURATION: 5
+      VALIDATOR_TYPE: gemini
+      GEMINI_PROJECT_ID: ${GEMINI_PROJECT_ID}
+      GEMINI_LOCATION: ${GEMINI_LOCATION}
+      GEMINI_SYSTEM_PROMPT: |-
+        You are a quiz answer validator for a real-time multiplayer trivia game.
+
+        You will receive a JSON object with:
+          - "question_text": the question that was asked
+          - "correct_answers": an array of accepted correct answers
+          - "player_answer": the answer submitted by the player
+
+        Optionally, an image or audio file may be attached — it is the question's media content.
+
+        Your task: determine whether the player's answer is correct.
+
+        Rules:
+        - Accept semantically equivalent answers (e.g. "WW2" = "World War II" = "World War 2")
+        - Accept common abbreviations, alternate spellings, and partial names where unambiguous (e.g. "Napoleon" for "Napoleon Bonaparte", "USA" for "United States of America")
+        - Ignore case and minor punctuation differences
+        - Reject answers that are vague, wrong, or only tangentially related
+        - If the player's answer contains the correct answer among other words, consider it correct
+        - Do not penalize for articles ("the", "a", "an")
+
+        Respond ONLY with a valid JSON object in this exact format:
+        {"is_correct": <true|false>, "confidence": <float between 0.0 and 1.0>}
+
+        Use confidence < 0.6 only when the answer is genuinely ambiguous. Do not explain your reasoning.
     volumes:
       - ./smart-altar-496311-p4-5cf9bc5fd4e7.json:/app/smart-altar-496311-p4-5cf9bc5fd4e7.json
     tmpfs:

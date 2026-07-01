@@ -3,10 +3,12 @@ package incoming
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
+	clientevent "github.com/holdennekt/sgame/backend/internal/eventsprocessor/client"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
 	serverevent "github.com/holdennekt/sgame/backend/internal/eventsprocessor/server"
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
@@ -24,6 +26,9 @@ func HandlePauseMessage(ctx context.Context, server realtime.Channel, internalSe
 	}
 
 	if err := server.Send(ctx, outgoing.NewRoomUpdatedMessage(roomId)); err != nil {
+		return err
+	}
+	if err := server.Send(ctx, clientevent.NewSystemChatMessage(fmt.Sprintf("%s paused the game", user.Name))); err != nil {
 		return err
 	}
 
@@ -44,6 +49,11 @@ func HandlePauseMessage(ctx context.Context, server realtime.Channel, internalSe
 		}
 
 		if err := server.Send(ctx, outgoing.NewRoomUpdatedMessage(roomId)); err != nil {
+			slog.Error("error", "err", err)
+			return
+		}
+		autoUnpauseMsg := clientevent.NewSystemChatMessage("Game was automatically unpaused after reaching the time limit")
+		if err := server.Send(ctx, autoUnpauseMsg); err != nil {
 			slog.Error("error", "err", err)
 			return
 		}

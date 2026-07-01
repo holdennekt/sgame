@@ -85,9 +85,9 @@ func (c *RoomController) get(ctx *gin.Context) {
 // @Produce      json
 // @Param        id        path      string  true   "Room ID"
 // @Param        password  query     string  false  "Room password (if required)"
-// @Success      200  {object}  domain.RoomLobby "Can be RoomLobby, RoomHost, or RoomPlayer"
-// @Success      200  {object}  domain.RoomHost "Can be RoomLobby, RoomHost, or PlayerRoom"
-// @Success      200  {object}  domain.RoomPlayer "Can be RoomLobby, HostRoom, or RoomPlayer"
+// @Success      200  {object}  domain.RoomLobby "Can be RoomLobby, RoomModerator, or RoomPlayer"
+// @Success      200  {object}  domain.RoomModerator "Can be RoomLobby, RoomModerator, or RoomPlayer"
+// @Success      200  {object}  domain.RoomPlayer "Can be RoomLobby, RoomModerator, or RoomPlayer"
 // @Failure      401  {object}  dto.ErrorResponse "Unauthorized"
 // @Failure      403  {object}  dto.ErrorResponse "Forbidden: Invalid password"
 // @Failure      404  {object}  dto.ErrorResponse "Room not found"

@@ -29,7 +29,7 @@ export interface DbUser extends User {
   password: string;
 }
 
-export interface Host extends User {
+export interface Moderator extends User {
   isConnected: boolean;
 }
 

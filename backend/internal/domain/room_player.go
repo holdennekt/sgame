@@ -6,7 +6,8 @@ type RoomPlayer struct {
 	Id                    string                 `json:"id"`
 	Name                  string                 `json:"name"`
 	PackPreview           PackPreview            `json:"packPreview"`
-	Host                  *Host                  `json:"host"`
+	Options               RoomOptions            `json:"options"`
+	Moderator             *Moderator             `json:"moderator"`
 	Players               []Player               `json:"players"`
 	State                 RoomState              `json:"state"`
 	CurrentRoundName      *string                `json:"currentRoundName"`
@@ -94,7 +95,8 @@ func NewPlayerRoom(room *Room, spectatorCount int) RoomPlayer {
 		Id:                    room.Id,
 		Name:                  room.Name,
 		PackPreview:           room.PackPreview,
-		Host:                  room.Host,
+		Options:               room.Options,
+		Moderator:             room.Moderator,
 		Players:               room.Players,
 		State:                 room.State,
 		CurrentRoundName:      room.CurrentRoundName,

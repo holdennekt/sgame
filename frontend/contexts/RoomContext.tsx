@@ -3,7 +3,7 @@
 import { createContext, RefObject, useContext } from "react";
 import React from "react";
 import {
-  RoomHost,
+  RoomModerator,
   RoomPlayer,
   RoundDemo,
   QuestionDemo,
@@ -11,13 +11,15 @@ import {
 } from "@/types/room";
 
 export type RoomContextValue = {
-  room: RoomHost | RoomPlayer;
+  room: RoomModerator | RoomPlayer;
   roundDemo: RoundDemo | null;
   questionDemo: QuestionDemo | null;
   correctAnswerDemo: CorrectAnswerDemo | null;
   onRoundDemoDone: () => void;
   answerButton: RefObject<HTMLDivElement>;
-  submitAnswer: () => void;
+  startAnswer: () => void;
+  submitTypedAnswer: (answer: string) => void;
+  banPlayer: (playerId: string) => void;
   selectQuestion: (q: { category: string; index: number }) => void;
   passQuestion: (passTo: string) => void;
   placeBet: (amount: number) => void;

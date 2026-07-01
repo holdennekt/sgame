@@ -29,7 +29,7 @@ type Room struct {
 	CreatedBy             string                `json:"createdBy" bson:"createdBy"`
 	Options               RoomOptions           `json:"options" bson:"options"`
 	PackPreview           PackPreview           `json:"packPreview" bson:"packPreview"`
-	Host                  *Host                 `json:"host" bson:"host"`
+	Moderator             *Moderator            `json:"moderator" bson:"moderator"`
 	Players               []Player              `json:"players" bson:"players"`
 	BanList               []string              `json:"banList" bson:"banList"`
 	State                 RoomState             `json:"state" bson:"state"`
@@ -55,6 +55,7 @@ type RoomOptions struct {
 	FalseStartAllowed         bool        `json:"falseStartAllowed" bson:"falseStartAllowed"`
 	TimeToBet                 int         `json:"timeToBet,omitempty" bson:"timeToBet"`
 	TimeToPass                int         `json:"timeToPass,omitempty" bson:"timeToPass"`
+	AIHost                    bool        `json:"aiHost" bson:"aiHost"`
 }
 
 type PrivacyType string
@@ -116,6 +117,7 @@ type AnsweringPlayer struct {
 	Id            string    `json:"id" bson:"id"`
 	TimerStartsAt time.Time `json:"timerStartsAt" bson:"timerStartsAt"`
 	TimerEndsAt   time.Time `json:"timerEndsAt" bson:"timerEndsAt"`
+	Answer        string    `json:"answer" bson:"answer"`
 }
 
 type FinalRoundState struct {
@@ -132,11 +134,11 @@ type PausedState struct {
 	PausedAt *time.Time `json:"pausedAt" bson:"pausedAt"`
 }
 
-func (r *Room) IsUserHost(userId string) bool {
-	if r.Host == nil {
+func (r *Room) IsUserModerator(userId string) bool {
+	if r.Moderator == nil {
 		return false
 	}
-	return userId == r.Host.Id
+	return userId == r.Moderator.Id
 }
 
 func (r *Room) UsersPlayerIndex(userId string) int {
@@ -146,7 +148,7 @@ func (r *Room) UsersPlayerIndex(userId string) int {
 }
 
 func (r *Room) IsUserIn(userId string) bool {
-	return r.IsUserHost(userId) || r.UsersPlayerIndex(userId) != -1
+	return r.IsUserModerator(userId) || r.UsersPlayerIndex(userId) != -1
 }
 
 func (r *Room) IsUserBanned(userId string) bool {
@@ -156,8 +158,8 @@ func (r *Room) IsUserBanned(userId string) bool {
 }
 
 func (r *Room) GetProjection(userId string, spectatorCount int) any {
-	if r.IsUserHost(userId) {
-		return NewHostRoom(r, spectatorCount)
+	if r.IsUserModerator(userId) && !r.Options.AIHost {
+		return NewModeratorRoom(r, spectatorCount)
 	}
 	return NewPlayerRoom(r, spectatorCount)
 }
@@ -194,7 +196,7 @@ func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index 
 	if r.State != SelectingQuestion {
 		return custerr.NewConflictErr("can not select question now")
 	}
-	if userId != *r.CurrentPlayer && userId != r.Host.Id {
+	if userId != *r.CurrentPlayer && !r.IsUserModerator(userId) {
 		return custerr.NewForbiddenErr("not allowed to select question")
 	}
 	catQuestions := r.CurrentRoundQuestions.findCategory(category)
@@ -346,6 +348,27 @@ func (r *Room) SubmitAnswer(userId string) error {
 	return nil
 }
 
+// SubmitTypedAnswer stores the player's typed answer and immediately cancels the
+// thinking timer (by setting TimerEndsAt = now), which triggers the deadlineChanged
+// guard in HandleAnswerStartedMessage and unblocks the AI validation goroutine.
+func (r *Room) SubmitTypedAnswer(userId, answer string) error {
+	if r.PausedState.Paused {
+		return custerr.NewConflictErr("game is paused")
+	}
+	if r.State != Answering {
+		return custerr.NewConflictErr("cannot submit answer now")
+	}
+	if r.AnsweringPlayer == nil || r.AnsweringPlayer.Id != userId {
+		return custerr.NewForbiddenErr("not your turn to answer")
+	}
+	if !r.Options.AIHost {
+		return custerr.NewForbiddenErr("text answers are only used in AI host mode")
+	}
+	r.AnsweringPlayer.Answer = answer
+	r.AnsweringPlayer.TimerEndsAt = time.Now()
+	return nil
+}
+
 func (r *Room) ValidateAnswer(userId string, isCorrect bool) error {
 	if r.PausedState.Paused {
 		return custerr.NewConflictErr("game is paused")
@@ -353,7 +376,10 @@ func (r *Room) ValidateAnswer(userId string, isCorrect bool) error {
 	if r.State != Answering {
 		return custerr.NewConflictErr("can not validate answer now")
 	}
-	if !r.IsUserHost(userId) && userId != SYSTEM {
+	if r.Options.AIHost && userId != SYSTEM {
+		return custerr.NewForbiddenErr("answer validation is handled by AI in this room")
+	}
+	if !r.IsUserModerator(userId) && userId != SYSTEM {
 		return custerr.NewForbiddenErr("not allowed to validate answer")
 	}
 
@@ -407,7 +433,7 @@ func (r *Room) PassQuestion(fromUserId string, toUserId string) error {
 	if toUserIndex == -1 {
 		return custerr.NewNotFoundErr(fmt.Sprintf("no player with id \"%s\" in room", toUserId))
 	}
-	if *r.CurrentPlayer != fromUserId && r.Host.Id != fromUserId {
+	if *r.CurrentPlayer != fromUserId && !r.IsUserModerator(fromUserId) {
 		return custerr.NewConflictErr("not allowed to pass question")
 	}
 	if *r.CurrentPlayer == toUserId {
@@ -582,7 +608,7 @@ func (r *Room) RemoveFinalRoundCategory(pack *Pack, userId string, category stri
 	if r.State != SelectingFinalRoundCategory {
 		return custerr.NewConflictErr("cannot remove final round category now")
 	}
-	if userId != *r.CurrentPlayer && !r.IsUserHost(userId) {
+	if userId != *r.CurrentPlayer && !r.IsUserModerator(userId) {
 		return custerr.NewForbiddenErr("not allowed to remove final round category")
 	}
 
@@ -734,7 +760,7 @@ func (r *Room) ValidateFinalRoundAnswer(userId string, isCorrect bool) error {
 	if r.State != ValidatingFinalRoundAnswers {
 		return custerr.NewConflictErr("can not validate final round answer now")
 	}
-	if !r.IsUserHost(userId) {
+	if !r.IsUserModerator(userId) {
 		return custerr.NewForbiddenErr("not allowed to validate final round answer")
 	}
 
@@ -769,7 +795,7 @@ func (r *Room) SkipQuestion(userId string) error {
 	if !skippable {
 		return custerr.NewConflictErr("can not skip question now")
 	}
-	if !r.IsUserHost(userId) {
+	if !r.IsUserModerator(userId) {
 		return custerr.NewForbiddenErr("not allowed to skip question")
 	}
 	r.EndQuestion()
@@ -780,7 +806,7 @@ func (r *Room) SkipRound(userId string) error {
 	if r.PausedState.Paused {
 		return custerr.NewConflictErr("game is paused")
 	}
-	if !r.IsUserHost(userId) {
+	if !r.IsUserModerator(userId) {
 		return custerr.NewForbiddenErr("not allowed to skip round")
 	}
 	if r.State != SelectingQuestion {
@@ -790,7 +816,7 @@ func (r *Room) SkipRound(userId string) error {
 }
 
 func (r *Room) ChangeScore(userId string, playerId string, score int) error {
-	if !r.IsUserHost(userId) {
+	if !r.IsUserModerator(userId) {
 		return custerr.NewForbiddenErr("not allowed to change score")
 	}
 	playerIndex := slices.IndexFunc(r.Players, func(p Player) bool {
@@ -800,6 +826,23 @@ func (r *Room) ChangeScore(userId string, playerId string, score int) error {
 		return custerr.NewNotFoundErr(fmt.Sprintf("no player with id \"%s\" in room", playerId))
 	}
 	r.Players[playerIndex].Score = score
+	return nil
+}
+
+func (r *Room) BanPlayer(callerUserId, targetUserId string) error {
+	if !r.IsUserModerator(callerUserId) {
+		return custerr.NewForbiddenErr("not allowed to ban players")
+	}
+	if callerUserId == targetUserId {
+		return custerr.NewBadRequestErr("cannot ban yourself")
+	}
+	if r.IsUserBanned(targetUserId) {
+		return custerr.NewConflictErr("player is already banned")
+	}
+	r.BanList = append(r.BanList, targetUserId)
+	r.Players = slices.DeleteFunc(r.Players, func(p Player) bool {
+		return p.Id == targetUserId
+	})
 	return nil
 }
 
@@ -855,7 +898,7 @@ func (r *Room) shiftTimers(elapsed time.Duration) {
 func (r *Room) Pause(userId string) error {
 	now := time.Now()
 
-	if !r.IsUserHost(userId) {
+	if !r.IsUserModerator(userId) {
 		return custerr.NewForbiddenErr("not allowed to pause")
 	}
 	if r.PausedState.Paused {
@@ -880,7 +923,7 @@ func (r *Room) Pause(userId string) error {
 }
 
 func (r *Room) Unpause(userId string) error {
-	if !r.IsUserHost(userId) {
+	if !r.IsUserModerator(userId) {
 		return custerr.NewForbiddenErr("not allowed to unpause")
 	}
 	if !r.PausedState.Paused {

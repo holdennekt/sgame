@@ -2,8 +2,10 @@ package incoming
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
+	clientevent "github.com/holdennekt/sgame/backend/internal/eventsprocessor/client"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
 	serverevent "github.com/holdennekt/sgame/backend/internal/eventsprocessor/server"
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
@@ -25,6 +27,9 @@ func HandleSkipQuestionMessage(ctx context.Context, server realtime.Channel, int
 
 	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
 	if err := server.Send(ctx, roomUpdatedMessage); err != nil {
+		return err
+	}
+	if err := server.Send(ctx, clientevent.NewSystemChatMessage(fmt.Sprintf("%s skipped the question", user.Name))); err != nil {
 		return err
 	}
 

@@ -27,10 +27,12 @@ export default function MainPanel() {
     skipQuestion,
     skipRound,
   } = useRoomContext();
-  const isHost = user.id === room.host?.id;
+  const isModerator = room.moderator?.id === user.id;
   const player = room.players.find((p) => p.id === user.id);
-  const canSkip = isHost && SKIPPABLE_STATES.has(room.state);
-  const canSkipRound = isHost && room.state === "selecting_question";
+  const canSkip =
+    isModerator && !room.options.aiHost && SKIPPABLE_STATES.has(room.state);
+  const canSkipRound =
+    isModerator && !room.options.aiHost && room.state === "selecting_question";
 
   return (
     <div className="flex-[3_0_0%] flex flex-col gap-2 min-w-0 min-h-0">
@@ -54,7 +56,8 @@ export default function MainPanel() {
 
       {player && <GameBottomSection />}
 
-      {isHost &&
+      {isModerator &&
+        !room.options.aiHost &&
         (room.state === "answering" ||
           room.state === "validating_final_round_answers") && (
           <ValidateAnswerPanel
@@ -86,7 +89,7 @@ export default function MainPanel() {
           onClick={skipQuestion}
         >
           <FiSkipForward size={12} />
-          Skip question
+          Skip Question
         </button>
       )}
 
@@ -97,7 +100,7 @@ export default function MainPanel() {
           onClick={skipRound}
         >
           <FiSkipForward size={12} />
-          Skip round
+          Skip Round
         </button>
       )}
     </div>

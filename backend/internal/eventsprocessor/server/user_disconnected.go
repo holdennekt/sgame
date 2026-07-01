@@ -41,11 +41,11 @@ func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel,
 	if err != nil {
 		return err
 	}
-	isHostConnected := room.Host != nil && room.Host.IsConnected
+	isModeratorConnected := room.Moderator != nil && room.Moderator.IsConnected
 	connectedPlayerIndex := slices.IndexFunc(room.Players, func(p domain.Player) bool {
 		return p.IsConnected
 	})
-	if !isHostConnected && connectedPlayerIndex == -1 {
+	if !isModeratorConnected && connectedPlayerIndex == -1 {
 		if err := roomCache.Expire(ctx, roomId, idleRoomTTL); err != nil {
 			return err
 		}

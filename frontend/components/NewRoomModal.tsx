@@ -37,6 +37,7 @@ export default function NewRoomModal({
   const [questionThinkingTimeFinal, setQuestionThinkingTimeFinal] =
     useState(60);
   const [readingSymbolsPerSecond, setReadingSymbolsPerSecond] = useState(30);
+  const [aiHost, setAiHost] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +127,7 @@ export default function NewRoomModal({
         questionThinkingTimeFinal,
         readingSymbolsPerSecond,
         falseStartAllowed: data.falseStartAllowed === "on",
+        aiHost,
       },
     };
 
@@ -330,6 +332,23 @@ export default function NewRoomModal({
                 defaultChecked
                 className="w-4 h-4 cursor-pointer accent-[var(--primary)]"
               />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className={labelCls}>AI Host</span>
+                <input
+                  type="checkbox"
+                  checked={aiHost}
+                  onChange={(e) => setAiHost(e.target.checked)}
+                  className="w-4 h-4 cursor-pointer accent-[var(--primary)]"
+                />
+              </div>
+              {aiHost && (
+                <p className="text-[11px] text-on-surface-muted">
+                  Players type their answers; AI validates automatically
+                </p>
+              )}
             </div>
           </div>
         </div>

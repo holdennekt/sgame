@@ -13,6 +13,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
 	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
 	"github.com/holdennekt/sgame/backend/internal/interface/repository"
+	ivalidator "github.com/holdennekt/sgame/backend/internal/interface/validator"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"github.com/holdennekt/sgame/backend/pkg/metrics"
 )
@@ -28,13 +29,18 @@ type RoomService struct {
 	roomInternalChannelGetter         realtime.ChannelGetter
 	roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter
 	cfg                               *config.Config
+	answerValidator                   ivalidator.AnswerValidator
 }
 
-func NewRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter, cfg *config.Config) *RoomService {
-	return &RoomService{packRepository, roomRepository, roomCache, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomInternalEventsProcessorGetter, cfg}
+func NewRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter, cfg *config.Config, answerValidator ivalidator.AnswerValidator) *RoomService {
+	return &RoomService{packRepository, roomRepository, roomCache, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomInternalEventsProcessorGetter, cfg, answerValidator}
 }
 
 func (s *RoomService) Create(ctx context.Context, userId string, crr dto.CreateRoomRequest) (string, error) {
+	if crr.Options.AIHost && s.answerValidator == nil {
+		return "", custerr.NewBadRequestErr("AI host mode is not supported: no answer validator configured")
+	}
+
 	pack, err := s.packRepository.GetById(ctx, crr.PackId)
 	if err != nil {
 		return "", custerr.NewInternalErr(err)
@@ -141,14 +147,18 @@ func (s *RoomService) Join(ctx context.Context, user domain.User, id, password s
 		}
 
 		full := len(room.Players) >= room.Options.MaxPlayers
-		canBeHost := user.Id == room.CreatedBy && room.Host == nil
+		canBeModerator := user.Id == room.CreatedBy && room.Moderator == nil
 
-		if full && !canBeHost {
+		if full && !canBeModerator {
 			return custerr.NewConflictErr("the room is already full")
 		}
 
-		if canBeHost {
-			room.Host = &domain.Host{User: user}
+		if canBeModerator {
+			room.Moderator = &domain.Moderator{User: user}
+			if room.Options.AIHost {
+				// In AI mode the moderator also plays, so they occupy a player slot.
+				room.Players = append(room.Players, domain.Player{User: user})
+			}
 		} else {
 			room.Players = append(room.Players, domain.Player{User: user})
 		}
@@ -180,8 +190,20 @@ func (s *RoomService) Leave(ctx context.Context, userId, id string) error {
 			return custerr.NewConflictErr("cannot leave ongoing game")
 		}
 
-		if room.IsUserHost(userId) {
-			room.Host = nil
+		if room.IsUserModerator(userId) {
+			if room.Options.AIHost {
+				room.Players = slices.DeleteFunc(room.Players, func(p domain.Player) bool {
+					return p.Id == userId
+				})
+				if len(room.Players) > 0 {
+					promoted := room.Players[0]
+					room.Moderator = &domain.Moderator{User: promoted.User}
+				} else {
+					room.Moderator = nil
+				}
+			} else {
+				room.Moderator = nil
+			}
 		} else {
 			room.Players = slices.DeleteFunc(room.Players, func(p domain.Player) bool {
 				return p.Id == userId
@@ -218,10 +240,11 @@ func (s *RoomService) Connect(ctx context.Context, userId, roomId string) (*doma
 	}
 
 	return s.roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
-		if room.IsUserHost(userId) {
-			room.Host.IsConnected = true
-		} else {
-			playerIndex := room.UsersPlayerIndex(userId)
+		if room.IsUserModerator(userId) {
+			room.Moderator.IsConnected = true
+		}
+		playerIndex := room.UsersPlayerIndex(userId)
+		if playerIndex != -1 {
 			room.Players[playerIndex].IsConnected = true
 		}
 		return nil
@@ -243,10 +266,11 @@ func (s *RoomService) Disconnect(ctx context.Context, userId, roomId string) (*d
 	}
 
 	return s.roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
-		if room.IsUserHost(userId) {
-			room.Host.IsConnected = false
-		} else {
-			playerIndex := room.UsersPlayerIndex(userId)
+		if room.IsUserModerator(userId) {
+			room.Moderator.IsConnected = false
+		}
+		playerIndex := room.UsersPlayerIndex(userId)
+		if playerIndex != -1 {
 			room.Players[playerIndex].IsConnected = false
 		}
 		return nil

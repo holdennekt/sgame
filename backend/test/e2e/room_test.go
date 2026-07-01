@@ -129,7 +129,7 @@ func TestFullGame(t *testing.T) {
 	drainUntilBroadcastState(t, domain.ShowingQuestion, all...)
 
 	// ── P1 submits → Answering ────────────────────────────────────────────────
-	require.NoError(t, p1.ws.Send(ctx, domain.SubmitAnswer, struct{}{}))
+	require.NoError(t, p1.ws.Send(ctx, domain.StartAnswer, struct{}{}))
 	drainUntilBroadcastState(t, domain.Answering, all...)
 
 	// ── host marks wrong → ShowingQuestion ───────────────────────────────────
@@ -137,7 +137,7 @@ func TestFullGame(t *testing.T) {
 	drainUntilBroadcastState(t, domain.ShowingQuestion, all...)
 
 	// ── P2 submits → Answering ────────────────────────────────────────────────
-	require.NoError(t, p2.ws.Send(ctx, domain.SubmitAnswer, struct{}{}))
+	require.NoError(t, p2.ws.Send(ctx, domain.StartAnswer, struct{}{}))
 	drainUntilBroadcastState(t, domain.Answering, all...)
 
 	// ── host marks correct → CorrectAnswerDemo → SelectingQuestion ───────────

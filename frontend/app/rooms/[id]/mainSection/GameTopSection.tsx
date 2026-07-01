@@ -1,6 +1,5 @@
 import { useRoomContext } from "@/contexts/RoomContext";
 import { useRequiredUser } from "@/contexts/UserContext";
-import { RoomHost, RoomPlayer } from "@/types/room";
 import BoardPanel from "./BoardPanel";
 import CorrectAnswerDemoPanel from "./CorrectAnswerDemoPanel";
 import FinalRoundBoardPanel from "./FinalRoundBoardPanel";
@@ -21,7 +20,7 @@ export default function GameTopSection() {
     removeFinalRoundCategory,
   } = useRoomContext();
 
-  const isHost = user.id === room.host?.id;
+  const isModerator = room.moderator?.id === user.id;
 
   if (questionDemo)
     return (
@@ -49,7 +48,7 @@ export default function GameTopSection() {
         <BoardPanel
           currentRoundQuestions={room.currentRoundQuestions!}
           selectQuestion={selectQuestion}
-          canSelectQuestion={isHost || user.id === room.currentPlayer}
+          canSelectQuestion={isModerator || user.id === room.currentPlayer}
           isPaused={room.pausedState.paused}
         />
       );
@@ -141,7 +140,7 @@ export default function GameTopSection() {
       return (
         <FinalRoundBoardPanel
           availableCategories={room.finalRoundState?.availableCategories!}
-          canRemoveCategory={user.id === room.currentPlayer || isHost}
+          canRemoveCategory={user.id === room.currentPlayer || isModerator}
           removeCategory={removeFinalRoundCategory}
           isPaused={room.pausedState.paused}
         />

@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { HiddenPack, Pack } from "@/types/pack";
 import { PackDraft } from "@/types/pack_draft";
-import { RoomHost, RoomLobby, RoomPlayer } from "@/types/room";
+import { RoomModerator, RoomLobby, RoomPlayer } from "@/types/room";
 import { User } from "@/middleware";
 import { HttpError } from "@/types/error";
 
@@ -62,7 +62,7 @@ export const getDraft = async (id: string): Promise<PackDraft> => {
 export const getRoom = async (
   id: string,
   password?: string
-): Promise<RoomHost | RoomPlayer> => {
+): Promise<RoomModerator | RoomPlayer> => {
   const url = new URL(backendUrl(`/api/rooms/${id}`));
   if (password) url.searchParams.set("password", password);
   const resp = await fetch(url, {

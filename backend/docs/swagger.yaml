@@ -2,6 +2,8 @@ basePath: /api
 definitions:
   github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer:
     properties:
+      answer:
+        type: string
       id:
         type: string
       timerEndsAt:
@@ -9,6 +11,7 @@ definitions:
       timerStartsAt:
         type: string
     required:
+    - answer
     - id
     - timerEndsAt
     - timerStartsAt
@@ -317,7 +320,7 @@ definitions:
     - question
     - timerEndsAt
     type: object
-  github_com_holdennekt_sgame_backend_internal_domain.Host:
+  github_com_holdennekt_sgame_backend_internal_domain.Moderator:
     properties:
       avatar:
         type: string
@@ -517,10 +520,10 @@ definitions:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState'
       finishedAt:
         type: string
-      host:
-        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host'
       id:
         type: string
+      moderator:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator'
       name:
         type: string
       options:
@@ -546,8 +549,8 @@ definitions:
     - currentRoundQuestions
     - finalRoundState
     - finishedAt
-    - host
     - id
+    - moderator
     - name
     - options
     - packPreview
@@ -555,7 +558,37 @@ definitions:
     - players
     - state
     type: object
-  github_com_holdennekt_sgame_backend_internal_domain.RoomHost:
+  github_com_holdennekt_sgame_backend_internal_domain.RoomLobby:
+    properties:
+      id:
+        type: string
+      maxPlayers:
+        type: integer
+      moderator:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator'
+      name:
+        type: string
+      packPreview:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
+      players:
+        items:
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player'
+        type: array
+      status:
+        type: string
+      type:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
+    required:
+    - id
+    - maxPlayers
+    - moderator
+    - name
+    - packPreview
+    - players
+    - status
+    - type
+    type: object
+  github_com_holdennekt_sgame_backend_internal_domain.RoomModerator:
     properties:
       allowedToAnswer:
         items:
@@ -575,12 +608,14 @@ definitions:
         type: array
       finalRoundState:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState'
-      host:
-        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host'
       id:
         type: string
+      moderator:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator'
       name:
         type: string
+      options:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions'
       packPreview:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
       pausedState:
@@ -601,47 +636,20 @@ definitions:
     - currentRoundName
     - currentRoundQuestions
     - finalRoundState
-    - host
     - id
+    - moderator
     - name
+    - options
     - packPreview
     - pausedState
     - players
     - spectatorCount
     - state
     type: object
-  github_com_holdennekt_sgame_backend_internal_domain.RoomLobby:
-    properties:
-      host:
-        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host'
-      id:
-        type: string
-      maxPlayers:
-        type: integer
-      name:
-        type: string
-      packPreview:
-        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
-      players:
-        items:
-          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player'
-        type: array
-      status:
-        type: string
-      type:
-        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
-    required:
-    - host
-    - id
-    - maxPlayers
-    - name
-    - packPreview
-    - players
-    - status
-    - type
-    type: object
   github_com_holdennekt_sgame_backend_internal_domain.RoomOptions:
     properties:
+      aiHost:
+        type: boolean
       answerThinkingTime:
         maximum: 30
         minimum: 1
@@ -679,6 +687,7 @@ definitions:
         - public
         - private
     required:
+    - aiHost
     - answerThinkingTime
     - falseStartAllowed
     - maxPlayers
@@ -708,12 +717,14 @@ definitions:
         type: array
       finalRoundState:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundState'
-      host:
-        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host'
       id:
         type: string
+      moderator:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator'
       name:
         type: string
+      options:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions'
       packPreview:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
       pausedState:
@@ -734,9 +745,10 @@ definitions:
     - currentRoundName
     - currentRoundQuestions
     - finalRoundState
-    - host
     - id
+    - moderator
     - name
+    - options
     - packPreview
     - pausedState
     - players
@@ -820,7 +832,7 @@ definitions:
   github_com_holdennekt_sgame_backend_internal_dto.CreateCategoryRequest:
     properties:
       comment:
-        maxLength: 200
+        maxLength: 250
         type: string
       name:
         maxLength: 50
@@ -841,7 +853,7 @@ definitions:
       attachment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
       text:
-        maxLength: 500
+        maxLength: 1000
         type: string
     required:
     - text
@@ -849,7 +861,7 @@ definitions:
   github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundCategoryRequest:
     properties:
       name:
-        maxLength: 25
+        maxLength: 50
         minLength: 1
         type: string
       question:
@@ -943,7 +955,7 @@ definitions:
       comment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCommentRequest'
       text:
-        maxLength: 500
+        maxLength: 1000
         minLength: 1
         type: string
       type:
@@ -1075,7 +1087,7 @@ definitions:
   github_com_holdennekt_sgame_backend_internal_dto.UpdateCategoryDraftRequest:
     properties:
       comment:
-        maxLength: 1000
+        maxLength: 2000
         type: string
       name:
         maxLength: 200
@@ -1094,7 +1106,7 @@ definitions:
       attachment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
       text:
-        maxLength: 1000
+        maxLength: 2000
         type: string
     type: object
   github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundCategoryDraftRequest:
@@ -1132,7 +1144,7 @@ definitions:
       comment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest'
       text:
-        maxLength: 1000
+        maxLength: 2000
         type: string
     required:
     - answers
@@ -1204,7 +1216,7 @@ definitions:
       comment:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest'
       text:
-        maxLength: 1000
+        maxLength: 2000
         type: string
       type:
         allOf:
@@ -2116,7 +2128,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Can be RoomLobby, HostRoom, or RoomPlayer
+          description: Can be RoomLobby, RoomModerator, or RoomPlayer
           schema:
             $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomPlayer'
         "401":

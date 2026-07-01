@@ -15,7 +15,7 @@ type DbUser struct {
 	Password string `json:"password" bson:"password"`
 }
 
-type Host struct {
+type Moderator struct {
 	User        `bson:"inline"`
 	IsConnected bool `json:"isConnected" bson:"isConnected"`
 }

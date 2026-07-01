@@ -7,6 +7,7 @@
 package app
 
 import (
+	"context"
 	"github.com/google/wire"
 	"github.com/holdennekt/sgame/backend/internal/config"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor"
@@ -14,10 +15,12 @@ import (
 	mongo2 "github.com/holdennekt/sgame/backend/internal/infrastructure/database/mongo"
 	"github.com/holdennekt/sgame/backend/internal/infrastructure/realtime/pubsub"
 	"github.com/holdennekt/sgame/backend/internal/infrastructure/realtime/streams"
+	validator2 "github.com/holdennekt/sgame/backend/internal/infrastructure/validator"
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
 	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
 	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
+	"github.com/holdennekt/sgame/backend/internal/interface/validator"
 	"github.com/holdennekt/sgame/backend/internal/service"
 	"github.com/holdennekt/sgame/backend/internal/transport/http"
 	"github.com/holdennekt/sgame/backend/internal/transport/ws"
@@ -52,11 +55,12 @@ func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage2 storage.Stor
 	streamsChannelGetter := provideStreamsChannelGetter(rds, manager)
 	streamsPersistentChannelGetter := provideStreamsPersistentChannelGetter(rds, manager)
 	roomInternalEventsProcessorGetter := provideRoomInternalEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, cfg)
-	roomService := provideRoomService(pack, repositoryRoom, room, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, roomInternalEventsProcessorGetter, cfg)
+	answerValidator := provideAnswerValidator(cfg)
+	roomService := provideRoomService(pack, repositoryRoom, room, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, roomInternalEventsProcessorGetter, cfg, answerValidator)
 	roomController := http.NewRoomController(packService, roomService)
 	lobbyEventsProcessorGetter := provideLobbyEventsProcessorGetter(room, pubSubChannelGetter)
 	lobbyHandler := provideLobbyHandler(pubSubChannelGetter, lobbyEventsProcessorGetter)
-	roomEventsProcessorGetter := provideRoomEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, cfg, roomService)
+	roomEventsProcessorGetter := provideRoomEventsProcessorGetter(room, repositoryRoom, pack, storage2, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, cfg, answerValidator, roomService)
 	roomHandler := provideRoomHandler(roomService, roomEventsProcessorGetter, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter)
 	appApp := NewApp(cfg, room, authController, userController, packController, packDraftController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter)
 	return appApp
@@ -100,16 +104,31 @@ func provideLobbyEventsProcessorGetter(roomCache cache.Room, pubsubGetter PubSub
 	return eventsprocessor.NewLobbyEventsProcessorGetter(pubsubGetter.ChannelGetter, roomCache)
 }
 
-func provideRoomEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentGetter StreamsPersistentChannelGetter, cfg *config.Config, roomService *service.RoomService) eventsprocessor.RoomEventsProcessorGetter {
-	return eventsprocessor.NewRoomEventsProcessorGetter(pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomCache, roomRepo, packRepo, storage2, cfg, roomService.Disconnect)
+func provideAnswerValidator(cfg *config.Config) validator.AnswerValidator {
+	switch cfg.ValidatorType {
+	case "ollama":
+		return validator2.NewLocalEmbeddingValidator(cfg.OllamaURL, cfg.OllamaThreshold)
+	case "gemini":
+		v, err := validator2.NewGeminiValidator(context.Background(), cfg.GeminiProjectID, cfg.GeminiLocation, cfg.GeminiSystemPrompt)
+		if err != nil {
+			panic("failed to initialize Gemini validator: " + err.Error())
+		}
+		return v
+	default:
+		return nil
+	}
+}
+
+func provideRoomEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentGetter StreamsPersistentChannelGetter, cfg *config.Config, validator3 validator.AnswerValidator, roomService *service.RoomService) eventsprocessor.RoomEventsProcessorGetter {
+	return eventsprocessor.NewRoomEventsProcessorGetter(pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomCache, roomRepo, packRepo, storage2, cfg, validator3, roomService.Disconnect)
 }
 
 func provideRoomInternalEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, storage2 storage.Storage, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentGetter StreamsPersistentChannelGetter, cfg *config.Config) eventsprocessor.RoomInternalEventsProcessorGetter {
 	return eventsprocessor.NewRoomInternalEventsProcessorGetter(pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomCache, roomRepo, packRepo, storage2, cfg)
 }
 
-func provideRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentGetter StreamsPersistentChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter, cfg *config.Config) *service.RoomService {
-	return service.NewRoomService(packRepository, roomRepository, roomCache, pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomInternalEventsProcessorGetter, cfg)
+func provideRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentGetter StreamsPersistentChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter, cfg *config.Config, validator3 validator.AnswerValidator) *service.RoomService {
+	return service.NewRoomService(packRepository, roomRepository, roomCache, pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomInternalEventsProcessorGetter, cfg, validator3)
 }
 
 var ServiceSet = wire.NewSet(service.NewAuthService, service.NewUserService, provideRoomService, service.NewAttachmentService, service.NewPackService, service.NewPackDraftService)

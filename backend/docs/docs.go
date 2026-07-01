@@ -1432,7 +1432,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Can be RoomLobby, HostRoom, or RoomPlayer",
+                        "description": "Can be RoomLobby, RoomModerator, or RoomPlayer",
                         "schema": {
                             "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomPlayer"
                         }
@@ -1828,11 +1828,15 @@ const docTemplate = `{
         "github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer": {
             "type": "object",
             "required": [
+                "answer",
                 "id",
                 "timerEndsAt",
                 "timerStartsAt"
             ],
             "properties": {
+                "answer": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -2276,7 +2280,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.Host": {
+        "github_com_holdennekt_sgame_backend_internal_domain.Moderator": {
             "type": "object",
             "required": [
                 "avatar",
@@ -2531,8 +2535,8 @@ const docTemplate = `{
                 "currentRoundQuestions",
                 "finalRoundState",
                 "finishedAt",
-                "host",
                 "id",
+                "moderator",
                 "name",
                 "options",
                 "packPreview",
@@ -2580,11 +2584,11 @@ const docTemplate = `{
                 "finishedAt": {
                     "type": "string"
                 },
-                "host": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host"
-                },
                 "id": {
                     "type": "string"
+                },
+                "moderator": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator"
                 },
                 "name": {
                     "type": "string"
@@ -2609,7 +2613,49 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.RoomHost": {
+        "github_com_holdennekt_sgame_backend_internal_domain.RoomLobby": {
+            "type": "object",
+            "required": [
+                "id",
+                "maxPlayers",
+                "moderator",
+                "name",
+                "packPreview",
+                "players",
+                "status",
+                "type"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "maxPlayers": {
+                    "type": "integer"
+                },
+                "moderator": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "packPreview": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview"
+                },
+                "players": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType"
+                }
+            }
+        },
+        "github_com_holdennekt_sgame_backend_internal_domain.RoomModerator": {
             "type": "object",
             "required": [
                 "allowedToAnswer",
@@ -2619,9 +2665,10 @@ const docTemplate = `{
                 "currentRoundName",
                 "currentRoundQuestions",
                 "finalRoundState",
-                "host",
                 "id",
+                "moderator",
                 "name",
+                "options",
                 "packPreview",
                 "pausedState",
                 "players",
@@ -2656,14 +2703,17 @@ const docTemplate = `{
                 "finalRoundState": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState"
                 },
-                "host": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host"
-                },
                 "id": {
                     "type": "string"
                 },
+                "moderator": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator"
+                },
                 "name": {
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions"
                 },
                 "packPreview": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview"
@@ -2685,51 +2735,10 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.RoomLobby": {
-            "type": "object",
-            "required": [
-                "host",
-                "id",
-                "maxPlayers",
-                "name",
-                "packPreview",
-                "players",
-                "status",
-                "type"
-            ],
-            "properties": {
-                "host": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "maxPlayers": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "packPreview": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview"
-                },
-                "players": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player"
-                    }
-                },
-                "status": {
-                    "type": "string"
-                },
-                "type": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType"
-                }
-            }
-        },
         "github_com_holdennekt_sgame_backend_internal_domain.RoomOptions": {
             "type": "object",
             "required": [
+                "aiHost",
                 "answerThinkingTime",
                 "falseStartAllowed",
                 "maxPlayers",
@@ -2740,6 +2749,9 @@ const docTemplate = `{
                 "type"
             ],
             "properties": {
+                "aiHost": {
+                    "type": "boolean"
+                },
                 "answerThinkingTime": {
                     "type": "integer",
                     "maximum": 30,
@@ -2802,9 +2814,10 @@ const docTemplate = `{
                 "currentRoundName",
                 "currentRoundQuestions",
                 "finalRoundState",
-                "host",
                 "id",
+                "moderator",
                 "name",
+                "options",
                 "packPreview",
                 "pausedState",
                 "players",
@@ -2839,14 +2852,17 @@ const docTemplate = `{
                 "finalRoundState": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundState"
                 },
-                "host": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Host"
-                },
                 "id": {
                     "type": "string"
                 },
+                "moderator": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator"
+                },
                 "name": {
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions"
                 },
                 "packPreview": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview"
@@ -2976,7 +2992,7 @@ const docTemplate = `{
             "properties": {
                 "comment": {
                     "type": "string",
-                    "maxLength": 200
+                    "maxLength": 250
                 },
                 "name": {
                     "type": "string",
@@ -3004,7 +3020,7 @@ const docTemplate = `{
                 },
                 "text": {
                     "type": "string",
-                    "maxLength": 500
+                    "maxLength": 1000
                 }
             }
         },
@@ -3017,7 +3033,7 @@ const docTemplate = `{
             "properties": {
                 "name": {
                     "type": "string",
-                    "maxLength": 25,
+                    "maxLength": 50,
                     "minLength": 1
                 },
                 "question": {
@@ -3154,7 +3170,7 @@ const docTemplate = `{
                 },
                 "text": {
                     "type": "string",
-                    "maxLength": 500,
+                    "maxLength": 1000,
                     "minLength": 1
                 },
                 "type": {
@@ -3342,7 +3358,7 @@ const docTemplate = `{
             "properties": {
                 "comment": {
                     "type": "string",
-                    "maxLength": 1000
+                    "maxLength": 2000
                 },
                 "name": {
                     "type": "string",
@@ -3365,7 +3381,7 @@ const docTemplate = `{
                 },
                 "text": {
                     "type": "string",
-                    "maxLength": 1000
+                    "maxLength": 2000
                 }
             }
         },
@@ -3423,7 +3439,7 @@ const docTemplate = `{
                 },
                 "text": {
                     "type": "string",
-                    "maxLength": 1000
+                    "maxLength": 2000
                 }
             }
         },
@@ -3530,7 +3546,7 @@ const docTemplate = `{
                 },
                 "text": {
                     "type": "string",
-                    "maxLength": 1000
+                    "maxLength": 2000
                 },
                 "type": {
                     "enum": [

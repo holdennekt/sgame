@@ -68,7 +68,7 @@ func (r *roomRepository) GetByParticipant(ctx context.Context, userId string, se
 	filter := bson.M{
 		"$or": []bson.M{
 			{"players": bson.M{"$elemMatch": bson.M{"id": userId}}},
-			{"host.id": userId},
+			{"moderator.id": userId},
 		},
 	}
 	total, err := r.db.Collection(ROOMS_COLLECTION).CountDocuments(ctx, filter)

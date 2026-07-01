@@ -3,9 +3,9 @@ import { useRouter } from "next/navigation";
 import { ChatMessage, isChatMessage } from "@/components/Message";
 import { isError } from "@/middleware";
 import {
-  isRoomHost,
+  isRoomModerator,
   isRoomPlayer,
-  RoomHost,
+  RoomModerator,
   RoomPlayer,
   RoundDemo,
   QuestionDemo,
@@ -18,7 +18,7 @@ import { joinRoom, leaveRoom } from "@/app/api";
 import { useWebSocket } from "./useWebSocket";
 
 export function useRoom(
-  initialRoom: RoomHost | RoomPlayer,
+  initialRoom: RoomModerator | RoomPlayer,
   userId: string,
   isSpectator = false,
   password?: string
@@ -70,7 +70,7 @@ export function useRoom(
     setChatMessages((msgs) => [...msgs, payload]);
   });
   handlers.set("room_updated", (payload) => {
-    if (!isRoomHost(payload) && !isRoomPlayer(payload)) return;
+    if (!isRoomModerator(payload) && !isRoomPlayer(payload)) return;
     setRoom(payload);
   });
   handlers.set("room_deleted", () => router.push("/"));
@@ -98,7 +98,10 @@ export function useRoom(
   const togglePause = () => send(room.pausedState.paused ? "unpause" : "pause");
   const selectQuestion = (q: { category: string; index: number }) =>
     send("select_question", q);
-  const submitAnswer = () => send("submit_answer");
+  const startAnswer = () => send("start_answer");
+  const submitTypedAnswer = (answer: string) =>
+    send("submit_answer", { answer });
+  const banPlayer = (playerId: string) => send("ban_player", { playerId });
   const passQuestion = (passTo: string) => send("pass_question", { passTo });
   const placeBet = (amount: number) => send("place_bet", { amount });
   const placeFinalRoundBet = (amount: number) =>
@@ -117,7 +120,6 @@ export function useRoom(
     send("change_score", { playerId, score });
 
   const leave = async () => {
-    // Spectators are not members, so there is nothing to leave on the server.
     if (isSpectator) {
       router.push("/");
       return;
@@ -130,8 +132,6 @@ export function useRoom(
     }
   };
 
-  // Spectators can join the room they're watching. Private rooms reject
-  // spectators at the backend, so this is always a public room — no password.
   const joinAsPlayer = async () => {
     try {
       await joinRoom(room.id, undefined);
@@ -157,7 +157,9 @@ export function useRoom(
       togglePause,
       leave,
       joinAsPlayer,
-      submitAnswer,
+      startAnswer,
+      submitTypedAnswer,
+      banPlayer,
       selectQuestion,
       passQuestion,
       placeBet,

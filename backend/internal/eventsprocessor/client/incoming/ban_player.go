@@ -13,24 +13,23 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
-type ChangeScorePayload struct {
+type BanPlayerPayload struct {
 	PlayerId string `json:"playerId"`
-	Score    int    `json:"score"`
 }
 
-func HandleChangeScoreMessage(ctx context.Context, server realtime.Channel, roomCache cache.Room, roomId string, user domain.User, msg message.Message) error {
-	var csp ChangeScorePayload
-	if err := json.Unmarshal(msg.Payload, &csp); err != nil {
+func HandleBanPlayerMessage(ctx context.Context, server realtime.Channel, roomCache cache.Room, roomId string, user domain.User, msg message.Message) error {
+	var bpp BanPlayerPayload
+	if err := json.Unmarshal(msg.Payload, &bpp); err != nil {
 		return err
 	}
 
 	var targetName string
 	_, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
-		playerIdx := room.UsersPlayerIndex(csp.PlayerId)
+		playerIdx := room.UsersPlayerIndex(bpp.PlayerId)
 		if playerIdx != -1 {
 			targetName = room.Players[playerIdx].Name
 		}
-		return room.ChangeScore(user.Id, csp.PlayerId, csp.Score)
+		return room.BanPlayer(user.Id, bpp.PlayerId)
 	})
 	if err != nil {
 		return err
@@ -40,11 +39,6 @@ func HandleChangeScoreMessage(ctx context.Context, server realtime.Channel, room
 		return err
 	}
 
-	var chatText string
-	if csp.PlayerId == user.Id {
-		chatText = fmt.Sprintf("%s corrected their own score to %d", user.Name, csp.Score)
-	} else {
-		chatText = fmt.Sprintf("%s set %s's score to %d", user.Name, targetName, csp.Score)
-	}
-	return server.Send(ctx, clientevent.NewSystemChatMessage(chatText))
+	chatMsg := clientevent.NewSystemChatMessage(fmt.Sprintf("%s banned %s from the room", user.Name, targetName))
+	return server.Send(ctx, chatMsg)
 }

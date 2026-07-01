@@ -2,34 +2,130 @@ package incoming
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"log/slog"
+	"strings"
+	"time"
 
+	"github.com/holdennekt/sgame/backend/internal/config"
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
 	serverevent "github.com/holdennekt/sgame/backend/internal/eventsprocessor/server"
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
 	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
+	ivalidator "github.com/holdennekt/sgame/backend/internal/interface/validator"
 	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
-func HandleSubmitAnswerMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string, user domain.User, msg message.Message) error {
-	newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
-		return room.SubmitAnswer(user.Id)
+type SubmitAnswerPayload struct {
+	Answer string `json:"answer"`
+}
+
+func HandleSubmitAnswerMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string, user domain.User, validator ivalidator.AnswerValidator, cfg *config.Config, msg message.Message) error {
+	var sap SubmitAnswerPayload
+	if err := json.Unmarshal(msg.Payload, &sap); err != nil {
+		return err
+	}
+
+	var capturedQuestion domain.Question
+	var capturedPlayerId string
+	_, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
+		if room.CurrentQuestion != nil {
+			capturedQuestion = room.CurrentQuestion.Question
+		}
+		if room.AnsweringPlayer != nil {
+			capturedPlayerId = room.AnsweringPlayer.Id
+		}
+		return room.SubmitTypedAnswer(user.Id, sap.Answer)
 	})
 	if err != nil {
 		return err
 	}
 
-	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
-	if err := server.Send(ctx, roomUpdatedMessage); err != nil {
+	if err := server.Send(ctx, outgoing.NewRoomUpdatedMessage(roomId)); err != nil {
 		return err
 	}
 
-	answerStartedMessage := serverevent.NewAnswerStartedMessage(
-		newRoom.CurrentQuestion.Question,
-		newRoom.AnsweringPlayer.Id,
-	)
-	if err := internalServer.Send(ctx, answerStartedMessage); err != nil {
-		return err
-	}
+	go func() {
+		timeout := time.Duration(cfg.AIValidationTimeout) * time.Second
+		aiCtx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		iQuestion := buildValidatorQuestion(capturedQuestion, cfg.BucketName)
+
+		isCorrect := false
+		if isExactMatch(iQuestion.CorrectAnswers, sap.Answer) {
+			isCorrect = true
+		} else {
+			result, err := validator.Validate(aiCtx, iQuestion, sap.Answer)
+			if err != nil {
+				slog.Error("AI validation failed, defaulting to wrong answer", "err", err, "room_id", roomId)
+			} else {
+				isCorrect = result.IsCorrect
+			}
+		}
+
+		finalCtx, finalCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer finalCancel()
+
+		var question domain.Question
+		newRoom, err := roomCache.SafeUpdate(finalCtx, roomId, func(room *domain.Room) error {
+			if room.State != domain.Answering || room.AnsweringPlayer == nil || room.AnsweringPlayer.Id != capturedPlayerId {
+				return serverevent.ErrDeferredFunctionCancelled
+			}
+			if room.CurrentQuestion != nil {
+				question = room.CurrentQuestion.Question
+			}
+			return room.ValidateAnswer(domain.SYSTEM, isCorrect)
+		})
+		if err != nil {
+			if !errors.Is(err, serverevent.ErrDeferredFunctionCancelled) {
+				slog.Error("error applying AI validation result", "err", err, "room_id", roomId)
+			}
+			return
+		}
+
+		if err := server.Send(finalCtx, outgoing.NewRoomUpdatedMessage(roomId)); err != nil {
+			slog.Error("error sending room_updated after AI validation", "err", err)
+			return
+		}
+
+		if err := handlePostValidate(finalCtx, internalServer, newRoom, question); err != nil {
+			slog.Error("error in post-validate handler", "err", err)
+		}
+	}()
+
 	return nil
+}
+
+func isExactMatch(correctAnswers []string, playerAnswer string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(playerAnswer))
+	for _, correct := range correctAnswers {
+		if strings.ToLower(strings.TrimSpace(correct)) == normalized {
+			return true
+		}
+	}
+	return false
+}
+
+func buildValidatorQuestion(question domain.Question, bucketName string) ivalidator.Question {
+	q := ivalidator.Question{
+		CorrectAnswers: question.Answers,
+	}
+	if question.Text != nil {
+		q.Text = *question.Text
+	}
+	if question.Attachment != nil {
+		q.MediaURI = "gs://" + bucketName + "/" + question.Attachment.Key
+		switch question.Attachment.Type {
+		case domain.Image:
+			q.MediaType = ivalidator.MediaTypeImage
+		case domain.Audio:
+			q.MediaType = ivalidator.MediaTypeAudio
+		case domain.Video:
+			q.MediaType = ivalidator.MediaTypeVideo
+		}
+	}
+	return q
 }

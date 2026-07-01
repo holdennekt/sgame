@@ -19,7 +19,7 @@ func HandleStartGameMessage(ctx context.Context, lobbyServer realtime.Channel, r
 		anyConnectedPlayer := slices.ContainsFunc(room.Players, func(p domain.Player) bool {
 			return p.IsConnected
 		})
-		if !room.IsUserHost(user.Id) || !anyConnectedPlayer {
+		if !room.IsUserModerator(user.Id) || !anyConnectedPlayer {
 			return errors.New("not allowed to start game")
 		}
 		room.StartGame(pack)
@@ -29,15 +29,14 @@ func HandleStartGameMessage(ctx context.Context, lobbyServer realtime.Channel, r
 		return err
 	}
 
-	roundStartedMessage := serverevent.NewRoundStartedMessage()
-	if err := roomInternalServer.Send(ctx, roundStartedMessage); err != nil {
-		return err
-	}
-
 	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
 	if err := lobbyServer.Send(ctx, roomUpdatedMessage); err != nil {
 		slog.Error("error", "err", err)
 	}
+	if err := roomServer.Send(ctx, roomUpdatedMessage); err != nil {
+		return err
+	}
 
-	return roomServer.Send(ctx, roomUpdatedMessage)
+	roundStartedMessage := serverevent.NewRoundStartedMessage()
+	return roomInternalServer.Send(ctx, roundStartedMessage)
 }

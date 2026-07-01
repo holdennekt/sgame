@@ -32,7 +32,7 @@ func init() {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		_ = v.RegisterValidation(custvalid.SameLength, custvalid.ValidateSameLength)
 		v.RegisterTagNameFunc(func(fld reflect.StructField) string {
-			name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+			name, _, _ := strings.Cut(fld.Tag.Get("json"), ",")
 			if name == "" || name == "-" {
 				return fld.Name
 			}

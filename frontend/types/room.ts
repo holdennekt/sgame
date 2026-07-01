@@ -9,7 +9,7 @@ import {
   Comment,
   Attachment,
 } from "./pack";
-import { Host, Player } from "./user";
+import { Moderator, Player } from "./user";
 
 export interface GameHistoryEntry {
   id: string;
@@ -35,7 +35,7 @@ export interface Room {
   createdBy: string;
   options: RoomOptions;
   packPreview: PackPreview;
-  host: Host | null;
+  moderator: Moderator | null;
   players: Player[];
   banList: string[];
   state: RoomState;
@@ -62,9 +62,10 @@ const dummyRoom: Room = {
     questionThinkingTimeFinal: 60,
     readingSymbolsPerSecond: 30,
     falseStartAllowed: true,
+    aiHost: false,
   },
   packPreview: { id: "", name: "" },
-  host: null,
+  moderator: null,
   players: [],
   banList: [],
   state: "waiting_for_start",
@@ -116,6 +117,7 @@ export interface RoomOptions {
   questionThinkingTimeFinal: number;
   readingSymbolsPerSecond: number;
   falseStartAllowed: boolean;
+  aiHost: boolean;
 }
 
 export interface BoardQuestion {
@@ -144,6 +146,7 @@ export interface AnsweringPlayer {
   id: string;
   timerStartsAt: string;
   timerEndsAt: string;
+  answer: string;
 }
 
 export interface FinalRoundState {
@@ -164,7 +167,7 @@ export interface RoomLobby {
   id: string;
   name: string;
   packPreview: PackPreview;
-  host: Host | null;
+  moderator: Moderator | null;
   players: Player[];
   maxPlayers: number;
   type: PrivacyType;
@@ -179,7 +182,7 @@ const dummyRoomLobby: RoomLobby = {
   maxPlayers: 3,
   type: "public",
   status: "Idle",
-  host: null,
+  moderator: null,
 };
 
 export const isRoomLobby = (obj: unknown): obj is RoomLobby => {
@@ -187,11 +190,12 @@ export const isRoomLobby = (obj: unknown): obj is RoomLobby => {
   return Object.keys(dummyRoomLobby).every((key) => Object.hasOwn(obj, key));
 };
 
-export interface RoomHost {
+export interface RoomModerator {
   id: string;
   name: string;
   packPreview: PackPreview;
-  host: Host | null;
+  options: RoomOptions;
+  moderator: Moderator | null;
   players: Player[];
   state: RoomState;
   currentRoundName: string | null;
@@ -205,11 +209,22 @@ export interface RoomHost {
   spectatorCount: number;
 }
 
-const dummyRoomHost: RoomHost = {
+const dummyRoomModerator: RoomModerator = {
   id: "",
   name: "",
   packPreview: { id: "", name: "" },
-  host: null,
+  options: {
+    maxPlayers: 0,
+    type: "public",
+    password: null,
+    questionThinkingTime: 10,
+    answerThinkingTime: 5,
+    questionThinkingTimeFinal: 60,
+    readingSymbolsPerSecond: 30,
+    falseStartAllowed: true,
+    aiHost: false,
+  },
+  moderator: null,
   players: [],
   state: "waiting_for_start",
   currentRoundName: null,
@@ -233,16 +248,19 @@ const dummyRoomHost: RoomHost = {
   spectatorCount: 0,
 };
 
-export const isRoomHost = (obj: unknown): obj is RoomHost => {
+export const isRoomModerator = (obj: unknown): obj is RoomModerator => {
   if (typeof obj !== "object" || obj === null) return false;
-  return Object.keys(dummyRoomHost).every((key) => Object.hasOwn(obj, key));
+  return Object.keys(dummyRoomModerator).every((key) =>
+    Object.hasOwn(obj, key)
+  );
 };
 
 export interface RoomPlayer {
   id: string;
   name: string;
   packPreview: PackPreview;
-  host: Host | null;
+  options: RoomOptions;
+  moderator: Moderator | null;
   players: Player[];
   state: RoomState;
   currentRoundName: string | null;
@@ -260,7 +278,18 @@ const dummyRoomPlayer: RoomPlayer = {
   id: "",
   name: "",
   packPreview: { id: "", name: "" },
-  host: null,
+  options: {
+    maxPlayers: 0,
+    type: "public",
+    password: null,
+    questionThinkingTime: 10,
+    answerThinkingTime: 5,
+    questionThinkingTimeFinal: 60,
+    readingSymbolsPerSecond: 30,
+    falseStartAllowed: true,
+    aiHost: false,
+  },
+  moderator: null,
   players: [],
   state: "waiting_for_start",
   currentRoundName: null,

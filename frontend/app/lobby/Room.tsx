@@ -80,7 +80,7 @@ export default function RoomLobbyCard({
       {/* Avatars */}
       <div className="flex items-center gap-1 overflow-x-auto">
         <div className="w-7 h-7 rounded overflow-hidden border-2 border-primary shrink-0">
-          {getAvatar(room.host)}
+          {getAvatar(room.moderator)}
         </div>
         <div className="w-px h-5 bg-border shrink-0 mx-1" />
         {playersSlots.map((player, index) => (

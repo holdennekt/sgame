@@ -42,6 +42,8 @@ services:
         condition: service_healthy
       mongodb:
         condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
     environment:
       APP_ENV: development
       HOST: 0.0.0.0
@@ -67,6 +69,10 @@ services:
       TIME_TO_BET: 60
       TIME_TO_PASS: 60
       QUESTION_DEMO_DURATION: 5
+      VALIDATOR_TYPE: ollama
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_THRESHOLD: 0.80
+      AI_VALIDATION_TIMEOUT: 20
 
   mongodb:
     image: mongo:6.0
@@ -102,6 +108,33 @@ services:
     volumes:
       - redis_data:/data
 
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - 11434:11434
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  ollama-init:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        until ollama list 2>/dev/null; do sleep 2; done
+        ollama pull mxbai-embed-large
+    depends_on:
+      ollama:
+        condition: service_healthy
+
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     ports:
@@ -124,4 +157,5 @@ volumes:
   redis_data:
   mongodb_data_container:
   minio_data:
+  ollama_data:
   frontend_node_modules:
