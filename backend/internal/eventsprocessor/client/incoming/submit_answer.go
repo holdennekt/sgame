@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"path"
 	"strings"
 	"time"
 
@@ -109,6 +110,43 @@ func isExactMatch(correctAnswers []string, playerAnswer string) bool {
 	return false
 }
 
+func resolveMIMEType(stored, key string, attachType domain.FileType) string {
+	if stored != "" {
+		return stored
+	}
+	switch strings.ToLower(path.Ext(key)) {
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".png":
+		return "image/png"
+	case ".gif":
+		return "image/gif"
+	case ".webp":
+		return "image/webp"
+	case ".mp3":
+		return "audio/mpeg"
+	case ".wav":
+		return "audio/wav"
+	case ".ogg":
+		return "audio/ogg"
+	case ".flac":
+		return "audio/flac"
+	case ".mp4":
+		return "video/mp4"
+	case ".webm":
+		return "video/webm"
+	}
+	switch attachType {
+	case domain.Image:
+		return "image/jpeg"
+	case domain.Audio:
+		return "audio/mpeg"
+	case domain.Video:
+		return "video/mp4"
+	}
+	return ""
+}
+
 func buildValidatorQuestion(question domain.Question, bucketName string) ivalidator.Question {
 	q := ivalidator.Question{
 		CorrectAnswers: question.Answers,
@@ -118,7 +156,7 @@ func buildValidatorQuestion(question domain.Question, bucketName string) ivalida
 	}
 	if question.Attachment != nil {
 		q.MediaURI = "gs://" + bucketName + "/" + question.Attachment.Key
-		q.MediaMIMEType = question.Attachment.MimeType
+		q.MediaMIMEType = resolveMIMEType(question.Attachment.MimeType, question.Attachment.Key, question.Attachment.Type)
 		switch question.Attachment.Type {
 		case domain.Image:
 			q.MediaType = ivalidator.MediaTypeImage
