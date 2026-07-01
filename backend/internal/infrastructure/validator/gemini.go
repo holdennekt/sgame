@@ -66,7 +66,10 @@ func buildPromptParts(question ivalidator.Question, playerAnswer string) ([]*gen
 
 	if question.MediaURI != "" && question.MediaType != ivalidator.MediaTypeVideo {
 		parts = append(parts, &genai.Part{
-			FileData: &genai.FileData{FileURI: question.MediaURI},
+			FileData: &genai.FileData{
+				FileURI:  question.MediaURI,
+				MIMEType: question.MediaMIMEType,
+			},
 		})
 	}
 

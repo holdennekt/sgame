@@ -118,6 +118,7 @@ func buildValidatorQuestion(question domain.Question, bucketName string) ivalida
 	}
 	if question.Attachment != nil {
 		q.MediaURI = "gs://" + bucketName + "/" + question.Attachment.Key
+		q.MediaMIMEType = question.Attachment.MimeType
 		switch question.Attachment.Type {
 		case domain.Image:
 			q.MediaType = ivalidator.MediaTypeImage

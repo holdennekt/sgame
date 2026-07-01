@@ -75,6 +75,7 @@ services:
         {"is_correct": <true|false>, "confidence": <float between 0.0 and 1.0>}
 
         Use confidence < 0.6 only when the answer is genuinely ambiguous. Do not explain your reasoning.
+      AI_VALIDATION_TIMEOUT: 10
     volumes:
       - ./smart-altar-496311-p4-5cf9bc5fd4e7.json:/app/smart-altar-496311-p4-5cf9bc5fd4e7.json
     tmpfs:

@@ -15,6 +15,7 @@ type Question struct {
 	CorrectAnswers []string
 	MediaURI       string // gs:// URI; empty for text-only questions
 	MediaType      MediaType
+	MediaMIMEType  string
 }
 
 type ValidatorResponse struct {
