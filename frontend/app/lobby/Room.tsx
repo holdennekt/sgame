@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { User } from "@/middleware";
 import { RoomLobby } from "@/types/room";
 import { FaLock, FaGlobe, FaEye } from "react-icons/fa6";
+import { TbRobot } from "react-icons/tb";
 import { getAvatar } from "@/components/UserAvatar";
 import { joinRoom } from "@/app/api";
 import { isError } from "@/middleware";
@@ -79,9 +80,15 @@ export default function RoomLobbyCard({
 
       {/* Avatars */}
       <div className="flex items-center gap-1 overflow-x-auto">
-        <div className="w-7 h-7 rounded overflow-hidden border-2 border-primary shrink-0">
-          {getAvatar(room.moderator)}
-        </div>
+        {room.options.aiHost ? (
+          <div className="w-7 h-7 rounded border-2 border-primary shrink-0 flex items-center justify-center bg-primary/10 text-primary">
+            <TbRobot size={16} />
+          </div>
+        ) : (
+          <div className="w-7 h-7 rounded overflow-hidden border-2 border-primary shrink-0">
+            {getAvatar(room.moderator)}
+          </div>
+        )}
         <div className="w-px h-5 bg-border shrink-0 mx-1" />
         {playersSlots.map((player, index) => (
           <div

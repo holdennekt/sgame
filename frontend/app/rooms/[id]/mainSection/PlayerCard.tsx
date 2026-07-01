@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { getAvatar } from "@/components/UserAvatar";
 import { useRoomContext } from "@/contexts/RoomContext";
 import { useRequiredUser } from "@/contexts/UserContext";
@@ -63,16 +63,11 @@ export default function PlayerCard({ player }: { player: Player }) {
 
   useEffect(() => {
     if (!menuPos) return;
-    const onMouseDown = () => setMenuPos(null);
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setMenuPos(null);
     };
-    document.addEventListener("mousedown", onMouseDown);
     document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onMouseDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [menuPos]);
 
   const borderCls = isOrange
@@ -97,6 +92,13 @@ export default function PlayerCard({ player }: { player: Player }) {
               <span className="text-white text-sm font-bold">✓</span>
             </div>
           )}
+          {isBettingState && isYellow && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-yellow-300 text-sm font-bold drop-shadow">
+                ?
+              </span>
+            </div>
+          )}
         </div>
         <div className="w-full px-1 py-0.5 text-center bg-surface-raised">
           <p
@@ -117,7 +119,7 @@ export default function PlayerCard({ player }: { player: Player }) {
             />
           ) : (
             <p
-              className={`text-xs font-extrabold text-on-surface leading-tight${
+              className={`text-xs font-extrabold text-on-surface leading-tight border border-transparent${
                 isModerator ? " cursor-pointer hover:text-primary" : ""
               }`}
               onDoubleClick={
@@ -133,7 +135,7 @@ export default function PlayerCard({ player }: { player: Player }) {
               {player.score}
             </p>
           )}
-          {isOrange && player.betAmount && (
+          {isOrange && player.betAmount != null && (
             <p className="text-[10px] font-bold text-orange-400 leading-tight">
               {player.betAmount}
             </p>
@@ -142,33 +144,37 @@ export default function PlayerCard({ player }: { player: Player }) {
       </div>
 
       {menuPos && (
-        <div
-          className="fixed z-50 bg-surface border border-border rounded-lg shadow-lg py-1 min-w-[140px]"
-          style={{ top: menuPos.y, left: menuPos.x }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <button
-            className="w-full text-left px-3 py-2 text-sm hover:bg-surface-raised transition-colors"
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              startEditingScore();
-              setMenuPos(null);
-            }}
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setMenuPos(null)}
+          />
+          <div
+            className="fixed z-50 bg-surface border border-border rounded-lg shadow-lg py-1 min-w-[140px]"
+            style={{ top: menuPos.y, left: menuPos.x }}
           >
-            Change score
-          </button>
-          {player.id !== user.id && (
             <button
-              className="w-full text-left px-3 py-2 text-sm text-danger hover:bg-surface-raised transition-colors"
+              className="w-full text-left px-3 py-2 text-sm hover:bg-surface-raised transition-colors"
               onClick={() => {
-                banPlayer(player.id);
+                startEditingScore();
                 setMenuPos(null);
               }}
             >
-              Ban
+              Change score
             </button>
-          )}
-        </div>
+            {player.id !== user.id && (
+              <button
+                className="w-full text-left px-3 py-2 text-sm text-danger hover:bg-surface-raised transition-colors"
+                onClick={() => {
+                  banPlayer(player.id);
+                  setMenuPos(null);
+                }}
+              >
+                Ban
+              </button>
+            )}
+          </div>
+        </>
       )}
     </>
   );

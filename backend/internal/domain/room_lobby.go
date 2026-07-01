@@ -4,6 +4,7 @@ type RoomLobby struct {
 	Id          string      `json:"id"`
 	Name        string      `json:"name"`
 	PackPreview PackPreview `json:"packPreview"`
+	Options     RoomOptions `json:"options"`
 	Moderator   *Moderator  `json:"moderator"`
 	Players     []Player    `json:"players"`
 	MaxPlayers  int         `json:"maxPlayers"`
@@ -26,6 +27,7 @@ func NewRoomLobby(room *Room) RoomLobby {
 		Id:          room.Id,
 		Name:        room.Name,
 		PackPreview: room.PackPreview,
+		Options:     room.Options,
 		Moderator:   room.Moderator,
 		Players:     room.Players,
 		MaxPlayers:  room.Options.MaxPlayers,

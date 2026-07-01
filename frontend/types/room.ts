@@ -167,6 +167,7 @@ export interface RoomLobby {
   id: string;
   name: string;
   packPreview: PackPreview;
+  options: RoomOptions;
   moderator: Moderator | null;
   players: Player[];
   maxPlayers: number;
@@ -178,6 +179,17 @@ const dummyRoomLobby: RoomLobby = {
   id: "1",
   name: "xyz",
   packPreview: { id: "1", name: "wtf" },
+  options: {
+    maxPlayers: 3,
+    type: "public",
+    password: null,
+    questionThinkingTime: 10,
+    answerThinkingTime: 5,
+    questionThinkingTimeFinal: 60,
+    readingSymbolsPerSecond: 30,
+    falseStartAllowed: true,
+    aiHost: false,
+  },
   players: [],
   maxPlayers: 3,
   type: "public",
