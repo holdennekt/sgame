@@ -28,6 +28,7 @@ func (s *NoopStorage) URL(_ context.Context, key string, _ time.Duration) (strin
 func (s *NoopStorage) SignUploadPolicy(_ context.Context, _ storage.SignUploadPolicyInput) (*storage.SignUploadPolicyResult, error) {
 	return &storage.SignUploadPolicyResult{URL: "http://noop/upload", FormData: map[string]string{}}, nil
 }
+func (s *NoopStorage) SetContentType(_ context.Context, _, _ string) error { return nil }
 
 var _ storage.Storage = (*NoopStorage)(nil)
 

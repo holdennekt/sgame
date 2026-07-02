@@ -160,6 +160,19 @@ func (s *GCSStorage) GetStats(ctx context.Context, key string) (*storage.Stats, 
 	}, nil
 }
 
+func (s *GCSStorage) SetContentType(ctx context.Context, key, contentType string) error {
+	_, err := s.client.Bucket(s.bucketName).Object(key).Update(ctx, gcsstorage.ObjectAttrsToUpdate{
+		ContentType: contentType,
+	})
+	if err != nil {
+		if err == gcsstorage.ErrObjectNotExist {
+			return custerr.NewNotFoundErr(fmt.Sprintf("file with key %q not found", key))
+		}
+		return custerr.NewInternalErr(fmt.Errorf("failed to update content type: %w", err))
+	}
+	return nil
+}
+
 func (s *GCSStorage) URL(ctx context.Context, key string, ttl time.Duration) (string, error) {
 	if strings.HasPrefix(key, "public/") {
 		return fmt.Sprintf("%s/%s/%s", s.publicBase, s.bucketName, key), nil

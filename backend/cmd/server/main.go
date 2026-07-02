@@ -100,7 +100,7 @@ func main() {
 			slog.Error("failed to initialize minio client", "err", err)
 			os.Exit(1)
 		}
-		store = minioStorage.NewMinioStorage(mio, cfg.BucketName, cfg.FrontendURL, cfg.UserAgent)
+		store = minioStorage.NewMinioStorage(mio, cfg.BucketName, cfg.UserAgent)
 	}
 
 	app := app.InitializeApp(mdb, rds, store, cfg)

@@ -107,43 +107,93 @@ func (s *AttachmentService) probe(ctx context.Context, key string) (*domain.Atta
 		return nil, custerr.NewInternalErr(fmt.Errorf("failed to analyze media: %w", err))
 	}
 
+	fileType, mimeType := classifyProbe(probeData)
 	att := &domain.Attachment{
 		Key:      key,
-		MimeType: stats.ContentType,
+		MimeType: mimeType,
 		Size:     stats.Size,
-		Type:     s.attachmentTypeFromProbe(probeData),
+		Type:     fileType,
 	}
 	if att.Type == domain.Video || att.Type == domain.Audio {
 		att.Duration = probeData.Format.DurationSeconds
 	} else {
 		att.Duration = DEFAULT_ATTACHMENT_DURATION
 	}
+
+	if mimeType != stats.ContentType {
+		if err := s.storage.SetContentType(ctx, key, mimeType); err != nil {
+			return nil, err
+		}
+	}
+
 	return att, nil
 }
 
-func (s *AttachmentService) attachmentTypeFromProbe(data *ffprobe.ProbeData) domain.FileType {
-	imageCodecs := map[string]bool{
-		"png": true, "mjpeg": true, "jpeg": true, "gif": true,
-		"bmp": true, "webp": true, "tiff": true, "svg": true,
+// classifyProbe derives both the coarse FileType and a concrete MIME type from
+// ffprobe's analysis of the actual file content — more reliable than guessing
+// from a filename extension, and works for misnamed or extensionless files.
+func classifyProbe(data *ffprobe.ProbeData) (domain.FileType, string) {
+	imageMIMETypes := map[string]string{
+		"png": "image/png", "mjpeg": "image/jpeg", "jpeg": "image/jpeg",
+		"gif": "image/gif", "bmp": "image/bmp", "webp": "image/webp",
+		"tiff": "image/tiff", "svg": "image/svg+xml",
 	}
+
 	hasVideo, hasAudio := false, false
+	imageMIME := "image/jpeg"
 	for _, stream := range data.Streams {
 		switch stream.CodecType {
 		case "video":
-			if !imageCodecs[stream.CodecName] {
+			if mimeType, ok := imageMIMETypes[stream.CodecName]; ok {
+				imageMIME = mimeType
+			} else {
 				hasVideo = true
 			}
 		case "audio":
 			hasAudio = true
 		}
 	}
-	if hasVideo {
-		return domain.Video
+
+	switch {
+	case hasVideo:
+		return domain.Video, containerMIMEType(data.Format.FormatName, domain.Video)
+	case hasAudio:
+		return domain.Audio, containerMIMEType(data.Format.FormatName, domain.Audio)
+	default:
+		return domain.Image, imageMIME
 	}
-	if hasAudio {
-		return domain.Audio
+}
+
+// containerMIMEType maps ffprobe's (often comma-separated, ambiguous) container
+// format name to a concrete MIME type, using fileType to disambiguate formats
+// ffmpeg can't tell apart from the container alone (e.g. mp4 video vs m4a audio).
+func containerMIMEType(formatName string, fileType domain.FileType) string {
+	for name := range strings.SplitSeq(formatName, ",") {
+		switch name {
+		case "mp3":
+			return "audio/mpeg"
+		case "wav":
+			return "audio/wav"
+		case "ogg":
+			return "audio/ogg"
+		case "flac":
+			return "audio/flac"
+		case "webm", "matroska":
+			if fileType == domain.Audio {
+				return "audio/webm"
+			}
+			return "video/webm"
+		case "mov", "mp4", "m4a", "3gp", "3g2", "mj2":
+			if fileType == domain.Audio {
+				return "audio/mp4"
+			}
+			return "video/mp4"
+		}
 	}
-	return domain.Image
+	if fileType == domain.Audio {
+		return "audio/mpeg"
+	}
+	return "video/mp4"
 }
 
 func (s *AttachmentService) generateKey(filename string, public bool) string {

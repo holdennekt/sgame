@@ -6,7 +6,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -19,12 +18,11 @@ import (
 type MinioStorage struct {
 	client     *minio.Client
 	bucketName string
-	publicBase string
 	userAgent  string
 	httpClient *http.Client
 }
 
-func NewMinioStorage(client *minio.Client, bucketName, publicBase, userAgent string) storage.Storage {
+func NewMinioStorage(client *minio.Client, bucketName, userAgent string) storage.Storage {
 	exists, err := client.BucketExists(context.Background(), bucketName)
 	if err != nil {
 		slog.Error("fatal error", "err", err)
@@ -61,7 +59,6 @@ func NewMinioStorage(client *minio.Client, bucketName, publicBase, userAgent str
 	return &MinioStorage{
 		client:     client,
 		bucketName: bucketName,
-		publicBase: publicBase,
 		userAgent:  userAgent,
 		httpClient: &http.Client{
 			Timeout: 60 * time.Minute,
@@ -177,21 +174,39 @@ func (s *MinioStorage) GetStats(ctx context.Context, key string) (*storage.Stats
 	}, nil
 }
 
+func (s *MinioStorage) SetContentType(ctx context.Context, key, contentType string) error {
+	src := minio.CopySrcOptions{Bucket: s.bucketName, Object: key}
+	dst := minio.CopyDestOptions{
+		Bucket:          s.bucketName,
+		Object:          key,
+		ContentType:     contentType,
+		ReplaceMetadata: true,
+	}
+	if _, err := s.client.CopyObject(ctx, dst, src); err != nil {
+		errResponse := minio.ToErrorResponse(err)
+		if errResponse.Code == "NoSuchKey" {
+			return custerr.NewNotFoundErr(fmt.Sprintf("file with key %q not found", key))
+		}
+		return custerr.NewInternalErr(fmt.Errorf("failed to update content type: %w", err))
+	}
+	return nil
+}
+
+// URL returns a path relative to our own domain rather than an absolute URL —
+// nginx proxies /storage/ on the same host:port the app is served on, so a
+// relative URL resolves correctly regardless of which address (localhost,
+// LAN IP, a tunnel, ...) the browser used to reach the app.
 func (s *MinioStorage) URL(ctx context.Context, key string, ttl time.Duration) (string, error) {
 	if strings.HasPrefix(key, "public/") {
-		return fmt.Sprintf("%s/storage/%s/%s", s.publicBase, s.bucketName, key), nil
+		return fmt.Sprintf("/storage/%s/%s", s.bucketName, key), nil
 	}
 
 	u, err := s.client.PresignedGetObject(ctx, s.bucketName, key, ttl, nil)
 	if err != nil {
 		return "", custerr.NewInternalErr(fmt.Errorf("failed to generate presigned URL: %w", err))
 	}
-	furl, _ := url.Parse(s.publicBase)
-	u.Host = furl.Host
-	u.Scheme = furl.Scheme
-	u.Path = "/storage" + u.Path
 
-	return u.String(), nil
+	return "/storage" + u.Path + "?" + u.RawQuery, nil
 }
 
 func (s *MinioStorage) SignUploadPolicy(ctx context.Context, in storage.SignUploadPolicyInput) (*storage.SignUploadPolicyResult, error) {
@@ -205,10 +220,6 @@ func (s *MinioStorage) SignUploadPolicy(ctx context.Context, in storage.SignUplo
 	if err != nil {
 		return nil, custerr.NewInternalErr(fmt.Errorf("failed to generate presigned set URL and formData: %w", err))
 	}
-	furl, _ := url.Parse(s.publicBase)
-	u.Host = furl.Host
-	u.Scheme = furl.Scheme
-	u.Path = "/storage" + u.Path
 
-	return &storage.SignUploadPolicyResult{URL: u.String(), FormData: formData}, nil
+	return &storage.SignUploadPolicyResult{URL: "/storage" + u.Path, FormData: formData}, nil
 }

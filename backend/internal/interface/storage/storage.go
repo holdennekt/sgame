@@ -17,6 +17,9 @@ type Storage interface {
 	GetStats(ctx context.Context, key string) (*Stats, error)
 	URL(ctx context.Context, key string, ttl time.Duration) (string, error)
 	SignUploadPolicy(ctx context.Context, in SignUploadPolicyInput) (*SignUploadPolicyResult, error)
+	// SetContentType updates an existing object's Content-Type metadata in place,
+	// without re-uploading its bytes.
+	SetContentType(ctx context.Context, key, contentType string) error
 }
 
 type UploadInput struct {

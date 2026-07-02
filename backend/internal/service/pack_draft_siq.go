@@ -7,7 +7,6 @@ import (
 	"encoding/xml"
 	"io"
 	"log/slog"
-	"mime"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -252,9 +251,10 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 		return nil, custerr.NewBadRequestErr("invalid siq file: cannot parse content.xml: " + err.Error())
 	}
 
-	// processMedia uploads one zip entry to storage, probes it with ffprobe,
-	// and returns a fully populated *domain.Attachment.
-	// On any non-fatal error it returns nil or a best-effort result.
+	// processMedia probes one zip entry with ffprobe, uploads it to storage, and
+	// returns a fully populated *domain.Attachment. It returns nil if the media
+	// can't be read or probed — an attachment is only created once its Type and
+	// MimeType are known from its actual content.
 	processMedia := func(zipPath string) *domain.Attachment {
 		f := zipIndex[strings.ToLower(zipPath)]
 		if f == nil {
@@ -273,9 +273,29 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 			return nil
 		}
 
-		filename := filepath.Base(f.Name)
-		mimeType := mime.TypeByExtension(filepath.Ext(filename))
-		key := s.attachmentService.generateKey(filename, false)
+		tmpFile, err := os.CreateTemp("", "sgame-probe-*")
+		if err != nil {
+			slog.Error("siq import: failed to create temp file", "err", err)
+			return nil
+		}
+		defer func() { _ = os.Remove(tmpFile.Name()) }()
+		defer func() { _ = tmpFile.Close() }()
+
+		if _, err := tmpFile.Write(data); err != nil {
+			slog.Error("siq import: failed to buffer media for probing", "path", zipPath, "err", err)
+			return nil
+		}
+
+		probeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		probeData, err := ffprobe.ProbeURL(probeCtx, tmpFile.Name())
+		cancel()
+		if err != nil {
+			slog.Error("siq import: failed to probe media", "path", zipPath, "err", err)
+			return nil
+		}
+
+		fileType, mimeType := classifyProbe(probeData)
+		key := s.attachmentService.generateKey(filepath.Base(f.Name), false)
 
 		if err := s.storage.Upload(ctx, storage.UploadInput{
 			Key:      key,
@@ -287,34 +307,13 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 			return nil
 		}
 
-		tmpFile, err := os.CreateTemp("", "sgame-probe-*")
-		if err != nil {
-			slog.Error("siq import: failed to create temp file", "err", err)
-			return &domain.Attachment{Key: key, MimeType: mimeType, Size: int64(len(data)), Type: domain.Image}
-		}
-		defer func() { _ = os.Remove(tmpFile.Name()) }()
-		defer func() { _ = tmpFile.Close() }()
-
-		if _, err := io.Copy(tmpFile, bytes.NewReader(data)); err != nil {
-			slog.Error("siq import: failed to buffer media for probing", "path", zipPath, "err", err)
-			return &domain.Attachment{Key: key, MimeType: mimeType, Size: int64(len(data)), Type: domain.Image}
-		}
-
-		probeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
-		probeData, err := ffprobe.ProbeURL(probeCtx, tmpFile.Name())
-		if err != nil {
-			slog.Error("siq import: failed to probe media", "path", zipPath, "err", err)
-			return &domain.Attachment{Key: key, MimeType: mimeType, Size: int64(len(data)), Type: domain.Image}
-		}
-
 		att := &domain.Attachment{
 			Key:      key,
 			MimeType: mimeType,
 			Size:     int64(len(data)),
-			Type:     s.attachmentService.attachmentTypeFromProbe(probeData),
+			Type:     fileType,
 		}
-		if att.Type == domain.Video || att.Type == domain.Audio {
+		if fileType == domain.Video || fileType == domain.Audio {
 			att.Duration = probeData.Format.DurationSeconds
 		} else {
 			att.Duration = DEFAULT_ATTACHMENT_DURATION
