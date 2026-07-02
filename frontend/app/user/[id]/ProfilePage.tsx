@@ -33,15 +33,15 @@ export default function ProfilePage({
 
   const handleDeleteAccount = async () => {
     if (!confirm("Delete your account? This cannot be undone.")) return;
-    await logout();
     try {
       await deleteUser(user.id);
-      router.push("/login");
     } catch (e) {
       toast.error(isError(e) ? e.error : "Delete failed", {
         containerId: "profile",
       });
+      return;
     }
+    router.push("/login");
   };
   const [newRoomModal, setNewRoomModal] = useState<{
     isOpen: boolean;
