@@ -68,7 +68,7 @@ function PackCard({
           </div>
           <p className="text-xs text-on-surface-muted mt-0.5">
             by{" "}
-            {pack.createdBy.isGuest ? (
+            {pack.createdBy.isDeleted ? (
               <span className="text-on-surface">{pack.createdBy.name}</span>
             ) : (
               <Link

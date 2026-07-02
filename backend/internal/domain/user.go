@@ -3,10 +3,11 @@ package domain
 const SYSTEM = "SYSTEM"
 
 type User struct {
-	Id      string  `json:"id" bson:"id"`
-	Name    string  `json:"name" bson:"name"`
-	Avatar  *string `json:"avatar" bson:"avatar"`
-	IsGuest bool    `json:"isGuest" bson:"isGuest"`
+	Id        string  `json:"id" bson:"id"`
+	Name      string  `json:"name" bson:"name"`
+	Avatar    *string `json:"avatar" bson:"avatar"`
+	IsGuest   bool    `json:"isGuest" bson:"isGuest"`
+	IsDeleted bool    `json:"isDeleted" bson:"-"`
 }
 
 type DbUser struct {

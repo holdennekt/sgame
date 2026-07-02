@@ -8,6 +8,7 @@ export type User = {
   name: string;
   avatar: string | null;
   isGuest?: boolean;
+  isDeleted?: boolean;
 };
 
 export type ErrorBody = { error: string };

@@ -28,12 +28,28 @@ const (
 type PackService struct {
 	packRepository    repository.Pack
 	packDraftRepo     repository.PackDraft
+	userRepository    repository.User
 	storage           storage.Storage
 	attachmentService *AttachmentService
 }
 
-func NewPackService(packRepository repository.Pack, packDraftRepo repository.PackDraft, storage storage.Storage, attachmentService *AttachmentService) *PackService {
-	return &PackService{packRepository, packDraftRepo, storage, attachmentService}
+func NewPackService(packRepository repository.Pack, packDraftRepo repository.PackDraft, userRepository repository.User, storage storage.Storage, attachmentService *AttachmentService) *PackService {
+	return &PackService{packRepository, packDraftRepo, userRepository, storage, attachmentService}
+}
+
+// resolveCreator returns the current User for id, falling back to a "Deleted
+// user" placeholder if the account no longer exists.
+// Cache collapses repeat lookups for the same creator across a page of results.
+func resolveCreator(ctx context.Context, userRepository repository.User, cache map[string]domain.User, id string) domain.User {
+	if cached, ok := cache[id]; ok {
+		return cached
+	}
+	resolved := domain.User{Id: id, Name: "Deleted user", IsDeleted: true}
+	if user, err := userRepository.GetById(ctx, id); err == nil {
+		resolved = user.User
+	}
+	cache[id] = resolved
+	return resolved
 }
 
 func (s *PackService) Create(ctx context.Context, user domain.User, cpr dto.CreatePackRequest) (string, error) {
@@ -90,6 +106,7 @@ func (s *PackService) GetById(ctx context.Context, userId, id string) (any, erro
 	if err != nil {
 		return nil, err
 	}
+	pack.CreatedBy = resolveCreator(ctx, s.userRepository, map[string]domain.User{}, pack.CreatedBy.Id)
 
 	if userId != pack.CreatedBy.Id && userId != domain.SYSTEM {
 		if pack.Type != domain.Public {
@@ -150,11 +167,27 @@ func (s *PackService) GetPreviews(ctx context.Context, userId string, search dto
 }
 
 func (s *PackService) GetHiddens(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.HiddenPack, int, error) {
-	return s.packRepository.GetHiddens(ctx, userId, search)
+	hiddenPacks, total, err := s.packRepository.GetHiddens(ctx, userId, search)
+	if err != nil {
+		return nil, 0, err
+	}
+	cache := map[string]domain.User{}
+	for i := range hiddenPacks {
+		hiddenPacks[i].CreatedBy = resolveCreator(ctx, s.userRepository, cache, hiddenPacks[i].CreatedBy.Id)
+	}
+	return hiddenPacks, total, nil
 }
 
 func (s *PackService) GetCreatedBy(ctx context.Context, userId, createdBy string, search dto.SearchRequest) ([]domain.HiddenPack, int, error) {
-	return s.packRepository.GetCreatedBy(ctx, userId, createdBy, search)
+	hiddenPacks, total, err := s.packRepository.GetCreatedBy(ctx, userId, createdBy, search)
+	if err != nil {
+		return nil, 0, err
+	}
+	cache := map[string]domain.User{}
+	for i := range hiddenPacks {
+		hiddenPacks[i].CreatedBy = resolveCreator(ctx, s.userRepository, cache, hiddenPacks[i].CreatedBy.Id)
+	}
+	return hiddenPacks, total, nil
 }
 
 func (s *PackService) UpdateFromDraft(ctx context.Context, user domain.User, draft *domain.PackDraft) error {

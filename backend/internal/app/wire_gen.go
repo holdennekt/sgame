@@ -45,7 +45,7 @@ func InitializeApp(mdb *mongo.Database, rds *redis.Client, storage2 storage.Stor
 	pack := mongo2.NewPackRepository(mdb)
 	packDraft := mongo2.NewPackDraftRepository(mdb)
 	attachmentService := service.NewAttachmentService(storage2)
-	packService := service.NewPackService(pack, packDraft, storage2, attachmentService)
+	packService := service.NewPackService(pack, packDraft, user, storage2, attachmentService)
 	packController := http.NewPackController(packService)
 	packDraftService := service.NewPackDraftService(packDraft, pack, storage2, attachmentService, packService)
 	packDraftController := http.NewPackDraftController(packDraftService)

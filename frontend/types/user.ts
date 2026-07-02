@@ -22,6 +22,7 @@ export interface User {
   name: string;
   avatar: string | null;
   isGuest?: boolean;
+  isDeleted?: boolean;
 }
 
 export interface DbUser extends User {

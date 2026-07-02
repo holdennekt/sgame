@@ -106,6 +106,7 @@ func (s *PackDraftService) GetById(ctx context.Context, userId, id string) (*dom
 	if draft.CreatedBy.Id != userId {
 		return nil, custerr.NewForbiddenErr("cannot access another user's draft")
 	}
+	draft.CreatedBy = resolveCreator(ctx, s.packService.userRepository, map[string]domain.User{}, draft.CreatedBy.Id)
 	populateAttachmentURLs(ctx, s.storage, draft)
 	return draft, nil
 }
@@ -143,7 +144,15 @@ func populateAttachmentURLs(ctx context.Context, stor storage.Storage, draft *do
 }
 
 func (s *PackDraftService) GetByUser(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackDraft, int, error) {
-	return s.packDraftRepo.GetByUser(ctx, userId, search)
+	drafts, total, err := s.packDraftRepo.GetByUser(ctx, userId, search)
+	if err != nil {
+		return nil, 0, err
+	}
+	creator := resolveCreator(ctx, s.packService.userRepository, map[string]domain.User{}, userId)
+	for i := range drafts {
+		drafts[i].CreatedBy = creator
+	}
+	return drafts, total, nil
 }
 
 func (s *PackDraftService) Update(ctx context.Context, user domain.User, id string, req dto.UpdatePackDraftRequest) (*domain.PackDraft, error) {

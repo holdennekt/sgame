@@ -39,14 +39,14 @@ func (r *packDraftRepository) init(ctx context.Context) error {
 		}
 	}
 	_, err := r.db.Collection(PACK_DRAFTS_COLLECTION).Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys: bson.D{{Key: "createdBy.id", Value: 1}},
+		Keys: bson.D{{Key: "createdBy", Value: 1}},
 	})
 	return err
 }
 
 type mongoPackDraft struct {
 	Id           primitive.ObjectID `bson:"_id,omitempty"`
-	CreatedBy    domain.User        `bson:"createdBy"`
+	CreatedBy    string             `bson:"createdBy"`
 	Name         string             `bson:"name"`
 	Type         domain.PrivacyType `bson:"type"`
 	Rounds       []domain.Round     `bson:"rounds"`
@@ -60,7 +60,7 @@ func fromDomainDraft(d *domain.PackDraft) *mongoPackDraft {
 	objId, _ := primitive.ObjectIDFromHex(d.Id)
 	return &mongoPackDraft{
 		Id:           objId,
-		CreatedBy:    d.CreatedBy,
+		CreatedBy:    d.CreatedBy.Id,
 		Name:         d.Name,
 		Type:         d.Type,
 		Rounds:       d.Rounds,
@@ -92,7 +92,7 @@ func toDomainDraft(m *mongoPackDraft) *domain.PackDraft {
 	}
 	return &domain.PackDraft{
 		Id:           m.Id.Hex(),
-		CreatedBy:    m.CreatedBy,
+		CreatedBy:    domain.User{Id: m.CreatedBy},
 		Name:         m.Name,
 		Type:         m.Type,
 		Rounds:       rounds,
@@ -130,8 +130,8 @@ func (r *packDraftRepository) GetById(ctx context.Context, id string) (*domain.P
 
 func (r *packDraftRepository) GetByUser(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackDraft, int, error) {
 	filter := bson.M{
-		"createdBy.id": userId,
-		"name":         bson.M{"$regex": search.SearchRequest, "$options": "i"},
+		"createdBy": userId,
+		"name":      bson.M{"$regex": search.SearchRequest, "$options": "i"},
 	}
 	total, err := r.db.Collection(PACK_DRAFTS_COLLECTION).CountDocuments(ctx, filter)
 	if err != nil {
@@ -187,7 +187,7 @@ func (r *packDraftRepository) Update(ctx context.Context, draft *domain.PackDraf
 func (r *packDraftRepository) GetByUserAndLinkedPack(ctx context.Context, userId, packId string) (*domain.PackDraft, error) {
 	var m mongoPackDraft
 	err := r.db.Collection(PACK_DRAFTS_COLLECTION).FindOne(ctx, bson.M{
-		"createdBy.id": userId,
+		"createdBy":    userId,
 		"linkedPackId": packId,
 	}).Decode(&m)
 	if err != nil {
@@ -208,8 +208,8 @@ func (r *packDraftRepository) GetReferencedKeys(ctx context.Context, userId stri
 		return nil, custerr.NewBadRequestErr(fmt.Sprintf("%q is an invalid id", excludeId))
 	}
 	filter := bson.M{
-		"_id":          bson.M{"$ne": excludeObjId},
-		"createdBy.id": userId,
+		"_id":       bson.M{"$ne": excludeObjId},
+		"createdBy": userId,
 		"$or": bson.A{
 			bson.M{"rounds.categories.questions.attachment.key": bson.M{"$in": keys}},
 			bson.M{"rounds.categories.questions.comment.attachment.key": bson.M{"$in": keys}},
