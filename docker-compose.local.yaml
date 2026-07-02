@@ -104,7 +104,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 5s
 
   redis:
     image: redis/redis-stack-server:7.4.0-v8
@@ -117,7 +117,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 5s
     volumes:
       - redis_data:/data
 
@@ -127,12 +127,14 @@ services:
       - 11434:11434
     volumes:
       - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: -1
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 5s
 
   ollama-init:
     image: ollama/ollama:latest
@@ -161,9 +163,10 @@ services:
       - minio_data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
 
   prometheus:
     image: prom/prometheus:v3.7.3

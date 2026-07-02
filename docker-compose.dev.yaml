@@ -9,7 +9,7 @@ services:
       frontend:
         condition: service_started
       backend:
-        condition: service_started
+        condition: service_healthy
       minio:
         condition: service_healthy
 
@@ -22,7 +22,8 @@ services:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
       NODE_ENV: development
       CHOKIDAR_USEPOLLING: true
@@ -35,6 +36,8 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - ./backend:/app
+      - backend_go_mod:/go/pkg/mod
+      - backend_go_build_cache:/root/.cache/go-build
     ports:
       - 8080:80
     depends_on:
@@ -44,6 +47,12 @@ services:
         condition: service_healthy
       ollama-init:
         condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
     environment:
       APP_ENV: development
       HOST: 0.0.0.0
@@ -112,7 +121,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 5s
 
   redis:
     image: redis/redis-stack-server:7.4.0-v8
@@ -125,7 +134,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 5s
     volumes:
       - redis_data:/data
 
@@ -135,12 +144,14 @@ services:
       - 11434:11434
     volumes:
       - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: -1
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 5s
 
   ollama-init:
     image: ollama/ollama:latest
@@ -169,9 +180,10 @@ services:
       - minio_data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
 
 volumes:
   redis_data:
@@ -179,3 +191,5 @@ volumes:
   minio_data:
   ollama_data:
   frontend_node_modules:
+  backend_go_mod:
+  backend_go_build_cache:
