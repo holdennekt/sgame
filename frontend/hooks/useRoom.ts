@@ -114,8 +114,14 @@ export function useRoom(
     send("validate_answer", { isCorrect });
   const validateFinalRoundAnswer = (isCorrect: boolean) =>
     send("validate_final_round_answer", { isCorrect });
-  const skipQuestion = () => send("skip_question");
-  const skipRound = () => send("skip_round");
+  const skipQuestion = () => {
+    if (!confirm("Skip this question?")) return;
+    send("skip_question");
+  };
+  const skipRound = () => {
+    if (!confirm("Skip this round?")) return;
+    send("skip_round");
+  };
   const changeScore = (playerId: string, score: number) =>
     send("change_score", { playerId, score });
 
