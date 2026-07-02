@@ -28,6 +28,10 @@ func getSpectatorsKey(id string) string {
 	return domain.ROOM_PREFIX + id + domain.SPECTATORS_POSTFIX
 }
 
+func getOwnerKey(id string) string {
+	return domain.ROOM_PREFIX + id + domain.INTERNAL_POSTFIX + domain.OWNER_POSTFIX
+}
+
 type roomCache struct {
 	client *redis.Client
 	locker *redislock.Client
@@ -105,7 +109,7 @@ func (c *roomCache) SafeUpdate(ctx context.Context, roomId string, updateFunc fu
 }
 
 func (c *roomCache) Delete(ctx context.Context, roomId string) error {
-	if err := c.client.Del(ctx, getKey(roomId), getLockKey(roomId), getSpectatorsKey(roomId)).Err(); err != nil {
+	if err := c.client.Del(ctx, getKey(roomId), getLockKey(roomId), getSpectatorsKey(roomId), getOwnerKey(roomId)).Err(); err != nil {
 		return custerr.NewInternalErr(err)
 	}
 	return nil
@@ -145,12 +149,11 @@ func (c *roomCache) Persist(ctx context.Context, roomId string) error {
 
 func (c *roomCache) TrySetOwner(ctx context.Context, roomId string, ttl time.Duration) (bool, error) {
 	ip := http.GetServerIP()
-	key := domain.ROOM_PREFIX + roomId + domain.INTERNAL_POSTFIX + domain.OWNER_POSTFIX
-	return c.client.SetNX(ctx, key, ip, ttl).Result()
+	return c.client.SetNX(ctx, getOwnerKey(roomId), ip, ttl).Result()
 }
 
 func (c *roomCache) UpdateOwner(ctx context.Context, roomId string, ttl time.Duration) error {
-	key := domain.ROOM_PREFIX + roomId + domain.INTERNAL_POSTFIX + domain.OWNER_POSTFIX
+	key := getOwnerKey(roomId)
 	return c.client.Expire(ctx, key, ttl).Err()
 }
 

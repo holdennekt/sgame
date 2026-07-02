@@ -17,10 +17,7 @@ import (
 	"github.com/holdennekt/sgame/backend/pkg/metrics"
 )
 
-const (
-	IDLE_ROOM_TTL       = 10 * time.Minute
-	EXPIRE_GRACE_PERIOD = 1 * time.Second
-)
+const EXPIRE_GRACE_PERIOD = 1 * time.Second
 
 type userDisconnectedPayload struct {
 	UserId string `json:"userId"`
@@ -61,7 +58,13 @@ func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel,
 				slog.Error("error", "err", err)
 				return
 			}
+
+			if err := roomCache.Delete(ctx, roomId); err != nil {
+				slog.Error("error", "err", err)
+				return
+			}
 			metrics.RoomsActive.Dec()
+
 			deletedRoomMsg := outgoing.NewRoomDeletedMessage(roomId)
 			if err := lobbyServer.Send(ctx, deletedRoomMsg); err != nil {
 				slog.Error("error", "err", err)
@@ -72,6 +75,7 @@ func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel,
 			if err := internalServer.Send(ctx, deletedRoomMsg); err != nil {
 				slog.Error("error", "err", err)
 			}
+
 			if room.State != domain.WaitingForStart && room.State != domain.GameOver {
 				if err := roomRepository.Create(ctx, room); err != nil {
 					slog.Error("error", "err", err)
