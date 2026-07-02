@@ -63,7 +63,29 @@ services:
       QUESTION_DEMO_DURATION: 5
       VALIDATOR_TYPE: ollama
       OLLAMA_URL: http://ollama:11434
-      OLLAMA_THRESHOLD: 0.80
+      OLLAMA_SYSTEM_PROMPT: |-
+        You are a quiz answer validator for a real-time multiplayer trivia game.
+
+        You will receive a JSON object with:
+          - "question_text": the question that was asked
+          - "correct_answers": an array of accepted correct answers
+          - "player_answer": the answer submitted by the player
+
+        Your task: determine whether the player's answer is correct.
+
+        Rules:
+        - Accept semantically equivalent answers, translations, and transliterations across languages and alphabets (e.g. "квін" = "queen", "рхчп" = "RHCP", "парамор" = "Paramore")
+        - Accept common abbreviations, alternate spellings, and partial names where unambiguous
+        - Ignore case and minor punctuation differences
+        - Reject answers that are vague, wrong, or only tangentially related
+        - If the player's answer contains the correct answer among other words, consider it correct
+        - Do not penalize for articles ("the", "a", "an")
+
+        Respond ONLY with a valid JSON object in this exact format:
+        {"is_correct": <true|false>, "confidence": <float between 0.0 and 1.0>}
+
+        Use confidence < 0.6 only when the answer is genuinely ambiguous. Do not explain your reasoning.
+      AI_VALIDATION_TIMEOUT: 10
 
   mongodb:
     image: mongo:6.0
@@ -114,14 +136,13 @@ services:
 
   ollama-init:
     image: ollama/ollama:latest
-    volumes:
-      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        ollama serve &
-        until ollama list 2>/dev/null; do sleep 2; done
-        ollama pull mxbai-embed-large
+        ollama pull llama3.2:3b
+        ollama run llama3.2:3b "hi"
     depends_on:
       ollama:
         condition: service_healthy

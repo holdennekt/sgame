@@ -107,7 +107,7 @@ func provideLobbyEventsProcessorGetter(roomCache cache.Room, pubsubGetter PubSub
 func provideAnswerValidator(cfg *config.Config) validator.AnswerValidator {
 	switch cfg.ValidatorType {
 	case "ollama":
-		return validator2.NewLocalEmbeddingValidator(cfg.OllamaURL, cfg.OllamaThreshold)
+		return validator2.NewLocalLLMValidator(cfg.OllamaURL, cfg.OllamaSystemPrompt)
 	case "gemini":
 		v, err := validator2.NewGeminiValidator(context.Background(), cfg.GeminiProjectID, cfg.GeminiLocation, cfg.GeminiSystemPrompt)
 		if err != nil {

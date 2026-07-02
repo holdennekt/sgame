@@ -39,13 +39,13 @@ type Config struct {
 	QuestionDemoDuration int // seconds; env: QUESTION_DEMO_DURATION, default 5
 	IdleRoomTTL          int // seconds; env: IDLE_ROOM_TTL, default 600
 
-	ValidatorType       string  // env: VALIDATOR_TYPE; "ollama" | "gemini" | "" (disabled)
-	OllamaURL           string  // env: OLLAMA_URL
-	OllamaThreshold     float64 // env: OLLAMA_THRESHOLD; default 0.80
-	GeminiProjectID     string  // env: GEMINI_PROJECT_ID
-	GeminiLocation      string  // env: GEMINI_LOCATION
-	GeminiSystemPrompt  string  // env: GEMINI_SYSTEM_PROMPT
-	AIValidationTimeout int     // env: AI_VALIDATION_TIMEOUT; seconds; default 5
+	ValidatorType       string // env: VALIDATOR_TYPE; "ollama" | "gemini" | "" (disabled)
+	OllamaURL           string // env: OLLAMA_URL
+	OllamaSystemPrompt  string // env: OLLAMA_SYSTEM_PROMPT
+	GeminiProjectID     string // env: GEMINI_PROJECT_ID
+	GeminiLocation      string // env: GEMINI_LOCATION
+	GeminiSystemPrompt  string // env: GEMINI_SYSTEM_PROMPT
+	AIValidationTimeout int    // env: AI_VALIDATION_TIMEOUT; seconds; default 10
 }
 
 func Load() (*Config, error) {
@@ -69,13 +69,9 @@ func Load() (*Config, error) {
 		idleRoomTTL = 600
 	}
 
-	ollamaThreshold, _ := strconv.ParseFloat(os.Getenv("OLLAMA_THRESHOLD"), 64)
-	if ollamaThreshold == 0 {
-		ollamaThreshold = 0.80
-	}
 	aiValidationTimeout, _ := strconv.Atoi(os.Getenv("AI_VALIDATION_TIMEOUT"))
 	if aiValidationTimeout == 0 {
-		aiValidationTimeout = 5
+		aiValidationTimeout = 10
 	}
 
 	cfg := &Config{
@@ -112,7 +108,7 @@ func Load() (*Config, error) {
 
 		ValidatorType:       os.Getenv("VALIDATOR_TYPE"),
 		OllamaURL:           os.Getenv("OLLAMA_URL"),
-		OllamaThreshold:     ollamaThreshold,
+		OllamaSystemPrompt:  os.Getenv("OLLAMA_SYSTEM_PROMPT"),
 		GeminiProjectID:     os.Getenv("GEMINI_PROJECT_ID"),
 		GeminiLocation:      os.Getenv("GEMINI_LOCATION"),
 		GeminiSystemPrompt:  os.Getenv("GEMINI_SYSTEM_PROMPT"),
