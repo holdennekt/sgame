@@ -85,6 +85,18 @@ export const joinRoom = async (
   return resp.json();
 };
 
+// Verifies a spectator password before navigating to the room, so a wrong
+// password fails inline in the modal instead of after already navigating.
+export const checkRoomPassword = async (
+  id: string,
+  password: string | undefined
+): Promise<void> => {
+  const url = new URL(`/api/rooms/${id}`, window.location.origin);
+  if (password) url.searchParams.set(PASSWORD_QUERY_PARAM, password);
+  const resp = await fetch(url, { cache: "no-store" });
+  if (!resp.ok) throw await resp.json();
+};
+
 export const leaveRoom = async (id: string): Promise<void> => {
   const resp = await fetch(`/api/rooms/${id}/leave`, { method: "PATCH" });
   if (!resp.ok) throw await resp.json();

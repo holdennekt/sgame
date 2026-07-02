@@ -1,8 +1,7 @@
 import { useState } from "react";
 import Modal from "@/components/Modal";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
-import { joinRoom } from "@/app/api";
+import { joinRoom, checkRoomPassword } from "@/app/api";
 import { isError } from "@/middleware";
 
 type Mode = "join" | "spectate";
@@ -21,12 +20,14 @@ export default function PasswordModal({
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleConfirm = async () => {
     if (!roomId) return;
     setLoading(true);
     try {
       if (mode === "spectate") {
+        await checkRoomPassword(roomId, password);
         router.push(
           `/rooms/${roomId}?spectate=true&password=${encodeURIComponent(
             password
@@ -37,7 +38,7 @@ export default function PasswordModal({
         router.push(`/rooms/${roomId}`);
       }
     } catch (e) {
-      if (isError(e)) toast.error(e.error, { containerId: "lobby" });
+      setError(isError(e) ? e.error : "Something went wrong");
       setLoading(false);
     }
   };
@@ -49,6 +50,7 @@ export default function PasswordModal({
       isOpen={isOpen}
       onClose={() => {
         setPassword("");
+        setError(null);
         close();
       }}
       closeByClickingOutside
@@ -61,11 +63,15 @@ export default function PasswordModal({
           type="text"
           placeholder="Password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setError(null);
+          }}
           onKeyDown={(e) => {
             if (e.code === "Enter") void handleConfirm();
           }}
         />
+        {error && <p className="text-xs text-danger">{error}</p>}
       </div>
       <div className="mt-4 flex flex-row-reverse">
         <button
