@@ -181,7 +181,7 @@ func (p *RoomEventsProcessor) handleClientClosure(ctx context.Context) error {
 	if err := p.roomServer.Send(ctx, chatMessage); err != nil {
 		return err
 	}
-	userDisconnected := server.NewUserDisconnectedMessage(p.id)
+	userDisconnected := server.NewUserDisconnectedMessage(p.user.Id)
 	return p.roomInternalServer.Send(ctx, userDisconnected)
 }
 
