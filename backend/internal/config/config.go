@@ -52,25 +52,25 @@ func Load() (*Config, error) {
 	redisDB, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
 	minioUseSSL, _ := strconv.ParseBool(os.Getenv("MINIO_USE_SSL"))
 
-	timeToBet, _ := strconv.Atoi(os.Getenv("TIME_TO_BET"))
-	if timeToBet == 0 {
+	timeToBet, err := strconv.Atoi(os.Getenv("TIME_TO_BET"))
+	if err != nil {
 		timeToBet = 60
 	}
-	timeToPass, _ := strconv.Atoi(os.Getenv("TIME_TO_PASS"))
-	if timeToPass == 0 {
+	timeToPass, err := strconv.Atoi(os.Getenv("TIME_TO_PASS"))
+	if err != nil {
 		timeToPass = 60
 	}
-	questionDemoDuration, _ := strconv.Atoi(os.Getenv("QUESTION_DEMO_DURATION"))
-	if questionDemoDuration == 0 {
+	questionDemoDuration, err := strconv.Atoi(os.Getenv("QUESTION_DEMO_DURATION"))
+	if err != nil {
 		questionDemoDuration = 5
 	}
-	idleRoomTTL, _ := strconv.Atoi(os.Getenv("IDLE_ROOM_TTL"))
-	if idleRoomTTL == 0 {
+	idleRoomTTL, err := strconv.Atoi(os.Getenv("IDLE_ROOM_TTL"))
+	if err != nil {
 		idleRoomTTL = 600
 	}
 
-	aiValidationTimeout, _ := strconv.Atoi(os.Getenv("AI_VALIDATION_TIMEOUT"))
-	if aiValidationTimeout == 0 {
+	aiValidationTimeout, err := strconv.Atoi(os.Getenv("AI_VALIDATION_TIMEOUT"))
+	if err != nil {
 		aiValidationTimeout = 10
 	}
 
