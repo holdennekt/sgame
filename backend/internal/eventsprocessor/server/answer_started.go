@@ -12,6 +12,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
 	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
 	"github.com/holdennekt/sgame/backend/internal/message"
+	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
 type AnswerStartedMessage struct {
@@ -36,25 +37,34 @@ func HandleAnswerStartedMessage(ctx context.Context, server realtime.Channel, in
 	if err != nil {
 		return err
 	}
+
+	answeringEnded :=
+		room.State != domain.Answering ||
+			room.AnsweringPlayer.Id != asp.UserId ||
+			!asp.IsCurrent(room)
+	if answeringEnded {
+		return nil
+	}
+
 	time.AfterFunc(time.Until(room.AnsweringPlayer.TimerEndsAt), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		newerRoom, err := roomCache.SafeUpdate(ctx, roomId, func(newRoom *domain.Room) error {
-			answerRequestEnded :=
+			answeringEnded :=
 				newRoom.State != domain.Answering ||
 					newRoom.AnsweringPlayer.Id != asp.UserId ||
 					!asp.IsCurrent(newRoom)
 			deadlineChanged := newRoom.AnsweringPlayer != nil &&
 				!room.AnsweringPlayer.TimerEndsAt.Equal(newRoom.AnsweringPlayer.TimerEndsAt)
-			if answerRequestEnded || deadlineChanged || newRoom.PausedState.Paused {
+			if answeringEnded || deadlineChanged || newRoom.PausedState.Paused {
 				return ErrDeferredFunctionCancelled
 			}
 
 			return newRoom.ValidateAnswer(domain.SYSTEM, false)
 		})
 		if err != nil {
-			if err != ErrDeferredFunctionCancelled {
+			if !isIgnorableDeferredError(err) {
 				slog.Error("error", "err", err)
 			}
 			return
@@ -91,3 +101,16 @@ func HandleAnswerStartedMessage(ctx context.Context, server realtime.Channel, in
 }
 
 var ErrDeferredFunctionCancelled error = errors.New("deferred function is cancelled")
+
+// isIgnorableDeferredError reports whether err is an expected outcome for a
+// deferred time.AfterFunc callback that fires after the room has moved on —
+// either the guarded state no longer matches (ErrDeferredFunctionCancelled),
+// or the room was deleted entirely (idle cleanup, game already over) before
+// the timer fired. Neither is a bug worth logging as an error.
+func isIgnorableDeferredError(err error) bool {
+	if err == ErrDeferredFunctionCancelled {
+		return true
+	}
+	_, isRoomDeleted := err.(custerr.NotFoundErr)
+	return isRoomDeleted
+}

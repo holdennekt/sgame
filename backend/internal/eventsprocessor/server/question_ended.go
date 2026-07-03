@@ -26,9 +26,15 @@ func HandleQuestionEndedMessage(ctx context.Context, server realtime.Channel, in
 		return err
 	}
 
+	var roundAdvanced bool
 	var nextRoundStarted bool
 	newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
+		if room.State != domain.SelectingQuestion {
+			return nil
+		}
+
 		if !room.AnyAvailableQuestions() {
+			roundAdvanced = true
 			nextRoundStarted = room.StartNextRegularRound(pack)
 			if !nextRoundStarted {
 				finalRoundStarted, err := room.StartFinalRound(pack, getAttachmentUrl)
@@ -49,6 +55,10 @@ func HandleQuestionEndedMessage(ctx context.Context, server realtime.Channel, in
 	correctAnswerDemoMessage := outgoing.NewCorrectAnswerDemoMessage(qep.Question, getAttachmentUrl)
 	if err := server.Send(ctx, correctAnswerDemoMessage); err != nil {
 		return err
+	}
+
+	if !roundAdvanced {
+		return nil
 	}
 
 	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)

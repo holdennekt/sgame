@@ -32,6 +32,11 @@ func HandleRevealingStartedMessage(ctx context.Context, server realtime.Channel,
 		return err
 	}
 
+	revealingEnded := room.State != domain.RevealingQuestion || !rsp.IsCurrent(room)
+	if revealingEnded {
+		return nil
+	}
+
 	time.AfterFunc(time.Until(room.CurrentQuestion.TimerStartsAt), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -50,7 +55,7 @@ func HandleRevealingStartedMessage(ctx context.Context, server realtime.Channel,
 			return nil
 		})
 		if err != nil {
-			if err != ErrDeferredFunctionCancelled {
+			if !isIgnorableDeferredError(err) {
 				slog.Error("error", "err", err)
 			}
 			return

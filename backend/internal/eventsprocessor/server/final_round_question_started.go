@@ -21,6 +21,13 @@ func HandleFinalRoundQuestionStartedMessage(ctx context.Context, server realtime
 	if err != nil {
 		return err
 	}
+
+	questionEnded := room.State != domain.ShowingFinalRoundQuestion ||
+		room.FinalRoundState == nil || room.FinalRoundState.TimerEndsAt == nil
+	if questionEnded {
+		return nil
+	}
+
 	time.AfterFunc(time.Until(*room.FinalRoundState.TimerEndsAt), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -40,7 +47,7 @@ func HandleFinalRoundQuestionStartedMessage(ctx context.Context, server realtime
 			return nil
 		})
 		if err != nil {
-			if err != ErrDeferredFunctionCancelled {
+			if !isIgnorableDeferredError(err) {
 				slog.Error("error", "err", err)
 			}
 			return

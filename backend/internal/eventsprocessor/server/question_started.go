@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
+	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
 	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
 	"github.com/holdennekt/sgame/backend/internal/message"
@@ -31,6 +32,11 @@ func HandleQuestionStartedMessage(ctx context.Context, server realtime.Channel, 
 		return err
 	}
 
+	questionEnded := room.State != domain.ShowingQuestion || !qsp.IsCurrent(room)
+	if questionEnded {
+		return nil
+	}
+
 	time.AfterFunc(time.Until(room.CurrentQuestion.TimerEndsAt), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -49,9 +55,15 @@ func HandleQuestionStartedMessage(ctx context.Context, server realtime.Channel, 
 			return nil
 		})
 		if err != nil {
-			if err != ErrDeferredFunctionCancelled {
+			if !isIgnorableDeferredError(err) {
 				slog.Error("error", "err", err)
 			}
+			return
+		}
+
+		roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
+		if err := server.Send(ctx, roomUpdatedMessage); err != nil {
+			slog.Error("error", "err", err)
 			return
 		}
 

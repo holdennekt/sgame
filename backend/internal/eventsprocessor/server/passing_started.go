@@ -31,6 +31,12 @@ func HandlePassingStartedMessage(ctx context.Context, server realtime.Channel, i
 	if err != nil {
 		return err
 	}
+
+	passingEnded := room.State != domain.Passing || !psp.IsCurrent(room)
+	if passingEnded {
+		return nil
+	}
+
 	time.AfterFunc(time.Until(room.CurrentQuestion.PassingEndsAt), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -49,7 +55,7 @@ func HandlePassingStartedMessage(ctx context.Context, server realtime.Channel, i
 			return nil
 		})
 		if err != nil {
-			if err != ErrDeferredFunctionCancelled {
+			if !isIgnorableDeferredError(err) {
 				slog.Error("error", "err", err)
 			}
 			return
