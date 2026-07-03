@@ -9,7 +9,7 @@ import {
   Comment,
   Attachment,
 } from "./pack";
-import { Moderator, Player } from "./user";
+import { Moderator, Player, User } from "./user";
 
 export interface GameHistoryEntry {
   id: string;
@@ -61,7 +61,7 @@ const dummyRoom: Room = {
     answerThinkingTime: 5,
     questionThinkingTimeFinal: 60,
     readingSymbolsPerSecond: 30,
-    falseStartAllowed: true,
+    falseStartEnabled: false,
     aiHost: false,
   },
   packPreview: { id: "", name: "" },
@@ -116,7 +116,7 @@ export interface RoomOptions {
   answerThinkingTime: number;
   questionThinkingTimeFinal: number;
   readingSymbolsPerSecond: number;
-  falseStartAllowed: boolean;
+  falseStartEnabled: boolean;
   aiHost: boolean;
 }
 
@@ -187,7 +187,7 @@ const dummyRoomLobby: RoomLobby = {
     answerThinkingTime: 5,
     questionThinkingTimeFinal: 60,
     readingSymbolsPerSecond: 30,
-    falseStartAllowed: true,
+    falseStartEnabled: false,
     aiHost: false,
   },
   players: [],
@@ -233,7 +233,7 @@ const dummyRoomModerator: RoomModerator = {
     answerThinkingTime: 5,
     questionThinkingTimeFinal: 60,
     readingSymbolsPerSecond: 30,
-    falseStartAllowed: true,
+    falseStartEnabled: false,
     aiHost: false,
   },
   moderator: null,
@@ -298,7 +298,7 @@ const dummyRoomPlayer: RoomPlayer = {
     answerThinkingTime: 5,
     questionThinkingTimeFinal: 60,
     readingSymbolsPerSecond: 30,
-    falseStartAllowed: true,
+    falseStartEnabled: false,
     aiHost: false,
   },
   moderator: null,
@@ -387,6 +387,19 @@ const dummyQuestionDemo: QuestionDemo = {
 export const isQuestionDemo = (obj: unknown): obj is QuestionDemo => {
   if (typeof obj !== "object" || obj === null) return false;
   return Object.keys(dummyQuestionDemo).every((key) => Object.hasOwn(obj, key));
+};
+
+export type FalseStart = {
+  user: User;
+};
+
+const dummyFalseStart: FalseStart = {
+  user: { id: "", name: "", avatar: "" },
+};
+
+export const isFalseStart = (obj: unknown): obj is FalseStart => {
+  if (typeof obj !== "object" || obj === null) return false;
+  return Object.keys(dummyFalseStart).every((key) => Object.hasOwn(obj, key));
 };
 
 export type CorrectAnswerDemo = {

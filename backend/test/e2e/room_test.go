@@ -20,7 +20,7 @@ func defaultRoomOptions() map[string]any {
 		"questionThinkingTime":      1,
 		"answerThinkingTime":        1,
 		"questionThinkingTimeFinal": 2,
-		"falseStartAllowed":         false,
+		"falseStartEnabled":         false,
 	}
 }
 

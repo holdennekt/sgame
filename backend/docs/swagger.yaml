@@ -142,6 +142,8 @@ definitions:
         type: string
       id:
         type: string
+      isDeleted:
+        type: boolean
       isGuest:
         type: boolean
       login:
@@ -153,6 +155,7 @@ definitions:
     required:
     - avatar
     - id
+    - isDeleted
     - isGuest
     - login
     - name
@@ -328,6 +331,8 @@ definitions:
         type: string
       isConnected:
         type: boolean
+      isDeleted:
+        type: boolean
       isGuest:
         type: boolean
       name:
@@ -336,6 +341,7 @@ definitions:
     - avatar
     - id
     - isConnected
+    - isDeleted
     - isGuest
     - name
     type: object
@@ -432,6 +438,8 @@ definitions:
         type: string
       isConnected:
         type: boolean
+      isDeleted:
+        type: boolean
       isGuest:
         type: boolean
       name:
@@ -443,6 +451,7 @@ definitions:
     - betAmount
     - id
     - isConnected
+    - isDeleted
     - isGuest
     - name
     - score
@@ -568,6 +577,8 @@ definitions:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator'
       name:
         type: string
+      options:
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions'
       packPreview:
         $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
       players:
@@ -583,6 +594,7 @@ definitions:
     - maxPlayers
     - moderator
     - name
+    - options
     - packPreview
     - players
     - status
@@ -654,7 +666,7 @@ definitions:
         maximum: 30
         minimum: 1
         type: integer
-      falseStartAllowed:
+      falseStartEnabled:
         type: boolean
       maxPlayers:
         maximum: 10
@@ -689,7 +701,7 @@ definitions:
     required:
     - aiHost
     - answerThinkingTime
-    - falseStartAllowed
+    - falseStartEnabled
     - maxPlayers
     - password
     - questionThinkingTime
@@ -801,6 +813,8 @@ definitions:
         type: string
       id:
         type: string
+      isDeleted:
+        type: boolean
       isGuest:
         type: boolean
       name:
@@ -808,6 +822,7 @@ definitions:
     required:
     - avatar
     - id
+    - isDeleted
     - isGuest
     - name
     type: object

@@ -13,10 +13,10 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/server"
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
-	ivalidator "github.com/holdennekt/sgame/backend/internal/interface/validator"
 	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
 	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
+	ivalidator "github.com/holdennekt/sgame/backend/internal/interface/validator"
 	"github.com/holdennekt/sgame/backend/internal/message"
 )
 
@@ -195,6 +195,8 @@ func (p *RoomEventsProcessor) handleServerMessage(ctx context.Context, msg messa
 		return outgoing.HandleRoundDemoMessage(ctx, p.client, msg)
 	case domain.QuestionDemo:
 		return outgoing.HandleQuestionDemoMessage(ctx, p.client, msg)
+	case domain.FalseStart:
+		return outgoing.HandleFalseStartMessage(ctx, p.client, msg)
 	case domain.CorrectAnswerDemo:
 		return outgoing.HandleCorrectAnswerDemoMessage(ctx, p.client, msg)
 	case domain.RoomDeleted:

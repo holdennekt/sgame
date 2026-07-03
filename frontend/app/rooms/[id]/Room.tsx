@@ -32,7 +32,7 @@ export default function RoomPage({
   password?: string;
 }) {
   const user = useRequiredUser();
-  const { lastError, chat, game } = useRoom(
+  const { lastError, chat, lastFalseStart, game } = useRoom(
     initialRoom,
     user.id,
     isSpectator,
@@ -79,6 +79,17 @@ export default function RoomPage({
     if (chat.messages[chat.messages.length - 1].from.id === "") return;
     setUnreadCount((c) => c + 1);
   }, [chat.messages.length]);
+
+  useEffect(() => {
+    if (!lastFalseStart) return;
+    const falseStartUser = lastFalseStart.msg.user;
+    const message =
+      falseStartUser.id === user.id
+        ? "False start! You are skipping this question"
+        : `User ${falseStartUser.name} has just false started. They are skipping this question`;
+    toast.info(message, { containerId: "room" });
+    mainContainer.current?.focus();
+  }, [lastFalseStart]);
 
   const handleStartAnswer = () => {
     if (

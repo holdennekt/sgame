@@ -175,22 +175,37 @@ func TestSubmitAnswer_PlayerNotInAllowed_ReturnsError(t *testing.T) {
 	assert.Equal(t, ShowingQuestion, r.State)
 }
 
-func TestSubmitAnswer_FalseStartNotAllowed_DuringReveal(t *testing.T) {
+func TestSubmitAnswer_FalseStartEnabled_DuringReveal_LastEligiblePlayer(t *testing.T) {
 	r := buildRoom(func(r *Room) {
 		r.State = RevealingQuestion
-		r.Options.FalseStartAllowed = false
+		r.Options.FalseStartEnabled = true
 		r.CurrentQuestion = &CurrentQuestion{}
 		r.AllowedToAnswer = []string{"p1"}
 	})
 	err := r.StartAnswer("p1")
-	var ce custerr.ConflictErr
-	assert.ErrorAs(t, err, &ce)
+	assert.NoError(t, err)
+	assert.NotContains(t, r.AllowedToAnswer, "p1")
+	assert.Equal(t, SelectingQuestion, r.State)
 }
 
-func TestSubmitAnswer_FalseStartAllowed_DuringReveal(t *testing.T) {
+func TestSubmitAnswer_FalseStartEnabled_DuringReveal_OtherPlayersRemain(t *testing.T) {
 	r := buildRoom(func(r *Room) {
 		r.State = RevealingQuestion
-		r.Options.FalseStartAllowed = true
+		r.Options.FalseStartEnabled = true
+		r.CurrentQuestion = &CurrentQuestion{}
+		r.AllowedToAnswer = []string{"p1", "p2"}
+	})
+	err := r.StartAnswer("p1")
+	assert.NoError(t, err)
+	assert.NotContains(t, r.AllowedToAnswer, "p1")
+	assert.Contains(t, r.AllowedToAnswer, "p2")
+	assert.Equal(t, RevealingQuestion, r.State)
+}
+
+func TestSubmitAnswer_FalseStartDisabled_DuringReveal(t *testing.T) {
+	r := buildRoom(func(r *Room) {
+		r.State = RevealingQuestion
+		r.Options.FalseStartEnabled = false
 		r.CurrentQuestion = &CurrentQuestion{
 			Question:      Question{HiddenQuestion: HiddenQuestion{Value: 200}},
 			TimerStartsAt: time.Now().Add(3 * time.Second),
@@ -217,7 +232,7 @@ func TestSubmitAnswer_DuringShowingQuestion_SetsAnsweringState(t *testing.T) {
 func TestSubmitAnswer_DuringRevealingQuestion_SnapshotsAttachmentProgress(t *testing.T) {
 	r := buildRoom(func(r *Room) {
 		r.State = RevealingQuestion
-		r.Options.FalseStartAllowed = true
+		r.Options.FalseStartEnabled = false
 		r.CurrentQuestion = &CurrentQuestion{
 			Question: Question{
 				HiddenQuestion: HiddenQuestion{Value: 200},
@@ -236,7 +251,7 @@ func TestSubmitAnswer_DuringRevealingQuestion_SnapshotsAttachmentProgress(t *tes
 func TestSubmitAnswer_NilTextAndAttachment_DoesNotPanic(t *testing.T) {
 	r := buildRoom(func(r *Room) {
 		r.State = RevealingQuestion
-		r.Options.FalseStartAllowed = true
+		r.Options.FalseStartEnabled = false
 		r.CurrentQuestion = &CurrentQuestion{
 			Question:      Question{HiddenQuestion: HiddenQuestion{Value: 100}},
 			TimerStartsAt: time.Now().Add(3 * time.Second),

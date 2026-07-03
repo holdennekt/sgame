@@ -41,7 +41,16 @@ export default function GameTopSection() {
 
   switch (room.state) {
     case "waiting_for_start":
-      return <TextPanel topText="Waiting for start" />;
+      return (
+        <TextPanel
+          topText="Waiting for start"
+          commentText={
+            room.options.falseStartEnabled
+              ? "False starts are penalized in this room"
+              : undefined
+          }
+        />
+      );
 
     case "selecting_question":
       return (

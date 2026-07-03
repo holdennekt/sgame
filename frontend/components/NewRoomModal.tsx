@@ -37,6 +37,7 @@ export default function NewRoomModal({
   const [questionThinkingTimeFinal, setQuestionThinkingTimeFinal] =
     useState(60);
   const [readingSymbolsPerSecond, setReadingSymbolsPerSecond] = useState(30);
+  const [falseStartEnabled, setFalseStartEnabled] = useState(false);
   const [aiHost, setAiHost] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -126,7 +127,7 @@ export default function NewRoomModal({
         answerThinkingTime,
         questionThinkingTimeFinal,
         readingSymbolsPerSecond,
-        falseStartAllowed: data.falseStartAllowed === "on",
+        falseStartEnabled,
         aiHost,
       },
     };
@@ -324,14 +325,21 @@ export default function NewRoomModal({
               </div>
             ))}
 
-            <div className="flex items-center justify-between">
-              <span className={labelCls}>False Start Allowed</span>
-              <input
-                type="checkbox"
-                name="falseStartAllowed"
-                defaultChecked
-                className="w-4 h-4 cursor-pointer accent-[var(--primary)]"
-              />
+            <div>
+              <div className="flex items-center justify-between">
+                <span className={labelCls}>False Start</span>
+                <input
+                  type="checkbox"
+                  checked={falseStartEnabled}
+                  onChange={(e) => setFalseStartEnabled(e.target.checked)}
+                  className="w-4 h-4 cursor-pointer accent-[var(--primary)]"
+                />
+              </div>
+              {falseStartEnabled && (
+                <p className="text-[11px] text-on-surface-muted">
+                  False starting players get penalized by skipping the question
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1">

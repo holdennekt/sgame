@@ -37,5 +37,6 @@ const (
 	RoomUpdated               Event = "room_updated"
 	RoomDeleted               Event = "room_deleted"
 	UserDisconnected          Event = "user_disconnected"
+	FalseStart                Event = "false_start"
 	Error                     Event = "error"
 )

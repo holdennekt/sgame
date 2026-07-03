@@ -12,7 +12,11 @@ import (
 )
 
 func HandleStartAnswerMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string, user domain.User, msg message.Message) error {
+	var question domain.Question
 	newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
+		if room.CurrentQuestion != nil {
+			question = room.CurrentQuestion.Question
+		}
 		return room.StartAnswer(user.Id)
 	})
 	if err != nil {
@@ -24,12 +28,17 @@ func HandleStartAnswerMessage(ctx context.Context, server realtime.Channel, inte
 		return err
 	}
 
-	answerStartedMessage := serverevent.NewAnswerStartedMessage(
-		newRoom.CurrentQuestion.Question,
-		newRoom.AnsweringPlayer.Id,
-	)
-	if err := internalServer.Send(ctx, answerStartedMessage); err != nil {
-		return err
+	switch newRoom.State {
+	case domain.RevealingQuestion:
+		return server.Send(ctx, outgoing.NewFalseStartMessage(user))
+	case domain.SelectingQuestion:
+		return internalServer.Send(ctx, serverevent.NewQuestionEndedMessage(question))
+	case domain.Answering:
+		answerStartedMessage := serverevent.NewAnswerStartedMessage(
+			newRoom.CurrentQuestion.Question,
+			newRoom.AnsweringPlayer.Id,
+		)
+		return internalServer.Send(ctx, answerStartedMessage)
 	}
 	return nil
 }

@@ -13,6 +13,8 @@ import {
   isRoundDemo,
   isQuestionDemo,
   isCorrectAnswerDemo,
+  isFalseStart,
+  FalseStart,
 } from "@/types/room";
 import { joinRoom, leaveRoom } from "@/app/api";
 import { useWebSocket } from "./useWebSocket";
@@ -32,6 +34,10 @@ export function useRoom(
   } | null>(null);
   const [roundDemo, setRoundDemo] = useState<RoundDemo | null>(null);
   const [questionDemo, setQuestionDemo] = useState<QuestionDemo | null>(null);
+  const [lastFalseStart, setLastFalseStart] = useState<{
+    msg: FalseStart;
+    count: number;
+  } | null>(null);
   const [correctAnswerDemo, setCorrectAnswerDemo] =
     useState<CorrectAnswerDemo | null>(null);
   const delayedRoundDemoRef = useRef<RoundDemo | null>(null);
@@ -48,6 +54,9 @@ export function useRoom(
 
   const setError = (msg: string) =>
     setLastError((prev) => ({ msg, count: (prev?.count ?? 0) + 1 }));
+
+  const setFalseStart = (msg: FalseStart) =>
+    setLastFalseStart((prev) => ({ msg, count: (prev?.count ?? 0) + 1 }));
 
   const send = (event: string, payload?: unknown) => {
     if (isSpectator) return;
@@ -73,7 +82,6 @@ export function useRoom(
     if (!isRoomModerator(payload) && !isRoomPlayer(payload)) return;
     setRoom(payload);
   });
-  handlers.set("room_deleted", () => router.push("/"));
   handlers.set("round_demo", (payload) => {
     if (!isRoundDemo(payload)) return;
     if (correctAnswerDemo) {
@@ -87,11 +95,16 @@ export function useRoom(
     setQuestionDemo(payload);
     setTimeout(() => setQuestionDemo(null), payload.duration * 1000);
   });
+  handlers.set("false_start", (payload) => {
+    if (!isFalseStart(payload)) return;
+    setFalseStart(payload);
+  });
   handlers.set("correct_answer_demo", (payload) => {
     if (!isCorrectAnswerDemo(payload)) return;
     setCorrectAnswerDemo(payload);
     setTimeout(() => setCorrectAnswerDemo(null), payload.duration * 1000);
   });
+  handlers.set("room_deleted", () => router.push("/"));
 
   const sendChatMessage = (text: string) => send("chat", { text });
   const startGame = () => send("start_game");
@@ -153,6 +166,7 @@ export function useRoom(
       messages: chatMessages,
       send: sendChatMessage,
     },
+    lastFalseStart,
     game: {
       room,
       roundDemo,

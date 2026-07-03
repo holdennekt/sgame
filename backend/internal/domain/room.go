@@ -52,7 +52,7 @@ type RoomOptions struct {
 	QuestionThinkingTime      int         `json:"questionThinkingTime" bson:"questionThinkingTime" binding:"min=1,max=30"`
 	AnswerThinkingTime        int         `json:"answerThinkingTime" bson:"answerThinkingTime" binding:"min=1,max=30"`
 	QuestionThinkingTimeFinal int         `json:"questionThinkingTimeFinal" bson:"questionThinkingTimeFinal" binding:"min=1,max=120"`
-	FalseStartAllowed         bool        `json:"falseStartAllowed" bson:"falseStartAllowed"`
+	FalseStartEnabled         bool        `json:"falseStartEnabled" bson:"falseStartEnabled"`
 	TimeToBet                 int         `json:"timeToBet,omitempty" bson:"timeToBet"`
 	TimeToPass                int         `json:"timeToPass,omitempty" bson:"timeToPass"`
 	AIHost                    bool        `json:"aiHost" bson:"aiHost"`
@@ -312,8 +312,14 @@ func (r *Room) StartAnswer(userId string) error {
 	if !slices.Contains(r.AllowedToAnswer, userId) {
 		return custerr.NewConflictErr("not allowed to start answer")
 	}
-	if r.State == RevealingQuestion && !r.Options.FalseStartAllowed {
-		return custerr.NewConflictErr("can not start answer now")
+	if r.State == RevealingQuestion && r.Options.FalseStartEnabled {
+		r.AllowedToAnswer = slices.DeleteFunc(r.AllowedToAnswer, func(playerId string) bool {
+			return userId == playerId
+		})
+		if len(r.AllowedToAnswer) == 0 {
+			r.EndQuestion()
+		}
+		return nil
 	}
 
 	switch r.State {

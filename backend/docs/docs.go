@@ -2024,6 +2024,7 @@ const docTemplate = `{
             "required": [
                 "avatar",
                 "id",
+                "isDeleted",
                 "isGuest",
                 "login",
                 "name",
@@ -2035,6 +2036,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "isDeleted": {
+                    "type": "boolean"
                 },
                 "isGuest": {
                     "type": "boolean"
@@ -2286,6 +2290,7 @@ const docTemplate = `{
                 "avatar",
                 "id",
                 "isConnected",
+                "isDeleted",
                 "isGuest",
                 "name"
             ],
@@ -2297,6 +2302,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "isConnected": {
+                    "type": "boolean"
+                },
+                "isDeleted": {
                     "type": "boolean"
                 },
                 "isGuest": {
@@ -2432,6 +2440,7 @@ const docTemplate = `{
                 "betAmount",
                 "id",
                 "isConnected",
+                "isDeleted",
                 "isGuest",
                 "name",
                 "score"
@@ -2447,6 +2456,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "isConnected": {
+                    "type": "boolean"
+                },
+                "isDeleted": {
                     "type": "boolean"
                 },
                 "isGuest": {
@@ -2620,6 +2632,7 @@ const docTemplate = `{
                 "maxPlayers",
                 "moderator",
                 "name",
+                "options",
                 "packPreview",
                 "players",
                 "status",
@@ -2637,6 +2650,9 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions"
                 },
                 "packPreview": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview"
@@ -2740,7 +2756,7 @@ const docTemplate = `{
             "required": [
                 "aiHost",
                 "answerThinkingTime",
-                "falseStartAllowed",
+                "falseStartEnabled",
                 "maxPlayers",
                 "password",
                 "questionThinkingTime",
@@ -2757,7 +2773,7 @@ const docTemplate = `{
                     "maximum": 30,
                     "minimum": 1
                 },
-                "falseStartAllowed": {
+                "falseStartEnabled": {
                     "type": "boolean"
                 },
                 "maxPlayers": {
@@ -2938,6 +2954,7 @@ const docTemplate = `{
             "required": [
                 "avatar",
                 "id",
+                "isDeleted",
                 "isGuest",
                 "name"
             ],
@@ -2947,6 +2964,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "isDeleted": {
+                    "type": "boolean"
                 },
                 "isGuest": {
                     "type": "boolean"

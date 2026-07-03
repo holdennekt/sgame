@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { User } from "@/middleware";
 import { RoomLobby } from "@/types/room";
-import { FaLock, FaGlobe, FaEye } from "react-icons/fa6";
+import { FaLock, FaGlobe, FaEye, FaBan } from "react-icons/fa6";
 import { TbRobot } from "react-icons/tb";
 import { getAvatar } from "@/components/UserAvatar";
 import { joinRoom } from "@/app/api";
@@ -61,6 +61,14 @@ export default function RoomLobbyCard({
               <FaLock size={11} />
             )}
           </span>
+          {room.options.falseStartEnabled && (
+            <span
+              className="shrink-0 text-on-surface-muted"
+              title="False starts are penalized in this room"
+            >
+              <FaBan size={11} />
+            </span>
+          )}
         </div>
         <span className="text-xs shrink-0 text-on-surface-muted tabular-nums">
           {room.players.length}/{room.maxPlayers}

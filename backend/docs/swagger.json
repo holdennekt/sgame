@@ -2018,6 +2018,7 @@
             "required": [
                 "avatar",
                 "id",
+                "isDeleted",
                 "isGuest",
                 "login",
                 "name",
@@ -2029,6 +2030,9 @@
                 },
                 "id": {
                     "type": "string"
+                },
+                "isDeleted": {
+                    "type": "boolean"
                 },
                 "isGuest": {
                     "type": "boolean"
@@ -2280,6 +2284,7 @@
                 "avatar",
                 "id",
                 "isConnected",
+                "isDeleted",
                 "isGuest",
                 "name"
             ],
@@ -2291,6 +2296,9 @@
                     "type": "string"
                 },
                 "isConnected": {
+                    "type": "boolean"
+                },
+                "isDeleted": {
                     "type": "boolean"
                 },
                 "isGuest": {
@@ -2426,6 +2434,7 @@
                 "betAmount",
                 "id",
                 "isConnected",
+                "isDeleted",
                 "isGuest",
                 "name",
                 "score"
@@ -2441,6 +2450,9 @@
                     "type": "string"
                 },
                 "isConnected": {
+                    "type": "boolean"
+                },
+                "isDeleted": {
                     "type": "boolean"
                 },
                 "isGuest": {
@@ -2614,6 +2626,7 @@
                 "maxPlayers",
                 "moderator",
                 "name",
+                "options",
                 "packPreview",
                 "players",
                 "status",
@@ -2631,6 +2644,9 @@
                 },
                 "name": {
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions"
                 },
                 "packPreview": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview"
@@ -2734,7 +2750,7 @@
             "required": [
                 "aiHost",
                 "answerThinkingTime",
-                "falseStartAllowed",
+                "falseStartEnabled",
                 "maxPlayers",
                 "password",
                 "questionThinkingTime",
@@ -2751,7 +2767,7 @@
                     "maximum": 30,
                     "minimum": 1
                 },
-                "falseStartAllowed": {
+                "falseStartEnabled": {
                     "type": "boolean"
                 },
                 "maxPlayers": {
@@ -2932,6 +2948,7 @@
             "required": [
                 "avatar",
                 "id",
+                "isDeleted",
                 "isGuest",
                 "name"
             ],
@@ -2941,6 +2958,9 @@
                 },
                 "id": {
                     "type": "string"
+                },
+                "isDeleted": {
+                    "type": "boolean"
                 },
                 "isGuest": {
                     "type": "boolean"
