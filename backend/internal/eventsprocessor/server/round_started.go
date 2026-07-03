@@ -24,8 +24,5 @@ func HandleRoundStartedMessage(ctx context.Context, server realtime.Channel, roo
 		return *room.CurrentRoundName == round.Name
 	})
 	roundDemoMessage := outgoing.NewRoundDemoMessage(pack.Rounds[currentRoundIndex])
-	if err := server.Send(ctx, roundDemoMessage); err != nil {
-		return err
-	}
-	return nil
+	return server.Send(ctx, roundDemoMessage)
 }

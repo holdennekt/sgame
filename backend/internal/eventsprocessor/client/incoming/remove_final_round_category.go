@@ -35,9 +35,7 @@ func HandleRemoveFinalRoundCategoryMessage(ctx context.Context, server realtime.
 
 	if newRoom.State == domain.FinalRoundBetting {
 		bettingStartedMessage := serverevent.NewFinalRoundBettingStartedMessage()
-		if err := internalServer.Send(ctx, bettingStartedMessage); err != nil {
-			return err
-		}
+		return internalServer.Send(ctx, bettingStartedMessage)
 	}
 	return nil
 }

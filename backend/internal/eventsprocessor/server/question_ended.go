@@ -70,20 +70,14 @@ func HandleQuestionEndedMessage(ctx context.Context, server realtime.Channel, in
 	case domain.SelectingQuestion:
 		if nextRoundStarted {
 			roundStartedMessage := NewRoundStartedMessage()
-			if err := internalServer.Send(ctx, roundStartedMessage); err != nil {
-				return err
-			}
+			return internalServer.Send(ctx, roundStartedMessage)
 		}
 	case domain.FinalRoundBetting:
 		bettingStartedMessage := NewFinalRoundBettingStartedMessage()
-		if err := internalServer.Send(ctx, bettingStartedMessage); err != nil {
-			return err
-		}
+		return internalServer.Send(ctx, bettingStartedMessage)
 	case domain.GameOver:
 		gameEndedMessage := NewGameEndedMessage()
-		if err := internalServer.Send(ctx, gameEndedMessage); err != nil {
-			return err
-		}
+		return internalServer.Send(ctx, gameEndedMessage)
 	}
 	return nil
 }

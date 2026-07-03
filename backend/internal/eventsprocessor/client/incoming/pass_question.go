@@ -37,8 +37,5 @@ func HandlePassQuestionMessage(ctx context.Context, server realtime.Channel, int
 		newRoom.CurrentQuestion.Question,
 		newRoom.AnsweringPlayer.Id,
 	)
-	if err := internalServer.Send(ctx, answerStartedMessage); err != nil {
-		return err
-	}
-	return nil
+	return internalServer.Send(ctx, answerStartedMessage)
 }

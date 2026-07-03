@@ -38,9 +38,7 @@ func HandlePlaceBetMessage(ctx context.Context, server realtime.Channel, interna
 			newRoom.CurrentQuestion.Question,
 			newRoom.AnsweringPlayer.Id,
 		)
-		if err := internalServer.Send(ctx, answerStartedMessage); err != nil {
-			return err
-		}
+		return internalServer.Send(ctx, answerStartedMessage)
 	}
 	return nil
 }

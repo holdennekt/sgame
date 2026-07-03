@@ -28,9 +28,5 @@ func HandleSubmitFinalRoundAnswerMessage(ctx context.Context, server realtime.Ch
 	}
 
 	roomUpdatedMessage := outgoing.NewRoomUpdatedMessage(roomId)
-	if err := server.Send(ctx, roomUpdatedMessage); err != nil {
-		return err
-	}
-
-	return nil
+	return server.Send(ctx, roomUpdatedMessage)
 }
