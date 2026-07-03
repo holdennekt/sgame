@@ -28,16 +28,12 @@ func HandleSubmitAnswerMessage(ctx context.Context, server realtime.Channel, int
 		return err
 	}
 
-	var capturedQuestion domain.Question
-	var capturedPlayerId string
+	var question domain.Question
 	_, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
 		if room.CurrentQuestion != nil {
-			capturedQuestion = room.CurrentQuestion.Question
+			question = room.CurrentQuestion.Question
 		}
-		if room.AnsweringPlayer != nil {
-			capturedPlayerId = room.AnsweringPlayer.Id
-		}
-		return room.SubmitTypedAnswer(user.Id, sap.Answer)
+		return room.SubmitAnswer(user.Id, sap.Answer)
 	})
 	if err != nil {
 		return err
@@ -52,7 +48,7 @@ func HandleSubmitAnswerMessage(ctx context.Context, server realtime.Channel, int
 		aiCtx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		iQuestion := buildValidatorQuestion(capturedQuestion, cfg.BucketName)
+		iQuestion := buildValidatorQuestion(question, cfg.BucketName)
 
 		isCorrect := false
 		if isExactMatch(iQuestion.CorrectAnswers, sap.Answer) {
@@ -69,9 +65,12 @@ func HandleSubmitAnswerMessage(ctx context.Context, server realtime.Channel, int
 		finalCtx, finalCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer finalCancel()
 
-		var question domain.Question
 		newRoom, err := roomCache.SafeUpdate(finalCtx, roomId, func(room *domain.Room) error {
-			if room.State != domain.Answering || room.AnsweringPlayer == nil || room.AnsweringPlayer.Id != capturedPlayerId {
+			answeringEnded :=
+				room.State != domain.Answering ||
+					room.AnsweringPlayer.Id != user.Id ||
+					!question.IsCurrent(room)
+			if answeringEnded {
 				return serverevent.ErrDeferredFunctionCancelled
 			}
 			if room.CurrentQuestion != nil {

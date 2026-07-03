@@ -149,11 +149,11 @@ func withPaused(state RoomState) func(*Room) {
 	}
 }
 
-// ---- 1. SubmitAnswer ----
+// ---- 1. StartAnswer ----
 
 func TestSubmitAnswer_WrongState_ReturnsError(t *testing.T) {
 	r := buildRoom(func(r *Room) { r.State = Betting })
-	err := r.SubmitAnswer("p1")
+	err := r.StartAnswer("p1")
 	var ce custerr.ConflictErr
 	assert.ErrorAs(t, err, &ce)
 	assert.Equal(t, Betting, r.State)
@@ -161,7 +161,7 @@ func TestSubmitAnswer_WrongState_ReturnsError(t *testing.T) {
 
 func TestSubmitAnswer_WrongState_Answering(t *testing.T) {
 	r := buildRoom(func(r *Room) { r.State = Answering })
-	err := r.SubmitAnswer("p1")
+	err := r.StartAnswer("p1")
 	assert.Error(t, err)
 }
 
@@ -169,7 +169,7 @@ func TestSubmitAnswer_PlayerNotInAllowed_ReturnsError(t *testing.T) {
 	r := buildRoom(withShowingQuestion(200), func(r *Room) {
 		r.AllowedToAnswer = []string{"p2"}
 	})
-	err := r.SubmitAnswer("p1")
+	err := r.StartAnswer("p1")
 	var ce custerr.ConflictErr
 	assert.ErrorAs(t, err, &ce)
 	assert.Equal(t, ShowingQuestion, r.State)
@@ -182,7 +182,7 @@ func TestSubmitAnswer_FalseStartNotAllowed_DuringReveal(t *testing.T) {
 		r.CurrentQuestion = &CurrentQuestion{}
 		r.AllowedToAnswer = []string{"p1"}
 	})
-	err := r.SubmitAnswer("p1")
+	err := r.StartAnswer("p1")
 	var ce custerr.ConflictErr
 	assert.ErrorAs(t, err, &ce)
 }
@@ -197,14 +197,14 @@ func TestSubmitAnswer_FalseStartAllowed_DuringReveal(t *testing.T) {
 		}
 		r.AllowedToAnswer = []string{"p1"}
 	})
-	err := r.SubmitAnswer("p1")
+	err := r.StartAnswer("p1")
 	assert.NoError(t, err)
 	assert.Equal(t, Answering, r.State)
 }
 
 func TestSubmitAnswer_DuringShowingQuestion_SetsAnsweringState(t *testing.T) {
 	r := buildRoom(withShowingQuestion(200))
-	err := r.SubmitAnswer("p1")
+	err := r.StartAnswer("p1")
 	assert.NoError(t, err)
 	assert.Equal(t, Answering, r.State)
 	assert.Equal(t, "p1", r.AnsweringPlayer.Id)
@@ -228,7 +228,7 @@ func TestSubmitAnswer_DuringRevealingQuestion_SnapshotsAttachmentProgress(t *tes
 		}
 		r.AllowedToAnswer = []string{"p1"}
 	})
-	err := r.SubmitAnswer("p1")
+	err := r.StartAnswer("p1")
 	assert.NoError(t, err)
 	assert.True(t, r.CurrentQuestion.AttachmentRevealLastProgress >= 0 && r.CurrentQuestion.AttachmentRevealLastProgress <= 1)
 }
@@ -243,7 +243,7 @@ func TestSubmitAnswer_NilTextAndAttachment_DoesNotPanic(t *testing.T) {
 		}
 		r.AllowedToAnswer = []string{"p1"}
 	})
-	assert.NotPanics(t, func() { _ = r.SubmitAnswer("p1") })
+	assert.NotPanics(t, func() { _ = r.StartAnswer("p1") })
 }
 
 // ---- 2. ValidateAnswer ----

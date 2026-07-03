@@ -300,20 +300,20 @@ func (r *Room) startNonRegularQuestion(allowedToAnswer string) {
 	r.State = Answering
 }
 
-func (r *Room) SubmitAnswer(userId string) error {
+func (r *Room) StartAnswer(userId string) error {
 	now := time.Now()
 
 	if r.PausedState.Paused {
 		return custerr.NewConflictErr("game is paused")
 	}
 	if r.State != RevealingQuestion && r.State != ShowingQuestion {
-		return custerr.NewConflictErr("can not submit answer now")
+		return custerr.NewConflictErr("can not start answer now")
 	}
 	if !slices.Contains(r.AllowedToAnswer, userId) {
-		return custerr.NewConflictErr("not allowed to submit answer")
+		return custerr.NewConflictErr("not allowed to start answer")
 	}
 	if r.State == RevealingQuestion && !r.Options.FalseStartAllowed {
-		return custerr.NewConflictErr("can not submit answer now")
+		return custerr.NewConflictErr("can not start answer now")
 	}
 
 	switch r.State {
@@ -348,15 +348,12 @@ func (r *Room) SubmitAnswer(userId string) error {
 	return nil
 }
 
-// SubmitTypedAnswer stores the player's typed answer and immediately cancels the
-// thinking timer (by setting TimerEndsAt = now), which triggers the deadlineChanged
-// guard in HandleAnswerStartedMessage and unblocks the AI validation goroutine.
-func (r *Room) SubmitTypedAnswer(userId, answer string) error {
+func (r *Room) SubmitAnswer(userId, answer string) error {
 	if r.PausedState.Paused {
 		return custerr.NewConflictErr("game is paused")
 	}
 	if r.State != Answering {
-		return custerr.NewConflictErr("cannot submit answer now")
+		return custerr.NewConflictErr("can not submit answer now")
 	}
 	if r.AnsweringPlayer == nil || r.AnsweringPlayer.Id != userId {
 		return custerr.NewForbiddenErr("not your turn to answer")

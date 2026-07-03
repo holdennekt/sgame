@@ -13,7 +13,7 @@ import (
 
 func HandleStartAnswerMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, roomCache cache.Room, roomId string, user domain.User, msg message.Message) error {
 	newRoom, err := roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
-		return room.SubmitAnswer(user.Id)
+		return room.StartAnswer(user.Id)
 	})
 	if err != nil {
 		return err
