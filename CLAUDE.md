@@ -115,36 +115,88 @@ Timer-driven transitions (reveal timer, betting timer, pass timer) are triggered
 
 ### State Transition Diagram
 
+This diagram (and the precondition table below it) is verified directly against every `r.State =` assignment in `internal/domain/room.go` — not simplified. A few edges are easy to miss from reading the domain code casually: `RevealingQuestion → Answering` only exists when `Options.FalseStartAllowed` is true; a wrong answer can return to *either* `RevealingQuestion` or `ShowingQuestion` depending on timing, not just `ShowingQuestion`; `SelectingFinalRoundCategory` is skipped entirely (straight to `FinalRoundBetting`) when the final round has exactly one category; and `FinalRoundBetting → GameOver` is reachable directly if nobody places a positive bet.
+
 ```mermaid
 stateDiagram-v2
     [*] --> WaitingForStart
 
     WaitingForStart --> SelectingQuestion : start_game
 
-    SelectingQuestion --> RevealingQuestion           : select Regular question
-    SelectingQuestion --> Passing                     : select CatInBag
-    SelectingQuestion --> Betting                     : select Auction
-    SelectingQuestion --> SelectingFinalRoundCategory : all questions done [auto]
+    SelectingQuestion --> SelectingQuestion            : round ends, another round remains [auto]
+    SelectingQuestion --> RevealingQuestion             : select Regular / Auction w/ no eligible bettors
+    SelectingQuestion --> Passing                       : select CatInBag (2+ eligible players)
+    SelectingQuestion --> Answering                     : select CatInBag (0-1 eligible players)
+    SelectingQuestion --> Betting                       : select Auction (1+ eligible bettor)
+    SelectingQuestion --> SelectingFinalRoundCategory   : round ends, final round has 2+ categories [auto]
+    SelectingQuestion --> FinalRoundBetting             : round ends, final round has exactly 1 category [auto]
+    SelectingQuestion --> GameOver                      : round ends, nobody eligible for final round [auto]
 
-    RevealingQuestion --> ShowingQuestion : reveal timer [auto]
-    ShowingQuestion   --> Answering       : submit_answer
-    Passing           --> Answering       : pass_question
-    Betting           --> Answering       : all bets placed
+    RevealingQuestion --> ShowingQuestion : reveal timer elapses, nobody answered early [auto]
+    RevealingQuestion --> Answering       : start_answer (only if falseStartAllowed)
+    ShowingQuestion   --> Answering       : start_answer
 
-    Answering --> SelectingQuestion : validate_answer correct
-    Answering --> ShowingQuestion   : validate_answer wrong (remaining players)
+    Passing --> Answering : pass_question, or pass timer elapses [auto]
+    Betting --> Answering : all bets placed, or bet timer elapses [auto]
 
-    SelectingFinalRoundCategory --> SelectingFinalRoundCategory : remove_category
-    SelectingFinalRoundCategory --> FinalRoundBetting           : last category [auto]
+    Answering --> SelectingQuestion : correct answer, or last eligible player answered wrong
+    Answering --> RevealingQuestion : wrong, remaining players, still within reveal window
+    Answering --> ShowingQuestion   : wrong, remaining players, past reveal window
 
-    FinalRoundBetting         --> ShowingFinalRoundQuestion   : all bets placed
-    ShowingFinalRoundQuestion --> ValidatingFinalRoundAnswers : all answers submitted
+    note right of Answering
+      Moderator skip_question also reaches
+      SelectingQuestion directly from any of:
+      RevealingQuestion, ShowingQuestion,
+      Answering, Passing, Betting
+    end note
+
+    SelectingFinalRoundCategory --> SelectingFinalRoundCategory : remove_category (2+ categories remain)
+    SelectingFinalRoundCategory --> FinalRoundBetting            : remove_category (last category) [auto]
+
+    FinalRoundBetting --> ShowingFinalRoundQuestion : all bets placed / bet timer, 1+ positive bet [auto]
+    FinalRoundBetting --> GameOver                  : all bets placed / bet timer, nobody bet > 0 [auto]
+
+    ShowingFinalRoundQuestion --> ValidatingFinalRoundAnswers : all answers submitted [auto]
 
     ValidatingFinalRoundAnswers --> ValidatingFinalRoundAnswers : validate_answer (more players)
-    ValidatingFinalRoundAnswers --> GameOver                   : validate_answer (last player)
+    ValidatingFinalRoundAnswers --> GameOver                    : validate_answer (last player)
 
     GameOver --> [*]
 ```
+
+Moderator `skip_round` is a manual, synchronous bypass of the "round ends" auto-advance logic — from `SelectingQuestion` only, it produces the same set of outcomes as the `[auto]` round-end edges above (`SelectingQuestion→SelectingQuestion`/`SelectingFinalRoundCategory`/`FinalRoundBetting`/`GameOver`), just triggered on demand instead of after `AnyAvailableQuestions()` turns false.
+
+#### Every edge, with exact preconditions and source
+
+| From | To | Trigger / precondition | Source |
+|---|---|---|---|
+| `WaitingForStart` | `SelectingQuestion` | `start_game`, always (round 0) | `StartGame` → `StartNextRegularRound`, `room.go:167-186` |
+| `SelectingQuestion` | `SelectingQuestion` | round exhausted, next regular round exists | `StartNextRegularRound`, `room.go:186`, called from `question_ended.go` (async) or `skip_round.go` (sync) |
+| `SelectingQuestion` | `RevealingQuestion` | select Regular; or select Auction with zero players having `Score > 0` | `SelectQuestion`→`revealRegularQuestion`, `room.go:224-229,245-260,267-276` |
+| `SelectingQuestion` | `Passing` | select CatInBag, 2+ other connected players | `SelectQuestion`, `room.go:230-244` |
+| `SelectingQuestion` | `Answering` | select CatInBag, 0 or 1 other connected players (skips `Passing` entirely) | `SelectQuestion`→`startNonRegularQuestion`, `room.go:230-240,289-301` |
+| `SelectingQuestion` | `Betting` | select Auction, 1+ player with `Score > 0` | `SelectQuestion`, `room.go:245-254` |
+| `SelectingQuestion` | `SelectingFinalRoundCategory` | round exhausted, final round has 2+ available categories | `StartFinalRound`, `room.go:580-587` |
+| `SelectingQuestion` | `FinalRoundBetting` | round exhausted, final round has exactly 1 available category — `StartFinalRound` sets `SelectingFinalRoundCategory` then immediately calls `chooseFinalRoundCategory` in the same transaction, so `SelectingFinalRoundCategory` is never externally observed | `StartFinalRound`→`chooseFinalRoundCategory`, `room.go:580-588,639-656` |
+| `SelectingQuestion` | `GameOver` | round exhausted, no player has `Score > 0` (nobody eligible for final round) | `StartFinalRound` returns `false`, caller calls `EndGame`, `room.go:571-572` |
+| `RevealingQuestion` | `ShowingQuestion` | reveal timer elapses with nobody answering early | `StartRegularQuestion`, `room.go:278-287`, triggered by `revealing_started.go` deferred timer |
+| `RevealingQuestion` | `Answering` | `start_answer`, only permitted if `Options.FalseStartAllowed == true` | `StartAnswer`, `room.go:303-317,347` |
+| `ShowingQuestion` | `Answering` | `start_answer`, always permitted | `StartAnswer`, `room.go:303-317,347` |
+| `Passing` | `Answering` | `pass_question` (moderator or current player), or pass timer elapses | `PassQuestion`/`PassQuestionAuto`→`startNonRegularQuestion`, `room.go:420-464` |
+| `Betting` | `Answering` | last eligible bettor places a bet, or bet timer elapses | `PlaceBet`/`PlaceBetsAuto`→`startNonRegularQuestion`, `room.go:463-533` |
+| `Answering` | `SelectingQuestion` | correct answer, or wrong answer but `AllowedToAnswer` is now empty | `ValidateAnswer`→`EndQuestion`, `room.go:390-397,535-542` |
+| `Answering` | `RevealingQuestion` | wrong answer, players remain, answering player's timer started before the question's reveal-timer start | `ValidateAnswer`→`continueRegularQuestion`, `room.go:404-412` |
+| `Answering` | `ShowingQuestion` | wrong answer, players remain, answering player's timer started at/after the reveal-timer start | `ValidateAnswer`→`continueRegularQuestion`, `room.go:404,413-415` |
+| `RevealingQuestion`/`ShowingQuestion`/`Answering`/`Passing`/`Betting` | `SelectingQuestion` | moderator `skip_question` — bypasses the normal per-state resolution and force-ends the current question | `SkipQuestion`→`EndQuestion`, `room.go:786-800` |
+| `SelectingFinalRoundCategory` | `SelectingFinalRoundCategory` | `remove_category`, 2+ categories remain available | `RemoveFinalRoundCategory`, `room.go:601-637` |
+| `SelectingFinalRoundCategory` | `FinalRoundBetting` | `remove_category`, exactly 1 category remains | `RemoveFinalRoundCategory`→`chooseFinalRoundCategory`, `room.go:630-635,652` |
+| `FinalRoundBetting` | `ShowingFinalRoundQuestion` | all bets placed / bet timer elapses, at least one player bet `> 0` | `PlaceFinalRoundBet`/`PlaceFinalRoundBetsAuto`→`startFinalRoundQuestion`, `room.go:658-722` |
+| `FinalRoundBetting` | `GameOver` | all bets placed / bet timer elapses, every bet is `0` | `startFinalRoundQuestion` finds zero eligible players → `EndGame`, `room.go:702-713` |
+| `ShowingFinalRoundQuestion` | `ValidatingFinalRoundAnswers` | last remaining player submits their final-round answer | `SubmitFinalRoundAnswer`→`EndFinalRoundQuestion`, `room.go:725-751` |
+| `ValidatingFinalRoundAnswers` | `ValidatingFinalRoundAnswers` | `validate_answer`, more final-round players remain to validate | `ValidateFinalRoundAnswer`, `room.go:753-784` |
+| `ValidatingFinalRoundAnswers` | `GameOver` | `validate_answer`, last player validated | `ValidateFinalRoundAnswer`→`EndGame`, `room.go:777-781` |
+| `SelectingQuestion` (only) | `SelectingQuestion`/`SelectingFinalRoundCategory`/`FinalRoundBetting`/`GameOver` | moderator `skip_round` — manual, synchronous version of the round-end auto-advance edges above | `SkipRound`, `skip_round.go`, `room.go:802-813` |
+| `GameOver` | — | terminal, no outgoing transitions | `EndGame`, `room.go:949-960` |
 
 ### WebSocket connection flow
 
