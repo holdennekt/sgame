@@ -49,9 +49,14 @@ function isFinalRoundCategoryFormData(
   );
 }
 import { signURL, createDraft, updateDraft, publishDraft } from "@/app/api";
-import { isError, isValidationErrors, ValidationError } from "@/middleware";
+import {
+  isConflictError,
+  isError,
+  isValidationErrors,
+  ValidationError,
+} from "@/middleware";
 import { usePack } from "@/hooks/usePack";
-import { convertDraftToFormData } from "@/types/pack_draft";
+import { convertDraftToFormData, PackDraft } from "@/types/pack_draft";
 
 function parsePath(path: string): string[] {
   return path.split(/[.\[\]]+/).filter(Boolean);
@@ -367,6 +372,7 @@ export default function PackEditor({
   const skipNextAutosave = useRef(false);
   const uploadFileCache = useRef<Map<File, string>>(new Map());
   const uploadUrlCache = useRef<Map<string, string>>(new Map());
+  const draftSaveChain = useRef<Promise<unknown>>(Promise.resolve());
 
   useEffect(() => {
     if (!mounted.current) {
@@ -383,6 +389,29 @@ export default function PackEditor({
     autosaveTimer.current = setTimeout(() => saveDraft(pack), 1000);
     return () => clearTimeout(autosaveTimer.current);
   }, [pack, draftId]);
+
+  const MAX_CONFLICT_RETRIES = 2;
+
+  const updateDraftWithRetry = (
+    draftIdToSave: string,
+    body: unknown,
+    attempt = 0
+  ): Promise<PackDraft> => {
+    const run = draftSaveChain.current.then(
+      () => updateDraft(draftIdToSave, body),
+      () => updateDraft(draftIdToSave, body)
+    );
+    draftSaveChain.current = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run.catch((e: unknown) => {
+      if (isConflictError(e) && attempt < MAX_CONFLICT_RETRIES) {
+        return updateDraftWithRetry(draftIdToSave, body, attempt + 1);
+      }
+      throw e;
+    });
+  };
 
   const handleEdit = async () => {
     try {
@@ -406,7 +435,7 @@ export default function PackEditor({
         uploadFileCache.current,
         uploadUrlCache.current
       );
-      const newDraft = await updateDraft(draftId, req);
+      const newDraft = await updateDraftWithRetry(draftId, req);
       setSaveErrors([]);
       setSaveStatus({ type: "saved", at: new Date() });
       const serverFormData = convertDraftToFormData(newDraft);
@@ -435,7 +464,7 @@ export default function PackEditor({
         uploadFileCache.current,
         uploadUrlCache.current
       );
-      await updateDraft(draftId, req);
+      await updateDraftWithRetry(draftId, req);
       skipNextAutosave.current = true;
       setSaveErrors([]);
     } catch (e) {

@@ -11,9 +11,12 @@ export type User = {
   isDeleted?: boolean;
 };
 
-export type ErrorBody = { error: string };
+export type ErrorBody = { error: string; status?: number };
 export const isError = (obj: unknown): obj is ErrorBody =>
   obj != null && (obj as ErrorBody).error !== undefined;
+
+export const isConflictError = (obj: unknown): obj is ErrorBody =>
+  isError(obj) && obj.status === 409;
 
 export type ValidationError = { path: string; message: string };
 export type ValidationErrors = { errors: ValidationError[] };

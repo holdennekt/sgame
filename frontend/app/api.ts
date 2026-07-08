@@ -216,7 +216,7 @@ export const updateDraft = async (
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!resp.ok) throw await resp.json();
+  if (!resp.ok) throw { ...(await resp.json()), status: resp.status };
   return await resp.json();
 };
 
