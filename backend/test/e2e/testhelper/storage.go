@@ -16,6 +16,7 @@ func (s *NoopStorage) Upload(_ context.Context, _ storage.UploadInput) error { r
 func (s *NoopStorage) UploadFromURL(_ context.Context, _ storage.URLUploadInput) error { return nil }
 func (s *NoopStorage) Delete(_ context.Context, _ string) error                        { return nil }
 func (s *NoopStorage) Move(_ context.Context, _, _ string) error                       { return nil }
+func (s *NoopStorage) Copy(_ context.Context, _, _ string) error                       { return nil }
 func (s *NoopStorage) Get(_ context.Context, _ string) (io.ReadCloser, error) {
 	return nil, errors.New("not implemented")
 }

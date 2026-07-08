@@ -13,6 +13,8 @@ type Storage interface {
 	UploadFromURL(ctx context.Context, uui URLUploadInput) error
 	Delete(ctx context.Context, key string) error
 	Move(ctx context.Context, oldKey, newKey string) error
+	// Copy is Move without deleting oldKey; use it when oldKey must survive until a later step commits.
+	Copy(ctx context.Context, oldKey, newKey string) error
 	Get(ctx context.Context, key string) (io.ReadCloser, error)
 	GetStats(ctx context.Context, key string) (*Stats, error)
 	URL(ctx context.Context, key string, ttl time.Duration) (string, error)

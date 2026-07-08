@@ -124,12 +124,19 @@ func (s *MinioStorage) UploadFromURL(ctx context.Context, uui storage.URLUploadI
 }
 
 func (s *MinioStorage) Move(ctx context.Context, oldKey, newKey string) error {
+	if err := s.Copy(ctx, oldKey, newKey); err != nil {
+		return err
+	}
+	return s.Delete(ctx, oldKey)
+}
+
+func (s *MinioStorage) Copy(ctx context.Context, oldKey, newKey string) error {
 	src := minio.CopySrcOptions{Bucket: s.bucketName, Object: oldKey}
 	dst := minio.CopyDestOptions{Bucket: s.bucketName, Object: newKey}
 	if _, err := s.client.CopyObject(ctx, dst, src); err != nil {
-		return custerr.NewInternalErr(fmt.Errorf("failed to copy file during move: %w", err))
+		return custerr.NewInternalErr(fmt.Errorf("failed to copy file: %w", err))
 	}
-	return s.Delete(ctx, oldKey)
+	return nil
 }
 
 func (s *MinioStorage) Delete(ctx context.Context, key string) error {

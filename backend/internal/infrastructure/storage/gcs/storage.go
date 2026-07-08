@@ -101,26 +101,33 @@ func (s *GCSStorage) UploadFromURL(ctx context.Context, uui storage.URLUploadInp
 }
 
 func (s *GCSStorage) Move(ctx context.Context, oldKey, newKey string) error {
+	if err := s.Copy(ctx, oldKey, newKey); err != nil {
+		return err
+	}
+	return s.Delete(ctx, oldKey)
+}
+
+func (s *GCSStorage) Copy(ctx context.Context, oldKey, newKey string) error {
 	src := s.client.Bucket(s.bucketName).Object(oldKey)
 	dst := s.client.Bucket(s.bucketName).Object(newKey)
 	if _, err := dst.CopierFrom(src).Run(ctx); err != nil {
-		return custerr.NewInternalErr(fmt.Errorf("failed to copy file during move: %w", err))
+		return custerr.NewInternalErr(fmt.Errorf("failed to copy file: %w", err))
 	}
 	if strings.HasPrefix(newKey, "public/") {
 		if err := dst.ACL().Set(ctx, gcsstorage.AllUsers, gcsstorage.RoleReader); err != nil {
 			_ = dst.Delete(ctx)
-			return custerr.NewInternalErr(fmt.Errorf("failed to set public ACL on moved file: %w", err))
+			return custerr.NewInternalErr(fmt.Errorf("failed to set public ACL on copied file: %w", err))
 		}
 	} else {
 		if err := dst.ACL().Delete(ctx, gcsstorage.AllUsers); err != nil {
 			var gerr *googleapi.Error
 			if !errors.As(err, &gerr) || gerr.Code != http.StatusNotFound {
 				_ = dst.Delete(ctx)
-				return custerr.NewInternalErr(fmt.Errorf("failed to remove public ACL on moved file: %w", err))
+				return custerr.NewInternalErr(fmt.Errorf("failed to remove public ACL on copied file: %w", err))
 			}
 		}
 	}
-	return s.Delete(ctx, oldKey)
+	return nil
 }
 
 func (s *GCSStorage) Delete(ctx context.Context, key string) error {

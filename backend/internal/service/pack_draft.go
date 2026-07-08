@@ -253,12 +253,27 @@ func (s *PackDraftService) Publish(ctx context.Context, user domain.User, id str
 		return "", err
 	}
 
-	if err := s.promoteAttachments(ctx, draft); err != nil {
+	oldKeys, newKeys, err := s.promoteAttachments(ctx, draft)
+	if err != nil {
 		return "", err
 	}
 	if err := s.packDraftRepo.Update(ctx, draft); err != nil {
+		go func() {
+			for _, key := range newKeys {
+				if delErr := s.storage.Delete(context.Background(), key); delErr != nil {
+					slog.Error("publish: failed to clean up promoted attachment after failed update", "key", key, "err", delErr)
+				}
+			}
+		}()
 		return "", err
 	}
+	go func() {
+		for _, key := range oldKeys {
+			if err := s.storage.Delete(context.Background(), key); err != nil {
+				slog.Error("publish: failed to delete pre-promotion attachment", "key", key, "err", err)
+			}
+		}
+	}()
 
 	var packId string
 
@@ -281,7 +296,8 @@ func (s *PackDraftService) Publish(ctx context.Context, user domain.User, id str
 	return packId, nil
 }
 
-func (s *PackDraftService) promoteAttachments(ctx context.Context, draft *domain.PackDraft) error {
+// promoteAttachments re-keys each attachment to draft.Type's privacy prefix via Copy, returning old/new keys for the caller to reconcile.
+func (s *PackDraftService) promoteAttachments(ctx context.Context, draft *domain.PackDraft) (oldKeys, newKeys []string, err error) {
 	targetType := draft.Type
 
 	var atts []*domain.Attachment
@@ -309,11 +325,12 @@ func (s *PackDraftService) promoteAttachments(ctx context.Context, draft *domain
 	}
 
 	if len(atts) == 0 {
-		return nil
+		return nil, nil, nil
 	}
 
 	type result struct {
 		att    *domain.Attachment
+		oldKey string
 		newKey string
 		err    error
 	}
@@ -330,7 +347,7 @@ func (s *PackDraftService) promoteAttachments(ctx context.Context, draft *domain
 					results <- result{att: att, newKey: newKey}
 					continue
 				}
-				results <- result{att: att, newKey: newKey, err: s.storage.Move(ctx, att.Key, newKey)}
+				results <- result{att: att, oldKey: att.Key, newKey: newKey, err: s.storage.Copy(ctx, att.Key, newKey)}
 			}
 		}()
 	}
@@ -351,9 +368,13 @@ func (s *PackDraftService) promoteAttachments(ctx context.Context, draft *domain
 			}
 		} else {
 			r.att.Key = r.newKey
+			if r.oldKey != "" {
+				oldKeys = append(oldKeys, r.oldKey)
+				newKeys = append(newKeys, r.newKey)
+			}
 		}
 	}
-	return firstErr
+	return oldKeys, newKeys, firstErr
 }
 
 func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, oldDraft *domain.PackDraft, req dto.UpdatePackDraftRequest) (*domain.PackDraft, error) {
