@@ -21,13 +21,14 @@ import (
 type PackDraftService struct {
 	packDraftRepo     repository.PackDraft
 	packRepo          repository.Pack
+	userRepository    repository.User
 	storage           storage.Storage
 	attachmentService *AttachmentService
 	packService       *PackService
 	validator         *validator.Validate
 }
 
-func NewPackDraftService(packDraftRepo repository.PackDraft, packRepo repository.Pack, storage storage.Storage, attachmentService *AttachmentService, packService *PackService) *PackDraftService {
+func NewPackDraftService(packDraftRepo repository.PackDraft, packRepo repository.Pack, userRepository repository.User, storage storage.Storage, attachmentService *AttachmentService, packService *PackService) *PackDraftService {
 	v := validator.New()
 	v.SetTagName("binding")
 	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
@@ -41,6 +42,7 @@ func NewPackDraftService(packDraftRepo repository.PackDraft, packRepo repository
 	return &PackDraftService{
 		packDraftRepo:     packDraftRepo,
 		packRepo:          packRepo,
+		userRepository:    userRepository,
 		storage:           storage,
 		attachmentService: attachmentService,
 		packService:       packService,
@@ -106,7 +108,7 @@ func (s *PackDraftService) GetById(ctx context.Context, userId, id string) (*dom
 	if draft.CreatedBy.Id != userId {
 		return nil, custerr.NewForbiddenErr("cannot access another user's draft")
 	}
-	draft.CreatedBy = resolveCreator(ctx, s.packService.userRepository, map[string]domain.User{}, draft.CreatedBy.Id)
+	draft.CreatedBy = resolveCreator(ctx, s.userRepository, map[string]domain.User{}, draft.CreatedBy.Id)
 	populateAttachmentURLs(ctx, s.storage, draft)
 	return draft, nil
 }
@@ -148,7 +150,7 @@ func (s *PackDraftService) GetByUser(ctx context.Context, userId string, search 
 	if err != nil {
 		return nil, 0, err
 	}
-	creator := resolveCreator(ctx, s.packService.userRepository, map[string]domain.User{}, userId)
+	creator := resolveCreator(ctx, s.userRepository, map[string]domain.User{}, userId)
 	for i := range drafts {
 		drafts[i].CreatedBy = creator
 	}
@@ -164,29 +166,15 @@ func (s *PackDraftService) Update(ctx context.Context, user domain.User, id stri
 		return nil, custerr.NewForbiddenErr("cannot edit another user's draft")
 	}
 
-	// Determine linked pack keys once (needed for error-path cleanup only).
-	var linkedPackKeys map[string]struct{}
-	skipCleanup := false
-	if draft.LinkedPackId != nil {
-		linkedPack, fetchErr := s.packRepo.GetById(context.Background(), *draft.LinkedPackId)
-		if fetchErr != nil {
-			slog.Error("draft update: failed to fetch linked pack, skipping attachment cleanup", "pack_id", *draft.LinkedPackId, "err", fetchErr)
-			skipCleanup = true
-		} else {
-			linkedPackKeys = linkedPack.AttachmentKeys()
-		}
-	}
-
-	// On error, clean up any keys that were freshly uploaded in this request
-	// (present in req but not in the old draft), excluding linked-pack keys.
 	defer func() {
-		if err != nil && !skipCleanup {
-			for key := range sets.Delta(sets.Delta(req.AttachmentKeys(), draft.AttachmentKeys()), linkedPackKeys) {
-				if err := s.storage.Delete(context.Background(), key); err != nil {
-					slog.Error("failed to cleanup attachment", "key", key, "err", err)
-				}
-			}
+		if err == nil {
+			return
 		}
+		if _, isConflict := err.(custerr.ConflictErr); isConflict {
+			return
+		}
+		candidateKeys := sets.Delta(req.AttachmentKeys(), draft.AttachmentKeys())
+		go s.cleanupAttachmentKeys(context.Background(), draft.Id, candidateKeys, "draft update (error)")
 	}()
 
 	newDraft, err := s.updateDomain(ctx, user, draft, req)
@@ -198,14 +186,38 @@ func (s *PackDraftService) Update(ctx context.Context, user domain.User, id stri
 	if err != nil {
 		return nil, err
 	}
+	newDraft.Version = draft.Version + 1
 
-	// No GCS cleanup on successful Update: concurrent autosaves can race and a
-	// stale save may overwrite a newer one, leaving the draft referencing a key
-	// that was already deleted. Cleanup of replaced/removed attachments is deferred
-	// to Delete (user deletes the draft) and Publish (UpdateFromDraft handles it).
+	candidateKeys := sets.Delta(draft.AttachmentKeys(), newDraft.AttachmentKeys())
+	go s.cleanupAttachmentKeys(context.Background(), newDraft.Id, candidateKeys, "draft update")
 
 	populateAttachmentURLs(ctx, s.storage, newDraft)
 	return newDraft, nil
+}
+
+// cleanupAttachmentKeys deletes keys not still referenced by another draft or pack.
+func (s *PackDraftService) cleanupAttachmentKeys(ctx context.Context, excludeDraftId string, candidateKeys map[string]struct{}, logCtx string) {
+	if len(candidateKeys) == 0 {
+		return
+	}
+
+	referencedInDrafts, err := s.packDraftRepo.GetReferencedKeys(ctx, candidateKeys, excludeDraftId)
+	if err != nil {
+		slog.Error(logCtx+": failed to check cross-draft key references, skipping attachment cleanup", "err", err)
+		return
+	}
+	referencedInPacks, err := s.packRepo.GetReferencedKeys(ctx, candidateKeys, "")
+	if err != nil {
+		slog.Error(logCtx+": failed to check pack key references, skipping attachment cleanup", "err", err)
+		return
+	}
+
+	stillReferenced := sets.Union(referencedInDrafts, referencedInPacks)
+	for key := range sets.Delta(candidateKeys, stillReferenced) {
+		if err := s.storage.Delete(ctx, key); err != nil {
+			slog.Error("failed to cleanup attachment", "key", key, "err", err)
+		}
+	}
 }
 
 func (s *PackDraftService) Delete(ctx context.Context, userId, id string) error {
@@ -221,39 +233,7 @@ func (s *PackDraftService) Delete(ctx context.Context, userId, id string) error 
 		return err
 	}
 
-	go func() {
-		var linkedPackKeys map[string]struct{}
-		if draft.LinkedPackId != nil {
-			linkedPack, err := s.packRepo.GetById(context.Background(), *draft.LinkedPackId)
-			if err != nil {
-				slog.Error("draft delete: failed to fetch linked pack, skipping attachment cleanup", "pack_id", *draft.LinkedPackId, "err", err)
-				return
-			}
-			linkedPackKeys = linkedPack.AttachmentKeys()
-		}
-
-		candidateKeys := sets.Delta(draft.AttachmentKeys(), linkedPackKeys)
-		if len(candidateKeys) == 0 {
-			return
-		}
-
-		// Guard: skip keys referenced by other drafts to avoid breaking shared GCS objects.
-		keySlice := make([]string, 0, len(candidateKeys))
-		for k := range candidateKeys {
-			keySlice = append(keySlice, k)
-		}
-		referencedKeys, err := s.packDraftRepo.GetReferencedKeys(context.Background(), draft.CreatedBy.Id, keySlice, draft.Id)
-		if err != nil {
-			slog.Error("draft delete: failed to check cross-draft key references, skipping attachment cleanup", "err", err)
-			return
-		}
-
-		for key := range sets.Delta(candidateKeys, referencedKeys) {
-			if err := s.storage.Delete(context.Background(), key); err != nil {
-				slog.Error("failed to cleanup attachment", "key", key, "err", err)
-			}
-		}
-	}()
+	go s.cleanupAttachmentKeys(context.Background(), draft.Id, draft.AttachmentKeys(), "draft delete")
 
 	return nil
 }
@@ -486,6 +466,7 @@ func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, o
 		FinalRound:   finalRound,
 		CreatedAt:    oldDraft.CreatedAt,
 		UpdatedAt:    time.Now(),
+		Version:      oldDraft.Version,
 	}, nil
 }
 

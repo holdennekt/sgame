@@ -54,7 +54,15 @@ func (r *packRepository) init(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return nil
+
+	_, err = r.db.Collection(PACKS_COLLECTION).Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{Keys: bson.D{{Key: "createdBy", Value: 1}}},
+		{Keys: bson.D{{Key: "rounds.categories.questions.attachment.key", Value: 1}}},
+		{Keys: bson.D{{Key: "rounds.categories.questions.comment.attachment.key", Value: 1}}},
+		{Keys: bson.D{{Key: "finalRound.categories.question.attachment.key", Value: 1}}},
+		{Keys: bson.D{{Key: "finalRound.categories.question.comment.attachment.key", Value: 1}}},
+	})
+	return err
 }
 
 type mongoPack struct {
@@ -361,4 +369,47 @@ func (r *packRepository) Delete(ctx context.Context, id string) error {
 		return custerr.NewNotFoundErr(fmt.Sprintf("no pack with id \"%s\"", id))
 	}
 	return nil
+}
+
+// GetReferencedKeys finds keys still used by another pack; pass excludeId="" for none.
+func (r *packRepository) GetReferencedKeys(ctx context.Context, keys map[string]struct{}, excludeId string) (map[string]struct{}, error) {
+	if len(keys) == 0 {
+		return nil, nil
+	}
+	keySlice := make([]string, 0, len(keys))
+	for k := range keys {
+		keySlice = append(keySlice, k)
+	}
+	excludeObjId, _ := primitive.ObjectIDFromHex(excludeId)
+	filter := bson.M{
+		"_id": bson.M{"$ne": excludeObjId},
+		"$or": bson.A{
+			bson.M{"rounds.categories.questions.attachment.key": bson.M{"$in": keySlice}},
+			bson.M{"rounds.categories.questions.comment.attachment.key": bson.M{"$in": keySlice}},
+			bson.M{"finalRound.categories.question.attachment.key": bson.M{"$in": keySlice}},
+			bson.M{"finalRound.categories.question.comment.attachment.key": bson.M{"$in": keySlice}},
+		},
+	}
+	cur, err := r.db.Collection(PACKS_COLLECTION).Find(ctx, filter, options.Find().SetProjection(bson.M{"rounds": 1, "finalRound": 1}))
+	if err != nil {
+		return nil, custerr.NewInternalErr(err)
+	}
+	defer func() { _ = cur.Close(ctx) }()
+
+	referenced := make(map[string]struct{})
+	for cur.Next(ctx) {
+		var m mongoPack
+		if err := cur.Decode(&m); err != nil {
+			return nil, custerr.NewInternalErr(err)
+		}
+		for k := range toDomainPack(&m).AttachmentKeys() {
+			if _, ok := keys[k]; ok {
+				referenced[k] = struct{}{}
+			}
+		}
+	}
+	if err := cur.Err(); err != nil {
+		return nil, custerr.NewInternalErr(err)
+	}
+	return referenced, nil
 }

@@ -15,3 +15,14 @@ func Delta[K comparable](a, b map[K]struct{}) map[K]struct{} {
 	}
 	return delta
 }
+
+func Union[K comparable](a, b map[K]struct{}) map[K]struct{} {
+	union := make(map[K]struct{}, len(a)+len(b))
+	for k := range a {
+		union[k] = struct{}{}
+	}
+	for k := range b {
+		union[k] = struct{}{}
+	}
+	return union
+}

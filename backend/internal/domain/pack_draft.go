@@ -13,6 +13,8 @@ type PackDraft struct {
 	FinalRound   FinalRound  `json:"finalRound"`
 	CreatedAt    time.Time   `json:"createdAt"`
 	UpdatedAt    time.Time   `json:"updatedAt"`
+	// Version guards Update against clobbering a newer concurrent write.
+	Version int `json:"-"`
 }
 
 func (d *PackDraft) AttachmentKeys() map[string]struct{} {

@@ -16,4 +16,5 @@ type Pack interface {
 	GetByChecksum(ctx context.Context, userId string, checksum []byte, ignoreId *string) ([]*domain.Pack, error)
 	Update(ctx context.Context, pack *domain.Pack) error
 	Delete(ctx context.Context, id string) error
+	GetReferencedKeys(ctx context.Context, keys map[string]struct{}, excludeId string) (map[string]struct{}, error)
 }
