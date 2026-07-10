@@ -26,7 +26,7 @@ const (
 	NOT_REGISTERED_MAX_ATTEMPTS = 8
 	NOT_REGISTERED_ATTEMPTS_TTL = 2 * time.Hour
 	SAVE_MAX_ATTEMPTS           = 5
-	TRANSCODE_TIMEOUT           = 10 * time.Minute
+	TRANSCODE_TIMEOUT           = time.Minute
 )
 
 func DraftAttachmentsChannel(draftId string) string {
