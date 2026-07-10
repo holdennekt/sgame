@@ -69,7 +69,7 @@ docker-compose -f docker-compose.dev.yaml up --build
 internal/
   domain/         Pure domain types and state-machine logic (no I/O)
   service/        Business logic; orchestrates domain + infrastructure
-  interface/      Go interfaces for repository, cache, realtime, storage
+  interface/      Go interfaces for repository, cache, realtime, storage, queue
   infrastructure/ Concrete implementations:
     database/mongo/      MongoDB repositories
     cache/redis/         Redis session & room cache
@@ -77,6 +77,7 @@ internal/
     realtime/streams/    Redis Streams multiplexer
     realtime/ws/         WebSocket channel wrapper
     storage/             GCS and Minio adapters (+ factory/); two buckets: raw (staging) and compressed (serving)
+    queue/               Pull consumers for raw-bucket upload notifications (+ factory/): GCS Pub/Sub pull subscription, or a Redis-list-backed reliable queue fed by Minio's Redis notification target
   transport/
     http/          Gin HTTP controllers (auth, user, pack, pack_draft, room)
     ws/            WebSocket handlers (lobby, room)
@@ -211,7 +212,7 @@ Moderator `skip_round` is a manual, synchronous bypass of the "round ends" auto-
 
 ### Config
 
-All configuration comes from environment variables. Required vars: `MONGO_*`, `REDIS_HOST/PORT`, `STORAGE_PROVIDER`, `RAW_BUCKET_NAME`, `PROCESSED_BUCKET_NAME`, `FRONTEND_URL`, `HOST`, `PORT`. Optional: `NOTIFICATIONS_TOKEN` (shared secret for the storage-notification webhook), `TIME_TO_BET` (default 60s), `TIME_TO_PASS` (default 60s), `QUESTION_DEMO_DURATION` (default 5s), `IDLE_ROOM_TTL` (default 600s).
+All configuration comes from environment variables. Required vars: `MONGO_*`, `REDIS_HOST/PORT`, `STORAGE_PROVIDER`, `RAW_BUCKET_NAME`, `PROCESSED_BUCKET_NAME`, `FRONTEND_URL`, `HOST`, `PORT`. When `STORAGE_PROVIDER=gcs`, also required: `GCP_PROJECT_ID`, `PUBSUB_SUBSCRIPTION_ID` (the pull subscription attachment-processor consumes raw-bucket upload notifications from). Optional: `TIME_TO_BET` (default 60s), `TIME_TO_PASS` (default 60s), `QUESTION_DEMO_DURATION` (default 5s), `IDLE_ROOM_TTL` (default 600s).
 
 ### Swagger
 

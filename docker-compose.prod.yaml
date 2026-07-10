@@ -45,7 +45,6 @@ services:
       STORAGE_PROVIDER: gcs
       RAW_BUCKET_NAME: sgame-attachments-raw
       PROCESSED_BUCKET_NAME: sgame-attachments-processed
-      NOTIFICATIONS_TOKEN: ${NOTIFICATIONS_TOKEN}
       GOOGLE_APPLICATION_CREDENTIALS: /app/smart-altar-496311-p4-5cf9bc5fd4e7.json
       FRONTEND_URL: https://sgame.dedyn.io
       USER_AGENT: "SGame/1.0"
@@ -85,10 +84,8 @@ services:
     tmpfs:
       - /tmp
 
-  # Triggered by GCS bucket notifications: raw bucket -> Pub/Sub topic
-  # (OBJECT_FINALIZE) -> push subscription to
-  # https://<domain>/notifications/attachments?token=$NOTIFICATIONS_TOKEN.
-  # Give the raw bucket a short lifecycle TTL (e.g. 1 day) as a backstop.
+  # Pulls raw-bucket upload notifications (OBJECT_FINALIZE) from a GCS
+  # Pub/Sub pull subscription at its own pace (bounded by maxConcurrentProcessors)
   attachment-processor:
     image: europe-central2-docker.pkg.dev/smart-altar-496311-p4/sgame-images/sgame-backend:latest
     entrypoint: ["/attachment-processor"]
@@ -116,14 +113,15 @@ services:
       STORAGE_PROVIDER: gcs
       RAW_BUCKET_NAME: sgame-attachments-raw
       PROCESSED_BUCKET_NAME: sgame-attachments-processed
-      NOTIFICATIONS_TOKEN: ${NOTIFICATIONS_TOKEN}
+      GCP_PROJECT_ID: smart-altar-496311-p4
+      PUBSUB_SUBSCRIPTION_ID: sgame-attachment-uploads-push
       GOOGLE_APPLICATION_CREDENTIALS: /app/smart-altar-496311-p4-5cf9bc5fd4e7.json
       FRONTEND_URL: https://sgame.dedyn.io
       USER_AGENT: "SGame/1.0"
     volumes:
       - ./smart-altar-496311-p4-5cf9bc5fd4e7.json:/app/smart-altar-496311-p4-5cf9bc5fd4e7.json
-    tmpfs:
-      - /tmp
+      - attachment_processor_tmp:/tmp
+    restart: unless-stopped
 
   mongodb:
     image: mongo:6.0
@@ -184,3 +182,4 @@ volumes:
   mongodb_data_container:
   prometheus_data:
   grafana_data:
+  attachment_processor_tmp:

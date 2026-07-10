@@ -23,7 +23,6 @@ type Config struct {
 	StorageProvider      string
 	RawBucketName        string // env: RAW_BUCKET_NAME; staging bucket for original uploads
 	CompressedBucketName string // env: PROCESSED_BUCKET_NAME; serving bucket
-	NotificationsToken   string // env: NOTIFICATIONS_TOKEN; optional shared secret for storage webhook pushes
 	FrontendURL          string
 	UserAgent            string
 
@@ -31,6 +30,9 @@ type Config struct {
 	MinioUser     string
 	MinioPassword string
 	MinioUseSSL   bool
+
+	GCPProjectID         string // env: GCP_PROJECT_ID; required when STORAGE_PROVIDER=gcs
+	PubSubSubscriptionID string // env: PUBSUB_SUBSCRIPTION_ID; pull subscription for raw-bucket upload notifications
 
 	AppEnv string
 	Host   string
@@ -92,12 +94,14 @@ func Load() (*Config, error) {
 		StorageProvider:      os.Getenv("STORAGE_PROVIDER"),
 		RawBucketName:        os.Getenv("RAW_BUCKET_NAME"),
 		CompressedBucketName: os.Getenv("PROCESSED_BUCKET_NAME"),
-		NotificationsToken:   os.Getenv("NOTIFICATIONS_TOKEN"),
 
 		MinioEndpoint: os.Getenv("MINIO_ENDPOINT"),
 		MinioUser:     os.Getenv("MINIO_ROOT_USER"),
 		MinioPassword: os.Getenv("MINIO_ROOT_PASSWORD"),
 		MinioUseSSL:   minioUseSSL,
+
+		GCPProjectID:         os.Getenv("GCP_PROJECT_ID"),
+		PubSubSubscriptionID: os.Getenv("PUBSUB_SUBSCRIPTION_ID"),
 
 		AppEnv:      os.Getenv("APP_ENV"),
 		Host:        os.Getenv("HOST"),
@@ -153,6 +157,18 @@ func (c *Config) validate() error {
 			"MINIO_ROOT_PASSWORD": c.MinioPassword,
 		}
 		for key, val := range minioRequired {
+			if val == "" {
+				missing = append(missing, key)
+			}
+		}
+	}
+
+	if c.StorageProvider == "gcs" {
+		gcsRequired := map[string]string{
+			"GCP_PROJECT_ID":         c.GCPProjectID,
+			"PUBSUB_SUBSCRIPTION_ID": c.PubSubSubscriptionID,
+		}
+		for key, val := range gcsRequired {
 			if val == "" {
 				missing = append(missing, key)
 			}

@@ -105,8 +105,8 @@ services:
         Use confidence < 0.6 only when the answer is genuinely ambiguous. Do not explain your reasoning.
       AI_VALIDATION_TIMEOUT: 10
 
-  # Triggered by Minio bucket notifications (webhook target on the minio
-  # service; bucket event rule added by minio-init).
+  # Pulls raw-bucket upload notifications from a Redis-list-backed queue,
+  # fed by Minio's Redis notification target (bucket event rule added by minio-init)
   attachment-processor:
     image: sgame-backend-dev
     build:
@@ -141,7 +141,6 @@ services:
       STORAGE_PROVIDER: minio
       RAW_BUCKET_NAME: attachments-raw
       PROCESSED_BUCKET_NAME: attachments-processed
-      NOTIFICATIONS_TOKEN: ${NOTIFICATIONS_TOKEN}
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_ENDPOINT: minio:9000
@@ -217,15 +216,20 @@ services:
       - 9000:9000
       - 9001:9001
     command: server /data --console-address :9001
+    depends_on:
+      redis:
+        condition: service_healthy
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BROWSER: on
-      # queue dir persists undelivered events for redelivery
-      MINIO_NOTIFY_WEBHOOK_ENABLE_SGAME: "on"
-      MINIO_NOTIFY_WEBHOOK_ENDPOINT_SGAME: http://attachment-processor/notifications/attachments
-      MINIO_NOTIFY_WEBHOOK_AUTH_TOKEN_SGAME: ${NOTIFICATIONS_TOKEN}
-      MINIO_NOTIFY_WEBHOOK_QUEUE_DIR_SGAME: /data/.notify-sgame
+      MINIO_NOTIFY_REDIS_ENABLE_SGAME: on
+      MINIO_NOTIFY_REDIS_ADDRESS_SGAME: redis:6379
+      MINIO_NOTIFY_REDIS_USER_SGAME: ${REDIS_USERNAME}
+      MINIO_NOTIFY_REDIS_PASSWORD_SGAME: ${REDIS_PASSWORD}
+      MINIO_NOTIFY_REDIS_KEY_SGAME: attachment:notifications:queue
+      MINIO_NOTIFY_REDIS_FORMAT_SGAME: access
+      MINIO_NOTIFY_REDIS_QUEUE_DIR_SGAME: /data/.notify-sgame
     volumes:
       - minio_data:/data
     healthcheck:
@@ -245,7 +249,8 @@ services:
       - |
         mc alias set local http://minio:9000 "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWORD}"
         mc mb --ignore-existing local/attachments-raw local/attachments-processed
-        mc event add local/attachments-raw arn:minio:sqs::SGAME:webhook --event put || true
+        mc event remove local/attachments-raw --force || true
+        mc event add local/attachments-raw arn:minio:sqs::SGAME:redis --event put
         mc ilm rule add local/attachments-raw --expire-days 1 || true
 
 volumes:

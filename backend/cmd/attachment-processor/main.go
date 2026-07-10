@@ -17,6 +17,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/config"
 	redisCache "github.com/holdennekt/sgame/backend/internal/infrastructure/cache/redis"
 	mongoDatabase "github.com/holdennekt/sgame/backend/internal/infrastructure/database/mongo"
+	queueFactory "github.com/holdennekt/sgame/backend/internal/infrastructure/queue/factory"
 	"github.com/holdennekt/sgame/backend/internal/infrastructure/realtime/pubsub"
 	storageFactory "github.com/holdennekt/sgame/backend/internal/infrastructure/storage/factory"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
@@ -28,6 +29,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+const maxConcurrentProcessors = 5
 
 func main() {
 	_ = godotenv.Load()
@@ -87,7 +90,23 @@ func main() {
 		pubsub.NewChannelGetter(rds),
 		redisCache.NewAttemptCounter(rds),
 	)
-	controller := myHttp.NewNotificationController(processor, cfg.NotificationsToken)
+
+	// Its own client/pool: a blocking queue consumer can hold connections
+	// checked out for a long time, which would starve the attempt-counter
+	// calls above if they shared one pool.
+	queueRds := redis.NewClient(&redis.Options{
+		Addr:     cfg.RedisHost + ":" + cfg.RedisPort,
+		Username: cfg.RedisUser,
+		Password: cfg.RedisPassword,
+		DB:       cfg.RedisDB,
+	})
+	defer func() { _ = queueRds.Close() }()
+
+	consumer, err := queueFactory.New(context.Background(), cfg, queueRds, maxConcurrentProcessors)
+	if err != nil {
+		slog.Error("failed to initialize notification queue consumer", "err", err)
+		os.Exit(1)
+	}
 
 	engine := gin.New()
 	engine.GET("/metrics", gin.WrapH(promhttp.Handler()))
@@ -97,7 +116,6 @@ func main() {
 		myHttp.LoggingMiddleware,
 		myHttp.ErrorMiddleware,
 	)
-	controller.RegisterRoutes(engine.Group("/"))
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -113,6 +131,14 @@ func main() {
 		}
 	}()
 
+	consumerDone := make(chan struct{})
+	go func() {
+		defer close(consumerDone)
+		if err := consumer.Consume(ctx, processor.Process); err != nil {
+			slog.Error("notification consumer stopped unexpectedly", "err", err)
+		}
+	}()
+
 	<-ctx.Done()
 	slog.Info("shutting down attachment processor")
 
@@ -122,6 +148,12 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("failed to shutdown gracefully", "err", err)
 		os.Exit(1)
+	}
+
+	select {
+	case <-consumerDone:
+	case <-shutdownCtx.Done():
+		slog.Error("notification consumer did not drain in time")
 	}
 
 	slog.Info("attachment processor shutdown gracefully")
