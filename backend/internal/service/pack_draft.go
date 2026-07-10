@@ -574,7 +574,7 @@ func (s *PackDraftService) Import(ctx context.Context, user domain.User, r io.Re
 		return "", custerr.NewForbiddenErr("guest users cannot import packs")
 	}
 
-	draft, err := s.parseSIQ(ctx, r, size)
+	draft, uploads, err := s.parseSIQ(r, size)
 	if err != nil {
 		return "", err
 	}
@@ -584,5 +584,10 @@ func (s *PackDraftService) Import(ctx context.Context, user domain.User, r io.Re
 	draft.CreatedAt = now
 	draft.UpdatedAt = now
 
-	return s.packDraftRepo.Create(ctx, draft)
+	id, err := s.packDraftRepo.Create(ctx, draft)
+	if err != nil {
+		return "", err
+	}
+	s.uploadSIQMedia(ctx, uploads)
+	return id, nil
 }

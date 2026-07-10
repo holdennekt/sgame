@@ -8,15 +8,13 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
-	"time"
+	"sync"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
-	"gopkg.in/vansante/go-ffprobe.v2"
 )
 
 type siqPackage struct {
@@ -212,12 +210,19 @@ func appendSelectOptions(qText string, param *siqParam) string {
 	return strings.Join(lines, "\n")
 }
 
-// parseSIQ unzips r, parses content.xml, uploads all referenced media to
-// storage, and returns a PackDraft with fully-populated Attachment structs.
-func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int64) (*domain.PackDraft, error) {
+// siqPendingUpload is a media file read from the zip but not yet uploaded
+type siqPendingUpload struct {
+	key  string
+	data []byte
+}
+
+// parseSIQ unzips r, parses content.xml, and returns a PackDraft with
+// fully-populated Attachment structs (status pending) plus the still-unsent
+// media bytes for the caller to upload once the draft has been persisted.
+func (s *PackDraftService) parseSIQ(r io.ReaderAt, size int64) (*domain.PackDraft, []siqPendingUpload, error) {
 	zr, err := zip.NewReader(r, size)
 	if err != nil {
-		return nil, custerr.NewBadRequestErr("invalid siq file: not a valid zip archive")
+		return nil, nil, custerr.NewBadRequestErr("invalid siq file: not a valid zip archive")
 	}
 
 	zipIndex := make(map[string]*zip.File, len(zr.File))
@@ -231,98 +236,54 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 
 	xmlZipFile := zipIndex["content.xml"]
 	if xmlZipFile == nil {
-		return nil, custerr.NewBadRequestErr("invalid siq file: content.xml not found")
+		return nil, nil, custerr.NewBadRequestErr("invalid siq file: content.xml not found")
 	}
 	rc, err := xmlZipFile.Open()
 	if err != nil {
-		return nil, custerr.NewInternalErr(err)
+		return nil, nil, custerr.NewInternalErr(err)
 	}
 	defer func() { _ = rc.Close() }()
 
 	xmlBytes, err := io.ReadAll(rc)
 	if err != nil {
-		return nil, custerr.NewInternalErr(err)
+		return nil, nil, custerr.NewInternalErr(err)
 	}
 	xmlBytes = regexp.MustCompile(`\s+xmlns(?::\w+)?="[^"]*"`).ReplaceAll(xmlBytes, nil)
 
 	var pkg siqPackage
 	if err := xml.Unmarshal(xmlBytes, &pkg); err != nil {
-		return nil, custerr.NewBadRequestErr("invalid siq file: cannot parse content.xml: " + err.Error())
+		return nil, nil, custerr.NewBadRequestErr("invalid siq file: cannot parse content.xml: " + err.Error())
 	}
 
-	// processMedia probes one zip entry with ffprobe, uploads it to storage, and
-	// returns a fully populated *domain.Attachment. It returns nil if the media
-	// can't be read or probed — an attachment is only created once its Type and
-	// MimeType are known from its actual content.
-	processMedia := func(zipPath string) *domain.Attachment {
+	// readMedia reads one zip entry and returns a pending *domain.Attachment
+	// plus its raw bytes for later upload
+	readMedia := func(zipPath string) (*domain.Attachment, []byte) {
 		f := zipIndex[strings.ToLower(zipPath)]
 		if f == nil {
 			slog.Warn("siq import: media not found in zip", "path", zipPath)
-			return nil
+			return nil, nil
 		}
 		fr, err := f.Open()
 		if err != nil {
 			slog.Error("siq import: cannot open media", "path", zipPath, "err", err)
-			return nil
+			return nil, nil
 		}
 		data, err := io.ReadAll(fr)
 		_ = fr.Close()
 		if err != nil {
 			slog.Error("siq import: cannot read media", "path", zipPath, "err", err)
-			return nil
-		}
-
-		tmpFile, err := os.CreateTemp("", "sgame-probe-*")
-		if err != nil {
-			slog.Error("siq import: failed to create temp file", "err", err)
-			return nil
-		}
-		defer func() { _ = os.Remove(tmpFile.Name()) }()
-		defer func() { _ = tmpFile.Close() }()
-
-		if _, err := tmpFile.Write(data); err != nil {
-			slog.Error("siq import: failed to buffer media for probing", "path", zipPath, "err", err)
-			return nil
-		}
-
-		probeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		probeData, err := ffprobe.ProbeURL(probeCtx, tmpFile.Name())
-		cancel()
-		if err != nil {
-			slog.Error("siq import: failed to probe media", "path", zipPath, "err", err)
-			return nil
-		}
-
-		fileType, mimeType := classifyProbe(probeData)
-		key := s.attachmentService.generateKey(false)
-
-		if err := s.rawStorage.Upload(ctx, storage.UploadInput{
-			Key:      key,
-			Size:     int64(len(data)),
-			MimeType: mimeType,
-			Reader:   bytes.NewReader(data),
-		}); err != nil {
-			slog.Error("siq import: failed to upload media", "path", zipPath, "err", err)
-			return nil
+			return nil, nil
 		}
 
 		att := &domain.Attachment{
-			Key:      key,
-			MimeType: mimeType,
-			Size:     int64(len(data)),
-			Type:     fileType,
-			Status:   domain.AttachmentPending,
+			Key:    s.attachmentService.generateKey(false),
+			Size:   int64(len(data)),
+			Status: domain.AttachmentPending,
 		}
-		if fileType == domain.Video || fileType == domain.Audio {
-			att.Duration = probeData.Format.DurationSeconds
-		} else {
-			att.Duration = DEFAULT_ATTACHMENT_DURATION
-		}
-		return att
+		return att, data
 	}
 
-	// Collect all unique media paths across every question (both question and
-	// answer/comment params) so we can deduplicate and upload in parallel.
+	// Collect all unique media paths
 	mediaSet := make(map[string]struct{})
 	for _, r := range pkg.Rounds.Rounds {
 		for _, theme := range r.Themes.Themes {
@@ -339,18 +300,20 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 		}
 	}
 
-	// Process all media concurrently using a fixed pool of 8 workers.
+	// Read all media concurrently using a pool of up to 8 workers
 	type mediaResult struct {
 		path string
 		att  *domain.Attachment
+		data []byte
 	}
 	jobs := make(chan string)
 	results := make(chan mediaResult)
 
-	for range 8 {
+	for range min(len(mediaSet), 8) {
 		go func() {
 			for zipPath := range jobs {
-				results <- mediaResult{zipPath, processMedia(zipPath)}
+				att, data := readMedia(zipPath)
+				results <- mediaResult{zipPath, att, data}
 			}
 		}()
 	}
@@ -363,9 +326,13 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 	}()
 
 	attMap := make(map[string]*domain.Attachment, len(mediaSet))
+	var uploads []siqPendingUpload
 	for i := 0; i < len(mediaSet); i++ {
 		r := <-results
 		attMap[r.path] = r.att
+		if r.att != nil {
+			uploads = append(uploads, siqPendingUpload{key: r.att.Key, data: r.data})
+		}
 	}
 
 	lookupMedia := func(zipPath string) *domain.Attachment {
@@ -470,5 +437,29 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 		Type:       domain.Private,
 		Rounds:     rounds,
 		FinalRound: finalRound,
-	}, nil
+	}, uploads, nil
+}
+
+// uploadSIQMedia uploads every pending SIQ media file to raw storage concurrently
+func (s *PackDraftService) uploadSIQMedia(ctx context.Context, uploads []siqPendingUpload) {
+	jobs := make(chan siqPendingUpload)
+	var wg sync.WaitGroup
+	for range min(len(uploads), 8) {
+		wg.Go(func() {
+			for u := range jobs {
+				if err := s.rawStorage.Upload(ctx, storage.UploadInput{
+					Key:    u.key,
+					Size:   int64(len(u.data)),
+					Reader: bytes.NewReader(u.data),
+				}); err != nil {
+					slog.Error("siq import: failed to upload media", "key", u.key, "err", err)
+				}
+			}
+		})
+	}
+	for _, u := range uploads {
+		jobs <- u
+	}
+	close(jobs)
+	wg.Wait()
 }
