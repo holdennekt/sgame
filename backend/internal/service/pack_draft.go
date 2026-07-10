@@ -179,7 +179,7 @@ func (s *PackDraftService) Update(ctx context.Context, user domain.User, id stri
 		go s.cleanupAttachmentKeys(context.Background(), draft.Id, candidateKeys, "draft update (error)")
 	}()
 
-	newDraft, err := s.updateDomain(ctx, user, draft, req)
+	newDraft, uploads, err := s.updateDomain(ctx, user, draft, req)
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +189,7 @@ func (s *PackDraftService) Update(ctx context.Context, user domain.User, id stri
 		return nil, err
 	}
 	newDraft.Version = draft.Version + 1
+	s.attachmentService.uploadPendingURLs(ctx, uploads)
 
 	candidateKeys := sets.Delta(draft.AttachmentKeys(), newDraft.AttachmentKeys())
 	go s.cleanupAttachmentKeys(context.Background(), newDraft.Id, candidateKeys, "draft update")
@@ -399,7 +400,14 @@ func (s *PackDraftService) promoteAttachments(ctx context.Context, draft *domain
 	return oldKeys, newKeys, firstErr
 }
 
-func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, oldDraft *domain.PackDraft, req dto.UpdatePackDraftRequest) (*domain.PackDraft, error) {
+func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, oldDraft *domain.PackDraft, req dto.UpdatePackDraftRequest) (*domain.PackDraft, []pendingURLUpload, error) {
+	var uploads []pendingURLUpload
+	addUpload := func(u *pendingURLUpload) {
+		if u != nil {
+			uploads = append(uploads, *u)
+		}
+	}
+
 	content := []string{req.Name}
 	rounds := []domain.Round{}
 	for _, r := range req.Rounds {
@@ -430,11 +438,12 @@ func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, o
 				}
 
 				if q.Attachment != nil {
-					attachment, err := s.attachmentService.upsertDomainDraft(ctx, oldDraft.GetAttachment(q.Attachment.Key), *q.Attachment)
+					attachment, upload, err := s.attachmentService.upsertDomainDraft(ctx, oldDraft.GetAttachment(q.Attachment.Key), *q.Attachment)
 					if err != nil {
-						return nil, err
+						return nil, nil, err
 					}
 					question.Attachment = attachment
+					addUpload(upload)
 				}
 
 				if q.Comment != nil {
@@ -442,11 +451,12 @@ func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, o
 						Text: q.Comment.Text,
 					}
 					if q.Comment.Attachment != nil {
-						attachment, err := s.attachmentService.upsertDomainDraft(ctx, oldDraft.GetAttachment(q.Comment.Attachment.Key), *q.Comment.Attachment)
+						attachment, upload, err := s.attachmentService.upsertDomainDraft(ctx, oldDraft.GetAttachment(q.Comment.Attachment.Key), *q.Comment.Attachment)
 						if err != nil {
-							return nil, err
+							return nil, nil, err
 						}
 						question.Comment.Attachment = attachment
+						addUpload(upload)
 					}
 				}
 
@@ -475,11 +485,12 @@ func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, o
 		}
 
 		if c.Question.Attachment != nil {
-			attachment, err := s.attachmentService.upsertDomainDraft(ctx, oldDraft.GetAttachment(c.Question.Attachment.Key), *c.Question.Attachment)
+			attachment, upload, err := s.attachmentService.upsertDomainDraft(ctx, oldDraft.GetAttachment(c.Question.Attachment.Key), *c.Question.Attachment)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			category.Question.Attachment = attachment
+			addUpload(upload)
 		}
 
 		if c.Question.Comment != nil {
@@ -487,11 +498,12 @@ func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, o
 				Text: c.Question.Comment.Text,
 			}
 			if c.Question.Comment.Attachment != nil {
-				attachment, err := s.attachmentService.upsertDomainDraft(ctx, oldDraft.GetAttachment(c.Question.Comment.Attachment.Key), *c.Question.Comment.Attachment)
+				attachment, upload, err := s.attachmentService.upsertDomainDraft(ctx, oldDraft.GetAttachment(c.Question.Comment.Attachment.Key), *c.Question.Comment.Attachment)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				category.Question.Comment.Attachment = attachment
+				addUpload(upload)
 			}
 		}
 
@@ -510,7 +522,7 @@ func (s *PackDraftService) updateDomain(ctx context.Context, user domain.User, o
 		CreatedAt:    oldDraft.CreatedAt,
 		UpdatedAt:    time.Now(),
 		Version:      oldDraft.Version,
-	}, nil
+	}, uploads, nil
 }
 
 func draftToCreatePackRequest(draft *domain.PackDraft) dto.CreatePackRequest {

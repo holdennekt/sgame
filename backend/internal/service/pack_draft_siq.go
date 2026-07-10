@@ -453,6 +453,7 @@ func (s *PackDraftService) uploadSIQMedia(ctx context.Context, uploads []siqPend
 					Reader: bytes.NewReader(u.data),
 				}); err != nil {
 					slog.Error("siq import: failed to upload media", "key", u.key, "err", err)
+					s.attachmentService.markFailed(ctx, u.key, "failed to upload media from the imported file")
 				}
 			}
 		})

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strings"
 
@@ -26,27 +27,84 @@ func NewAttachmentService(packDraftRepo repository.PackDraft, packRepo repositor
 	return &AttachmentService{packDraftRepo, packRepo, rawStorage, compressedStorage}
 }
 
+// pendingURLUpload defers a URL fetch until its key's draft/pack is persisted, avoiding a notification racing ahead of registration.
+type pendingURLUpload struct {
+	key string
+	url string
+}
+
 // A key already referenced elsewhere (e.g. pasted) keeps its metadata — no notification fires for it.
-func (s *AttachmentService) createDomain(ctx context.Context, req dto.CreateAttachmentRequest, privacyType domain.PrivacyType) (*domain.Attachment, error) {
+func (s *AttachmentService) createDomain(ctx context.Context, req dto.CreateAttachmentRequest, privacyType domain.PrivacyType) (*domain.Attachment, *pendingURLUpload, error) {
 	key := req.Key
+	var upload *pendingURLUpload
 	if req.URL != "" {
 		var err error
 		key, err = s.generateKeyFromURL(req.URL, privacyType == domain.Public)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		if err = s.rawStorage.UploadFromURL(ctx, storage.URLUploadInput{Key: key, URL: req.URL, MaxBytes: MAX_FILE_SIZE}); err != nil {
-			return nil, err
-		}
+		upload = &pendingURLUpload{key: key, url: req.URL}
 	} else if existing := s.findRegistered(ctx, key); existing != nil {
 		clone := *existing
 		clone.URL = ""
-		return &clone, nil
+		return &clone, nil, nil
 	}
 	return &domain.Attachment{
 		Key:    key,
 		Status: domain.AttachmentPending,
-	}, nil
+	}, upload, nil
+}
+
+// A failed fetch marks just that one attachment failed, not the whole (already-persisted) save.
+func (s *AttachmentService) uploadPendingURLs(ctx context.Context, uploads []pendingURLUpload) {
+	for _, u := range uploads {
+		if err := s.rawStorage.UploadFromURL(ctx, storage.URLUploadInput{Key: u.key, URL: u.url, MaxBytes: MAX_FILE_SIZE}); err != nil {
+			slog.Error("failed to fetch url attachment", "key", u.key, "url", u.url, "err", err)
+			s.markFailed(ctx, u.key, "failed to fetch the provided URL")
+		}
+	}
+}
+
+// markFailed locates whichever draft/pack currently owns key and marks its attachment failed.
+func (s *AttachmentService) markFailed(ctx context.Context, key, message string) {
+	if draft, err := s.packDraftRepo.FindByAttachmentKey(ctx, key); err == nil {
+		for attempt := 0; ; attempt++ {
+			att := draft.GetAttachment(key)
+			if att == nil {
+				return
+			}
+			att.Status = domain.AttachmentFailed
+			att.Error = message
+			err := s.packDraftRepo.Update(ctx, draft)
+			if err == nil {
+				return
+			}
+			if _, ok := err.(custerr.ConflictErr); !ok || attempt >= SAVE_MAX_ATTEMPTS {
+				slog.Error("failed to mark url attachment failed", "key", key, "err", err)
+				return
+			}
+			draft, err = s.packDraftRepo.FindByAttachmentKey(ctx, key)
+			if err != nil {
+				slog.Error("failed to refetch draft to mark url attachment failed", "key", key, "err", err)
+				return
+			}
+		}
+	}
+
+	pack, err := s.packRepo.FindByAttachmentKey(ctx, key)
+	if err != nil {
+		slog.Warn("could not locate draft/pack to mark url attachment failed", "key", key)
+		return
+	}
+	att := pack.GetAttachment(key)
+	if att == nil {
+		return
+	}
+	att.Status = domain.AttachmentFailed
+	att.Error = message
+	if err := s.packRepo.Update(ctx, pack); err != nil {
+		slog.Error("failed to mark url attachment failed", "key", key, "err", err)
+	}
 }
 
 func (s *AttachmentService) findRegistered(ctx context.Context, key string) *domain.Attachment {
@@ -59,45 +117,31 @@ func (s *AttachmentService) findRegistered(ctx context.Context, key string) *dom
 	return nil
 }
 
-func (s *AttachmentService) upsertDomainDraft(ctx context.Context, oldAttachment *domain.Attachment, req dto.CreateAttachmentRequest) (*domain.Attachment, error) {
-	var attachment *domain.Attachment
-
+func (s *AttachmentService) upsertDomainDraft(ctx context.Context, oldAttachment *domain.Attachment, req dto.CreateAttachmentRequest) (*domain.Attachment, *pendingURLUpload, error) {
 	if oldAttachment != nil {
-		attachment = oldAttachment
-	} else {
-		var err error
-		attachment, err = s.createDomain(ctx, req, domain.Private)
-		if err != nil {
-			return nil, err
-		}
+		return oldAttachment, nil, nil
 	}
-	return attachment, nil
+	return s.createDomain(ctx, req, domain.Private)
 }
 
-func (s *AttachmentService) upsertDomain(ctx context.Context, oldAttachment *domain.Attachment, req dto.CreateAttachmentRequest, privacyType domain.PrivacyType) (*domain.Attachment, error) {
-	var attachment *domain.Attachment
+func (s *AttachmentService) upsertDomain(ctx context.Context, oldAttachment *domain.Attachment, req dto.CreateAttachmentRequest, privacyType domain.PrivacyType) (*domain.Attachment, *pendingURLUpload, error) {
+	if oldAttachment == nil {
+		return s.createDomain(ctx, req, privacyType)
+	}
 
-	if oldAttachment != nil {
-		attachment = oldAttachment
-		// only ready attachments have an object in the compressed bucket to re-key
-		if oldAttachment.IsReady() {
-			keyUUID := req.Key[strings.Index(req.Key, "/"):]
-			newKey := string(privacyType) + keyUUID
-			if oldAttachment.Key != newKey {
-				if err := s.compressedStorage.Move(ctx, oldAttachment.Key, newKey); err != nil {
-					return nil, err
-				}
-				attachment.Key = newKey
+	attachment := oldAttachment
+	// only ready attachments have an object in the compressed bucket to re-key
+	if oldAttachment.IsReady() {
+		keyUUID := req.Key[strings.Index(req.Key, "/"):]
+		newKey := string(privacyType) + keyUUID
+		if oldAttachment.Key != newKey {
+			if err := s.compressedStorage.Move(ctx, oldAttachment.Key, newKey); err != nil {
+				return nil, nil, err
 			}
-		}
-	} else {
-		var err error
-		attachment, err = s.createDomain(ctx, req, privacyType)
-		if err != nil {
-			return nil, err
+			attachment.Key = newKey
 		}
 	}
-	return attachment, nil
+	return attachment, nil, nil
 }
 
 // classifyProbe derives both the coarse FileType and a concrete MIME type from

@@ -79,12 +79,17 @@ func (s *PackService) Create(ctx context.Context, user domain.User, cpr dto.Crea
 		}
 	}()
 
-	pack, err := s.createDomain(ctx, cpr, user)
+	pack, uploads, err := s.createDomain(ctx, cpr, user)
 	if err != nil {
 		return "", err
 	}
 
-	return s.packRepository.Create(ctx, pack)
+	id, err := s.packRepository.Create(ctx, pack)
+	if err != nil {
+		return "", err
+	}
+	s.attachmentService.uploadPendingURLs(ctx, uploads)
+	return id, nil
 }
 
 func (s *PackService) CreateFromDraft(ctx context.Context, user domain.User, draft *domain.PackDraft) (string, error) {
@@ -253,7 +258,7 @@ func (s *PackService) Update(ctx context.Context, user domain.User, req dto.Upda
 		}
 	}()
 
-	newPack, err := s.updateDomain(ctx, user, pack, req)
+	newPack, uploads, err := s.updateDomain(ctx, user, pack, req)
 	if err != nil {
 		return err
 	}
@@ -262,6 +267,7 @@ func (s *PackService) Update(ctx context.Context, user domain.User, req dto.Upda
 	if err != nil {
 		return err
 	}
+	s.attachmentService.uploadPendingURLs(ctx, uploads)
 
 	for key := range sets.Delta(pack.AttachmentKeys(), req.AttachmentKeys()) {
 		deleteAttachmentObjects(context.Background(), s.rawStorage, s.compressedStorage, key)
@@ -345,10 +351,17 @@ func (s *PackService) validateRoundsCheckSum(ctx context.Context, userId string,
 	)
 }
 
-func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackRequest, user domain.User) (*domain.Pack, error) {
+func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackRequest, user domain.User) (*domain.Pack, []pendingURLUpload, error) {
 	roundsChecksum, err := s.validateRoundsCheckSum(ctx, user.Id, dto, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	var uploads []pendingURLUpload
+	addUpload := func(u *pendingURLUpload) {
+		if u != nil {
+			uploads = append(uploads, *u)
+		}
 	}
 
 	content := []string{dto.Name}
@@ -381,11 +394,12 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 				}
 
 				if q.Attachment != nil {
-					attachment, err := s.attachmentService.createDomain(ctx, *q.Attachment, dto.Type)
+					attachment, upload, err := s.attachmentService.createDomain(ctx, *q.Attachment, dto.Type)
 					if err != nil {
-						return nil, err
+						return nil, nil, err
 					}
 					question.Attachment = attachment
+					addUpload(upload)
 				}
 
 				if q.Comment != nil {
@@ -393,11 +407,12 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 						Text: q.Comment.Text,
 					}
 					if q.Comment.Attachment != nil {
-						attachment, err := s.attachmentService.createDomain(ctx, *q.Comment.Attachment, dto.Type)
+						attachment, upload, err := s.attachmentService.createDomain(ctx, *q.Comment.Attachment, dto.Type)
 						if err != nil {
-							return nil, err
+							return nil, nil, err
 						}
 						question.Comment.Attachment = attachment
+						addUpload(upload)
 					}
 				}
 
@@ -426,11 +441,12 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 		}
 
 		if c.Question.Attachment != nil {
-			attachment, err := s.attachmentService.createDomain(ctx, *c.Question.Attachment, dto.Type)
+			attachment, upload, err := s.attachmentService.createDomain(ctx, *c.Question.Attachment, dto.Type)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			category.Question.Attachment = attachment
+			addUpload(upload)
 		}
 
 		if c.Question.Comment != nil {
@@ -438,11 +454,12 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 				Text: c.Question.Comment.Text,
 			}
 			if c.Question.Comment.Attachment != nil {
-				attachment, err := s.attachmentService.createDomain(ctx, *c.Question.Comment.Attachment, dto.Type)
+				attachment, upload, err := s.attachmentService.createDomain(ctx, *c.Question.Comment.Attachment, dto.Type)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				category.Question.Comment.Attachment = attachment
+				addUpload(upload)
 			}
 		}
 
@@ -460,13 +477,20 @@ func (s *PackService) createDomain(ctx context.Context, dto dto.CreatePackReques
 		FinalRound:     finalRound,
 		CreatedAt:      now,
 		UpdatedAt:      now,
-	}, nil
+	}, uploads, nil
 }
 
-func (s *PackService) updateDomain(ctx context.Context, user domain.User, oldPack *domain.Pack, req dto.UpdatePackRequest) (*domain.Pack, error) {
+func (s *PackService) updateDomain(ctx context.Context, user domain.User, oldPack *domain.Pack, req dto.UpdatePackRequest) (*domain.Pack, []pendingURLUpload, error) {
 	roundsChecksum, err := s.validateRoundsCheckSum(ctx, user.Id, req.CreatePackRequest, &req.Id)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	var uploads []pendingURLUpload
+	addUpload := func(u *pendingURLUpload) {
+		if u != nil {
+			uploads = append(uploads, *u)
+		}
 	}
 
 	content := []string{req.Name}
@@ -499,11 +523,12 @@ func (s *PackService) updateDomain(ctx context.Context, user domain.User, oldPac
 				}
 
 				if q.Attachment != nil {
-					attachment, err := s.attachmentService.upsertDomain(ctx, oldPack.GetAttachment(q.Attachment.Key), *q.Attachment, req.Type)
+					attachment, upload, err := s.attachmentService.upsertDomain(ctx, oldPack.GetAttachment(q.Attachment.Key), *q.Attachment, req.Type)
 					if err != nil {
-						return nil, err
+						return nil, nil, err
 					}
 					question.Attachment = attachment
+					addUpload(upload)
 				}
 
 				if q.Comment != nil {
@@ -511,11 +536,12 @@ func (s *PackService) updateDomain(ctx context.Context, user domain.User, oldPac
 						Text: q.Comment.Text,
 					}
 					if q.Comment.Attachment != nil {
-						attachment, err := s.attachmentService.upsertDomain(ctx, oldPack.GetAttachment(q.Comment.Attachment.Key), *q.Comment.Attachment, req.Type)
+						attachment, upload, err := s.attachmentService.upsertDomain(ctx, oldPack.GetAttachment(q.Comment.Attachment.Key), *q.Comment.Attachment, req.Type)
 						if err != nil {
-							return nil, err
+							return nil, nil, err
 						}
 						question.Comment.Attachment = attachment
+						addUpload(upload)
 					}
 				}
 
@@ -544,11 +570,12 @@ func (s *PackService) updateDomain(ctx context.Context, user domain.User, oldPac
 		}
 
 		if c.Question.Attachment != nil {
-			attachment, err := s.attachmentService.upsertDomain(ctx, oldPack.GetAttachment(c.Question.Attachment.Key), *c.Question.Attachment, req.Type)
+			attachment, upload, err := s.attachmentService.upsertDomain(ctx, oldPack.GetAttachment(c.Question.Attachment.Key), *c.Question.Attachment, req.Type)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			category.Question.Attachment = attachment
+			addUpload(upload)
 		}
 
 		if c.Question.Comment != nil {
@@ -556,11 +583,12 @@ func (s *PackService) updateDomain(ctx context.Context, user domain.User, oldPac
 				Text: c.Question.Comment.Text,
 			}
 			if c.Question.Comment.Attachment != nil {
-				attachment, err := s.attachmentService.upsertDomain(ctx, oldPack.GetAttachment(c.Question.Comment.Attachment.Key), *c.Question.Comment.Attachment, req.Type)
+				attachment, upload, err := s.attachmentService.upsertDomain(ctx, oldPack.GetAttachment(c.Question.Comment.Attachment.Key), *c.Question.Comment.Attachment, req.Type)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				category.Question.Comment.Attachment = attachment
+				addUpload(upload)
 			}
 		}
 
@@ -578,5 +606,5 @@ func (s *PackService) updateDomain(ctx context.Context, user domain.User, oldPac
 		FinalRound:     finalRound,
 		CreatedAt:      oldPack.CreatedAt,
 		UpdatedAt:      time.Now(),
-	}, nil
+	}, uploads, nil
 }
