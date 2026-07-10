@@ -4,20 +4,19 @@ import (
 	"context"
 	"time"
 
-	"github.com/holdennekt/sgame/backend/internal/interface/cache"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"github.com/redis/go-redis/v9"
 )
 
-type attemptCounter struct {
+type AttemptCounter struct {
 	client *redis.Client
 }
 
-func NewAttemptCounter(client *redis.Client) cache.AttemptCounter {
-	return &attemptCounter{client}
+func NewAttemptCounter(client *redis.Client) *AttemptCounter {
+	return &AttemptCounter{client}
 }
 
-func (c *attemptCounter) Increment(ctx context.Context, key string, ttl time.Duration) (int64, error) {
+func (c *AttemptCounter) Increment(ctx context.Context, key string, ttl time.Duration) (int64, error) {
 	n, err := c.client.Incr(ctx, key).Result()
 	if err != nil {
 		return 0, custerr.NewInternalErr(err)

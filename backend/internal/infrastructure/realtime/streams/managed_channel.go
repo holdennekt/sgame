@@ -16,7 +16,7 @@ import (
 
 const LAST_ID_POSTFIX = ":lastId"
 
-type managedChannelGetter struct {
+type ManagedChannelGetter struct {
 	client     *redis.Client
 	manager    *pubsub.Manager
 	persistent bool
@@ -25,19 +25,19 @@ type managedChannelGetter struct {
 // NewManagedChannelGetter returns a getter for non-persistent stream channels.
 // Each subscriber always replays from "0-0" and the cursor is never written to
 // Redis — suitable for broadcast channels with many concurrent subscribers.
-func NewManagedChannelGetter(client *redis.Client, manager *pubsub.Manager) realtime.ChannelGetter {
-	return &managedChannelGetter{client: client, manager: manager, persistent: false}
+func NewManagedChannelGetter(client *redis.Client, manager *pubsub.Manager) *ManagedChannelGetter {
+	return &ManagedChannelGetter{client: client, manager: manager, persistent: false}
 }
 
 // NewPersistentManagedChannelGetter returns a getter for persistent stream channels.
 // The subscriber resumes from the Redis-stored cursor and writes it back on close
 // — suitable for single-subscriber channels (e.g. the internal events processor)
 // that must survive server restarts without replaying already-processed events.
-func NewPersistentManagedChannelGetter(client *redis.Client, manager *pubsub.Manager) realtime.ChannelGetter {
-	return &managedChannelGetter{client: client, manager: manager, persistent: true}
+func NewPersistentManagedChannelGetter(client *redis.Client, manager *pubsub.Manager) *ManagedChannelGetter {
+	return &ManagedChannelGetter{client: client, manager: manager, persistent: true}
 }
 
-func (g *managedChannelGetter) Get(name string) realtime.Channel {
+func (g *ManagedChannelGetter) Get(name string) realtime.Channel {
 	return &managedChannel{client: g.client, manager: g.manager, name: name, persistent: g.persistent}
 }
 

@@ -8,7 +8,6 @@ import (
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/dto"
-	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,19 +17,19 @@ import (
 
 const PACK_DRAFTS_COLLECTION = "pack_drafts"
 
-type packDraftRepository struct {
+type PackDraftRepository struct {
 	db *mongo.Database
 }
 
-func NewPackDraftRepository(db *mongo.Database) repository.PackDraft {
-	repo := packDraftRepository{db}
+func NewPackDraftRepository(db *mongo.Database) *PackDraftRepository {
+	repo := &PackDraftRepository{db}
 	if err := repo.init(context.Background()); err != nil {
 		panic(fmt.Errorf("failed to initialize pack draft repository: %w", err))
 	}
-	return &repo
+	return repo
 }
 
-func (r *packDraftRepository) init(ctx context.Context) error {
+func (r *PackDraftRepository) init(ctx context.Context) error {
 	if err := r.db.CreateCollection(ctx, PACK_DRAFTS_COLLECTION); err != nil {
 		var mongoErr mongo.CommandError
 		const codeNamespaceExists = 48
@@ -110,7 +109,7 @@ func toDomainDraft(m *mongoPackDraft) *domain.PackDraft {
 	}
 }
 
-func (r *packDraftRepository) Create(ctx context.Context, draft *domain.PackDraft) (string, error) {
+func (r *PackDraftRepository) Create(ctx context.Context, draft *domain.PackDraft) (string, error) {
 	m := fromDomainDraft(draft)
 	res, err := r.db.Collection(PACK_DRAFTS_COLLECTION).InsertOne(ctx, m)
 	if err != nil {
@@ -119,7 +118,7 @@ func (r *packDraftRepository) Create(ctx context.Context, draft *domain.PackDraf
 	return res.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func (r *packDraftRepository) GetById(ctx context.Context, id string) (*domain.PackDraft, error) {
+func (r *PackDraftRepository) GetById(ctx context.Context, id string) (*domain.PackDraft, error) {
 	objId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, custerr.NewBadRequestErr(fmt.Sprintf("%q is an invalid id", id))
@@ -135,7 +134,7 @@ func (r *packDraftRepository) GetById(ctx context.Context, id string) (*domain.P
 	return toDomainDraft(&m), nil
 }
 
-func (r *packDraftRepository) GetByUser(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackDraft, int, error) {
+func (r *PackDraftRepository) GetByUser(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackDraft, int, error) {
 	filter := bson.M{
 		"createdBy": userId,
 		"name":      bson.M{"$regex": search.SearchRequest, "$options": "i"},
@@ -179,7 +178,7 @@ func (r *packDraftRepository) GetByUser(ctx context.Context, userId string, sear
 	return drafts, int(total), nil
 }
 
-func (r *packDraftRepository) GetByUserAndLinkedPack(ctx context.Context, userId, packId string) (*domain.PackDraft, error) {
+func (r *PackDraftRepository) GetByUserAndLinkedPack(ctx context.Context, userId, packId string) (*domain.PackDraft, error) {
 	var m mongoPackDraft
 	err := r.db.Collection(PACK_DRAFTS_COLLECTION).FindOne(ctx, bson.M{
 		"createdBy":    userId,
@@ -194,7 +193,7 @@ func (r *packDraftRepository) GetByUserAndLinkedPack(ctx context.Context, userId
 	return toDomainDraft(&m), nil
 }
 
-func (r *packDraftRepository) Update(ctx context.Context, draft *domain.PackDraft) error {
+func (r *PackDraftRepository) Update(ctx context.Context, draft *domain.PackDraft) error {
 	m := fromDomainDraft(draft)
 	expectedVersion := draft.Version
 	m.Version = expectedVersion + 1
@@ -218,7 +217,7 @@ func (r *packDraftRepository) Update(ctx context.Context, draft *domain.PackDraf
 	return nil
 }
 
-func (r *packDraftRepository) Delete(ctx context.Context, id string) error {
+func (r *PackDraftRepository) Delete(ctx context.Context, id string) error {
 	objId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return custerr.NewBadRequestErr(fmt.Sprintf("%q is an invalid id", id))
@@ -244,7 +243,7 @@ func attachmentKeyFilter(key string) bson.M {
 	}
 }
 
-func (r *packDraftRepository) FindByAttachmentKey(ctx context.Context, key string) (*domain.PackDraft, error) {
+func (r *PackDraftRepository) FindByAttachmentKey(ctx context.Context, key string) (*domain.PackDraft, error) {
 	var m mongoPackDraft
 	err := r.db.Collection(PACK_DRAFTS_COLLECTION).FindOne(ctx, attachmentKeyFilter(key)).Decode(&m)
 	if err != nil {
@@ -257,7 +256,7 @@ func (r *packDraftRepository) FindByAttachmentKey(ctx context.Context, key strin
 }
 
 // GetReferencedKeys finds keys still used by another draft; pass excludeId="" for none.
-func (r *packDraftRepository) GetReferencedKeys(ctx context.Context, keys map[string]struct{}, excludeId string) (map[string]struct{}, error) {
+func (r *PackDraftRepository) GetReferencedKeys(ctx context.Context, keys map[string]struct{}, excludeId string) (map[string]struct{}, error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}

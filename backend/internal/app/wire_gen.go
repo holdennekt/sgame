@@ -35,42 +35,42 @@ import (
 // Injectors from wire.go:
 
 func InitializeApp(mdb *mongo.Database, rds *redis.Client, rawStorage storage.Raw, compressedStorage storage.Compressed, cfg *config.Config) *app {
-	room := redis2.NewRoomCache(rds)
-	session := redis2.NewSessionCache(rds)
-	user := mongo2.NewUserRepository(mdb)
-	authService := service.NewAuthService(session, user)
+	roomCache := redis2.NewRoomCache(rds)
+	sessionCache := redis2.NewSessionCache(rds)
+	userRepository := mongo2.NewUserRepository(mdb)
+	authService := service.NewAuthService(sessionCache, userRepository)
 	authController := http.NewAuthController(authService)
-	userService := service.NewUserService(user, session, compressedStorage)
+	userService := service.NewUserService(userRepository, sessionCache, compressedStorage)
 	userController := http.NewUserController(userService)
-	pack := mongo2.NewPackRepository(mdb)
-	packDraft := mongo2.NewPackDraftRepository(mdb)
-	attachmentService := service.NewAttachmentService(packDraft, pack, rawStorage, compressedStorage)
-	packService := service.NewPackService(pack, packDraft, user, rawStorage, compressedStorage, attachmentService)
+	packRepository := mongo2.NewPackRepository(mdb)
+	packDraftRepository := mongo2.NewPackDraftRepository(mdb)
+	attachmentService := service.NewAttachmentService(packDraftRepository, packRepository, rawStorage, compressedStorage)
+	packService := service.NewPackService(packRepository, packDraftRepository, userRepository, rawStorage, compressedStorage, attachmentService)
 	packController := http.NewPackController(packService)
-	packDraftService := service.NewPackDraftService(packDraft, pack, user, rawStorage, compressedStorage, attachmentService, packService)
+	packDraftService := service.NewPackDraftService(packDraftRepository, packRepository, userRepository, rawStorage, compressedStorage, attachmentService, packService)
 	manager := provideManager(rds)
 	pubSubChannelGetter := providePubSubChannelGetter(rds, manager)
 	packDraftController := providePackDraftController(packDraftService, pubSubChannelGetter)
-	repositoryRoom := mongo2.NewRoomRepository(mdb)
+	roomRepository := mongo2.NewRoomRepository(mdb)
 	streamsChannelGetter := provideStreamsChannelGetter(rds, manager)
 	streamsPersistentChannelGetter := provideStreamsPersistentChannelGetter(rds, manager)
-	roomInternalEventsProcessorGetter := provideRoomInternalEventsProcessorGetter(room, repositoryRoom, pack, compressedStorage, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, cfg)
+	roomInternalEventsProcessorGetter := provideRoomInternalEventsProcessorGetter(roomCache, roomRepository, packRepository, compressedStorage, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, cfg)
 	answerValidator := provideAnswerValidator(cfg)
-	roomService := provideRoomService(pack, repositoryRoom, room, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, roomInternalEventsProcessorGetter, cfg, answerValidator)
+	roomService := provideRoomService(packRepository, roomRepository, roomCache, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, roomInternalEventsProcessorGetter, cfg, answerValidator)
 	roomController := http.NewRoomController(packService, roomService)
-	lobbyEventsProcessorGetter := provideLobbyEventsProcessorGetter(room, pubSubChannelGetter)
+	lobbyEventsProcessorGetter := provideLobbyEventsProcessorGetter(roomCache, pubSubChannelGetter)
 	lobbyHandler := provideLobbyHandler(pubSubChannelGetter, lobbyEventsProcessorGetter)
-	roomEventsProcessorGetter := provideRoomEventsProcessorGetter(room, repositoryRoom, pack, compressedStorage, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, cfg, answerValidator, roomService)
+	roomEventsProcessorGetter := provideRoomEventsProcessorGetter(roomCache, roomRepository, packRepository, compressedStorage, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, cfg, answerValidator, roomService)
 	roomHandler := provideRoomHandler(roomService, roomEventsProcessorGetter, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter)
-	appApp := NewApp(cfg, room, authController, userController, packController, packDraftController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter)
+	appApp := NewApp(cfg, roomCache, authController, userController, packController, packDraftController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter)
 	return appApp
 }
 
 // wire.go:
 
-var RepoSet = wire.NewSet(mongo2.NewUserRepository, mongo2.NewRoomRepository, mongo2.NewPackRepository, mongo2.NewPackDraftRepository)
+var RepoSet = wire.NewSet(mongo2.NewUserRepository, wire.Bind(new(repository.User), new(*mongo2.UserRepository)), mongo2.NewRoomRepository, wire.Bind(new(repository.Room), new(*mongo2.RoomRepository)), mongo2.NewPackRepository, wire.Bind(new(repository.Pack), new(*mongo2.PackRepository)), mongo2.NewPackDraftRepository, wire.Bind(new(repository.PackDraft), new(*mongo2.PackDraftRepository)))
 
-var CacheSet = wire.NewSet(redis2.NewSessionCache, redis2.NewRoomCache)
+var CacheSet = wire.NewSet(redis2.NewSessionCache, wire.Bind(new(cache.Session), new(*redis2.SessionCache)), redis2.NewRoomCache, wire.Bind(new(cache.Room), new(*redis2.RoomCache)))
 
 type PubSubChannelGetter struct {
 	realtime.ChannelGetter

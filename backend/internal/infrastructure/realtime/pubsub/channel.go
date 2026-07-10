@@ -11,15 +11,15 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type channelGetter struct {
+type ChannelGetter struct {
 	client *redis.Client
 }
 
-func NewChannelGetter(client *redis.Client) realtime.ChannelGetter {
-	return &channelGetter{client}
+func NewChannelGetter(client *redis.Client) *ChannelGetter {
+	return &ChannelGetter{client}
 }
 
-func (g *channelGetter) Get(name string) realtime.Channel {
+func (g *ChannelGetter) Get(name string) realtime.Channel {
 	return &channel{client: g.client, name: name}
 }
 

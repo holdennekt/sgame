@@ -7,7 +7,6 @@ import (
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/dto"
-	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -16,12 +15,12 @@ import (
 
 const ROOMS_COLLECTION = "rooms"
 
-type roomRepository struct {
+type RoomRepository struct {
 	db *mongo.Database
 }
 
-func NewRoomRepository(db *mongo.Database) repository.Room {
-	repo := roomRepository{db}
+func NewRoomRepository(db *mongo.Database) *RoomRepository {
+	repo := RoomRepository{db}
 	if err := repo.init(context.Background()); err != nil {
 		var mongoErr mongo.CommandError
 		if errors.As(err, &mongoErr) {
@@ -36,11 +35,11 @@ func NewRoomRepository(db *mongo.Database) repository.Room {
 	return &repo
 }
 
-func (r *roomRepository) init(ctx context.Context) error {
+func (r *RoomRepository) init(ctx context.Context) error {
 	return r.db.CreateCollection(ctx, ROOMS_COLLECTION)
 }
 
-func (r *roomRepository) Create(ctx context.Context, room *domain.Room) error {
+func (r *RoomRepository) Create(ctx context.Context, room *domain.Room) error {
 	_, err := r.db.Collection(ROOMS_COLLECTION).InsertOne(ctx, room)
 	if err != nil {
 		return custerr.NewInternalErr(err)
@@ -48,7 +47,7 @@ func (r *roomRepository) Create(ctx context.Context, room *domain.Room) error {
 	return nil
 }
 
-func (r *roomRepository) GetById(ctx context.Context, id string) (*domain.Room, error) {
+func (r *RoomRepository) GetById(ctx context.Context, id string) (*domain.Room, error) {
 	var room domain.Room
 	err := r.db.Collection(ROOMS_COLLECTION).FindOne(
 		ctx,
@@ -64,7 +63,7 @@ func (r *roomRepository) GetById(ctx context.Context, id string) (*domain.Room, 
 	return &room, nil
 }
 
-func (r *roomRepository) GetByParticipant(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.Room, int, error) {
+func (r *RoomRepository) GetByParticipant(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.Room, int, error) {
 	filter := bson.M{
 		"$or": []bson.M{
 			{"players": bson.M{"$elemMatch": bson.M{"id": userId}}},

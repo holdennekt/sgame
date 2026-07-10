@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
-	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -16,12 +15,12 @@ import (
 
 const USERS_COLLECTION = "users"
 
-type userRepository struct {
+type UserRepository struct {
 	db *mongo.Database
 }
 
-func NewUserRepository(db *mongo.Database) repository.User {
-	repo := userRepository{db}
+func NewUserRepository(db *mongo.Database) *UserRepository {
+	repo := UserRepository{db}
 	if err := repo.init(context.Background()); err != nil {
 		var mongoErr mongo.CommandError
 		if errors.As(err, &mongoErr) {
@@ -36,7 +35,7 @@ func NewUserRepository(db *mongo.Database) repository.User {
 	return &repo
 }
 
-func (r *userRepository) init(ctx context.Context) error {
+func (r *UserRepository) init(ctx context.Context) error {
 	err := r.db.CreateCollection(ctx, USERS_COLLECTION)
 	if err != nil {
 		return err
@@ -91,7 +90,7 @@ func toDomainDbUser(dbUser *mongoDbUser) *domain.DbUser {
 	}
 }
 
-func (r *userRepository) Create(ctx context.Context, dbUser *domain.DbUser) (string, error) {
+func (r *UserRepository) Create(ctx context.Context, dbUser *domain.DbUser) (string, error) {
 	mDbUser := fromDomainDbUser(dbUser)
 	res, err := r.db.Collection(USERS_COLLECTION).InsertOne(ctx, mDbUser)
 	if err != nil {
@@ -103,7 +102,7 @@ func (r *userRepository) Create(ctx context.Context, dbUser *domain.DbUser) (str
 	return res.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func (r *userRepository) GetById(ctx context.Context, id string) (*domain.DbUser, error) {
+func (r *UserRepository) GetById(ctx context.Context, id string) (*domain.DbUser, error) {
 	objId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, custerr.NewBadRequestErr(fmt.Sprintf("\"%s\" is an invalid id", id))
@@ -124,7 +123,7 @@ func (r *userRepository) GetById(ctx context.Context, id string) (*domain.DbUser
 	return toDomainDbUser(&mDbUser), nil
 }
 
-func (r *userRepository) GetByLogin(ctx context.Context, login string) (*domain.DbUser, error) {
+func (r *UserRepository) GetByLogin(ctx context.Context, login string) (*domain.DbUser, error) {
 	var mDbUser mongoDbUser
 	err := r.db.Collection(USERS_COLLECTION).FindOne(
 		ctx,
@@ -140,7 +139,7 @@ func (r *userRepository) GetByLogin(ctx context.Context, login string) (*domain.
 	return toDomainDbUser(&mDbUser), nil
 }
 
-func (r *userRepository) Update(ctx context.Context, dbUser *domain.DbUser) error {
+func (r *UserRepository) Update(ctx context.Context, dbUser *domain.DbUser) error {
 	mDbUser := fromDomainDbUser(dbUser)
 	res, err := r.db.Collection(USERS_COLLECTION).ReplaceOne(
 		ctx,
@@ -156,7 +155,7 @@ func (r *userRepository) Update(ctx context.Context, dbUser *domain.DbUser) erro
 	return nil
 }
 
-func (r *userRepository) Delete(ctx context.Context, id string) error {
+func (r *UserRepository) Delete(ctx context.Context, id string) error {
 	objId, _ := primitive.ObjectIDFromHex(id)
 
 	res, err := r.db.Collection(USERS_COLLECTION).DeleteOne(

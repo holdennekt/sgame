@@ -24,7 +24,7 @@ type MinioStorage struct {
 	httpClient *http.Client
 }
 
-func NewMinioStorage(client *minio.Client, bucketName, userAgent string, publicRead bool) storage.Storage {
+func NewMinioStorage(client *minio.Client, bucketName, userAgent string, publicRead bool) *MinioStorage {
 	exists, err := client.BucketExists(context.Background(), bucketName)
 	if err != nil {
 		slog.Error("fatal error", "err", err)

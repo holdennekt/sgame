@@ -8,7 +8,6 @@ import (
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/dto"
-	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,12 +17,12 @@ import (
 
 const PACKS_COLLECTION = "packs"
 
-type packRepository struct {
+type PackRepository struct {
 	db *mongo.Database
 }
 
-func NewPackRepository(db *mongo.Database) repository.Pack {
-	repo := packRepository{db}
+func NewPackRepository(db *mongo.Database) *PackRepository {
+	repo := PackRepository{db}
 	if err := repo.init(context.Background()); err != nil {
 		var mongoErr mongo.CommandError
 		if errors.As(err, &mongoErr) {
@@ -38,7 +37,7 @@ func NewPackRepository(db *mongo.Database) repository.Pack {
 	return &repo
 }
 
-func (r *packRepository) init(ctx context.Context) error {
+func (r *PackRepository) init(ctx context.Context) error {
 	err := r.db.CreateCollection(ctx, PACKS_COLLECTION)
 	if err != nil {
 		return err
@@ -121,7 +120,7 @@ func toDomainPackPreview(mPackPreview mongoPackPreview) domain.PackPreview {
 	}
 }
 
-func (r *packRepository) Create(ctx context.Context, pack *domain.Pack) (string, error) {
+func (r *PackRepository) Create(ctx context.Context, pack *domain.Pack) (string, error) {
 	mPack := fromDomainPack(pack)
 	res, err := r.db.Collection(PACKS_COLLECTION).InsertOne(ctx, mPack)
 	if err != nil {
@@ -130,7 +129,7 @@ func (r *packRepository) Create(ctx context.Context, pack *domain.Pack) (string,
 	return res.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func (r *packRepository) GetById(ctx context.Context, id string) (*domain.Pack, error) {
+func (r *PackRepository) GetById(ctx context.Context, id string) (*domain.Pack, error) {
 	objId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, custerr.NewBadRequestErr(fmt.Sprintf("\"%s\" is an invalid id", id))
@@ -151,7 +150,7 @@ func (r *packRepository) GetById(ctx context.Context, id string) (*domain.Pack, 
 	return toDomainPack(&mPack), nil
 }
 
-func (r *packRepository) GetByChecksum(ctx context.Context, userId string, checksum []byte, ignoreId *string) ([]*domain.Pack, error) {
+func (r *PackRepository) GetByChecksum(ctx context.Context, userId string, checksum []byte, ignoreId *string) ([]*domain.Pack, error) {
 	ignoreObjId := primitive.NilObjectID
 	if ignoreId != nil {
 		ignoreObjId, _ = primitive.ObjectIDFromHex(*ignoreId)
@@ -187,7 +186,7 @@ func (r *packRepository) GetByChecksum(ctx context.Context, userId string, check
 	return packs, nil
 }
 
-func (r *packRepository) GetPreviews(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackPreview, int, error) {
+func (r *PackRepository) GetPreviews(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.PackPreview, int, error) {
 	filter := bson.M{
 		"name": primitive.Regex{
 			Pattern: search.SearchRequest,
@@ -239,7 +238,7 @@ func (r *packRepository) GetPreviews(ctx context.Context, userId string, search 
 	return packsPreviews, int(total), nil
 }
 
-func (r *packRepository) GetHiddens(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.HiddenPack, int, error) {
+func (r *PackRepository) GetHiddens(ctx context.Context, userId string, search dto.SearchRequest) ([]domain.HiddenPack, int, error) {
 	filter := bson.M{
 		"content": primitive.Regex{
 			Pattern: search.SearchRequest,
@@ -290,7 +289,7 @@ func (r *packRepository) GetHiddens(ctx context.Context, userId string, search d
 	return hiddenPacks, int(total), nil
 }
 
-func (r *packRepository) GetCreatedBy(ctx context.Context, userId, createdBy string, search dto.SearchRequest) ([]domain.HiddenPack, int, error) {
+func (r *PackRepository) GetCreatedBy(ctx context.Context, userId, createdBy string, search dto.SearchRequest) ([]domain.HiddenPack, int, error) {
 	filter := bson.M{
 		"content":   primitive.Regex{Pattern: search.SearchRequest, Options: "i"},
 		"createdBy": createdBy,
@@ -336,7 +335,7 @@ func (r *packRepository) GetCreatedBy(ctx context.Context, userId, createdBy str
 	return hiddenPacks, int(total), nil
 }
 
-func (r *packRepository) Update(ctx context.Context, pack *domain.Pack) error {
+func (r *PackRepository) Update(ctx context.Context, pack *domain.Pack) error {
 	mPack := fromDomainPack(pack)
 	res, err := r.db.Collection(PACKS_COLLECTION).ReplaceOne(
 		ctx,
@@ -352,7 +351,7 @@ func (r *packRepository) Update(ctx context.Context, pack *domain.Pack) error {
 	return nil
 }
 
-func (r *packRepository) Delete(ctx context.Context, id string) error {
+func (r *PackRepository) Delete(ctx context.Context, id string) error {
 	objId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return custerr.NewBadRequestErr(fmt.Sprintf("\"%s\" is an invalid id", id))
@@ -371,7 +370,7 @@ func (r *packRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *packRepository) FindByAttachmentKey(ctx context.Context, key string) (*domain.Pack, error) {
+func (r *PackRepository) FindByAttachmentKey(ctx context.Context, key string) (*domain.Pack, error) {
 	var m mongoPack
 	err := r.db.Collection(PACKS_COLLECTION).FindOne(ctx, attachmentKeyFilter(key)).Decode(&m)
 	if err != nil {
@@ -384,7 +383,7 @@ func (r *packRepository) FindByAttachmentKey(ctx context.Context, key string) (*
 }
 
 // GetReferencedKeys finds keys still used by another pack; pass excludeId="" for none.
-func (r *packRepository) GetReferencedKeys(ctx context.Context, keys map[string]struct{}, excludeId string) (map[string]struct{}, error) {
+func (r *PackRepository) GetReferencedKeys(ctx context.Context, keys map[string]struct{}, excludeId string) (map[string]struct{}, error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}

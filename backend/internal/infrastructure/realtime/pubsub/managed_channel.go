@@ -10,16 +10,16 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type managedChannelGetter struct {
+type ManagedChannelGetter struct {
 	client  *redis.Client
 	manager *Manager
 }
 
-func NewManagedChannelGetter(client *redis.Client, manager *Manager) realtime.ChannelGetter {
-	return &managedChannelGetter{client, manager}
+func NewManagedChannelGetter(client *redis.Client, manager *Manager) *ManagedChannelGetter {
+	return &ManagedChannelGetter{client, manager}
 }
 
-func (g *managedChannelGetter) Get(name string) realtime.Channel {
+func (g *ManagedChannelGetter) Get(name string) realtime.Channel {
 	return &managedChannel{client: g.client, manager: g.manager, name: name}
 }
 

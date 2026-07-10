@@ -25,7 +25,7 @@ type GCSStorage struct {
 	httpClient *http.Client
 }
 
-func NewGCSStorage(ctx context.Context, bucketName string, publicRead bool) (storage.Storage, error) {
+func NewGCSStorage(ctx context.Context, bucketName string, publicRead bool) (*GCSStorage, error) {
 	client, err := gcsstorage.NewClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GCS client: %w", err)

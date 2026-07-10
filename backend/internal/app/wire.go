@@ -28,14 +28,20 @@ import (
 
 var RepoSet = wire.NewSet(
 	mongoDatabase.NewUserRepository,
+	wire.Bind(new(repository.User), new(*mongoDatabase.UserRepository)),
 	mongoDatabase.NewRoomRepository,
+	wire.Bind(new(repository.Room), new(*mongoDatabase.RoomRepository)),
 	mongoDatabase.NewPackRepository,
+	wire.Bind(new(repository.Pack), new(*mongoDatabase.PackRepository)),
 	mongoDatabase.NewPackDraftRepository,
+	wire.Bind(new(repository.PackDraft), new(*mongoDatabase.PackDraftRepository)),
 )
 
 var CacheSet = wire.NewSet(
 	redisCache.NewSessionCache,
+	wire.Bind(new(cache.Session), new(*redisCache.SessionCache)),
 	redisCache.NewRoomCache,
+	wire.Bind(new(cache.Room), new(*redisCache.RoomCache)),
 )
 
 type PubSubChannelGetter struct {
