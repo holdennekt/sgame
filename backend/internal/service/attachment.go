@@ -3,29 +3,30 @@ package service
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/dto"
+	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"gopkg.in/vansante/go-ffprobe.v2"
 )
 
 type AttachmentService struct {
-	storage storage.Storage
+	packDraftRepo     repository.PackDraft
+	packRepo          repository.Pack
+	rawStorage        storage.Raw
+	compressedStorage storage.Compressed
 }
 
-func NewAttachmentService(storage storage.Storage) *AttachmentService {
-	return &AttachmentService{storage}
+func NewAttachmentService(packDraftRepo repository.PackDraft, packRepo repository.Pack, rawStorage storage.Raw, compressedStorage storage.Compressed) *AttachmentService {
+	return &AttachmentService{packDraftRepo, packRepo, rawStorage, compressedStorage}
 }
 
+// A key already referenced elsewhere (e.g. pasted) keeps its metadata — no notification fires for it.
 func (s *AttachmentService) createDomain(ctx context.Context, req dto.CreateAttachmentRequest, privacyType domain.PrivacyType) (*domain.Attachment, error) {
 	key := req.Key
 	if req.URL != "" {
@@ -34,11 +35,28 @@ func (s *AttachmentService) createDomain(ctx context.Context, req dto.CreateAtta
 		if err != nil {
 			return nil, err
 		}
-		if err = s.storage.UploadFromURL(ctx, storage.URLUploadInput{Key: key, URL: req.URL, MaxBytes: MAX_FILE_SIZE}); err != nil {
+		if err = s.rawStorage.UploadFromURL(ctx, storage.URLUploadInput{Key: key, URL: req.URL, MaxBytes: MAX_FILE_SIZE}); err != nil {
 			return nil, err
 		}
+	} else if existing := s.findRegistered(ctx, key); existing != nil {
+		clone := *existing
+		clone.URL = ""
+		return &clone, nil
 	}
-	return s.probe(ctx, key)
+	return &domain.Attachment{
+		Key:    key,
+		Status: domain.AttachmentPending,
+	}, nil
+}
+
+func (s *AttachmentService) findRegistered(ctx context.Context, key string) *domain.Attachment {
+	if draft, err := s.packDraftRepo.FindByAttachmentKey(ctx, key); err == nil {
+		return draft.GetAttachment(key)
+	}
+	if pack, err := s.packRepo.FindByAttachmentKey(ctx, key); err == nil {
+		return pack.GetAttachment(key)
+	}
+	return nil
 }
 
 func (s *AttachmentService) upsertDomainDraft(ctx context.Context, oldAttachment *domain.Attachment, req dto.CreateAttachmentRequest) (*domain.Attachment, error) {
@@ -60,15 +78,18 @@ func (s *AttachmentService) upsertDomain(ctx context.Context, oldAttachment *dom
 	var attachment *domain.Attachment
 
 	if oldAttachment != nil {
-		keyUUID := req.Key[strings.Index(req.Key, "/"):]
-		newKey := string(privacyType) + keyUUID
-		if oldAttachment.Key != newKey {
-			if err := s.storage.Move(ctx, oldAttachment.Key, newKey); err != nil {
-				return nil, err
+		attachment = oldAttachment
+		// only ready attachments have an object in the compressed bucket to re-key
+		if oldAttachment.IsReady() {
+			keyUUID := req.Key[strings.Index(req.Key, "/"):]
+			newKey := string(privacyType) + keyUUID
+			if oldAttachment.Key != newKey {
+				if err := s.compressedStorage.Move(ctx, oldAttachment.Key, newKey); err != nil {
+					return nil, err
+				}
+				attachment.Key = newKey
 			}
 		}
-		attachment = oldAttachment
-		attachment.Key = newKey
 	} else {
 		var err error
 		attachment, err = s.createDomain(ctx, req, privacyType)
@@ -77,56 +98,6 @@ func (s *AttachmentService) upsertDomain(ctx context.Context, oldAttachment *dom
 		}
 	}
 	return attachment, nil
-}
-
-func (s *AttachmentService) probe(ctx context.Context, key string) (*domain.Attachment, error) {
-	stats, err := s.storage.GetStats(ctx, key)
-	if err != nil {
-		return nil, err
-	}
-	reader, err := s.storage.Get(ctx, key)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = reader.Close() }()
-
-	tmpFile, err := os.CreateTemp("", "sgame-probe-*")
-	if err != nil {
-		return nil, custerr.NewInternalErr(fmt.Errorf("failed to create temp file: %w", err))
-	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-	defer func() { _ = tmpFile.Close() }()
-	if _, err := io.Copy(tmpFile, reader); err != nil {
-		return nil, custerr.NewInternalErr(fmt.Errorf("failed to buffer file for probing: %w", err))
-	}
-
-	probeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	probeData, err := ffprobe.ProbeURL(probeCtx, tmpFile.Name())
-	if err != nil {
-		return nil, custerr.NewInternalErr(fmt.Errorf("failed to analyze media: %w", err))
-	}
-
-	fileType, mimeType := classifyProbe(probeData)
-	att := &domain.Attachment{
-		Key:      key,
-		MimeType: mimeType,
-		Size:     stats.Size,
-		Type:     fileType,
-	}
-	if att.Type == domain.Video || att.Type == domain.Audio {
-		att.Duration = probeData.Format.DurationSeconds
-	} else {
-		att.Duration = DEFAULT_ATTACHMENT_DURATION
-	}
-
-	if mimeType != stats.ContentType {
-		if err := s.storage.SetContentType(ctx, key, mimeType); err != nil {
-			return nil, err
-		}
-	}
-
-	return att, nil
 }
 
 // classifyProbe derives both the coarse FileType and a concrete MIME type from
@@ -196,22 +167,20 @@ func containerMIMEType(formatName string, fileType domain.FileType) string {
 	return "video/mp4"
 }
 
-func (s *AttachmentService) generateKey(filename string, public bool) string {
-	ext := filepath.Ext(filename)
+// No extension: compression normalizes the codec, so the source extension would mislead.
+func (s *AttachmentService) generateKey(public bool) string {
 	id := uuid.New().String()
 	prefix := "private"
 	if public {
 		prefix = "public"
 	}
 
-	return fmt.Sprintf("%s/%s%s", prefix, id, ext)
+	return fmt.Sprintf("%s/%s", prefix, id)
 }
 
 func (s *AttachmentService) generateKeyFromURL(sourceUrl string, public bool) (string, error) {
-	u, err := url.Parse(sourceUrl)
-	if err != nil {
+	if _, err := url.Parse(sourceUrl); err != nil {
 		return "", custerr.NewBadRequestErr(fmt.Sprintf("error parsing URL: %v", err))
 	}
-	filename := filepath.Base(u.Path)
-	return s.generateKey(filename, public), nil
+	return s.generateKey(public), nil
 }

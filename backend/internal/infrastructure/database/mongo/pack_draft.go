@@ -233,6 +233,29 @@ func (r *packDraftRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+func attachmentKeyFilter(key string) bson.M {
+	return bson.M{
+		"$or": bson.A{
+			bson.M{"rounds.categories.questions.attachment.key": key},
+			bson.M{"rounds.categories.questions.comment.attachment.key": key},
+			bson.M{"finalRound.categories.question.attachment.key": key},
+			bson.M{"finalRound.categories.question.comment.attachment.key": key},
+		},
+	}
+}
+
+func (r *packDraftRepository) FindByAttachmentKey(ctx context.Context, key string) (*domain.PackDraft, error) {
+	var m mongoPackDraft
+	err := r.db.Collection(PACK_DRAFTS_COLLECTION).FindOne(ctx, attachmentKeyFilter(key)).Decode(&m)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, custerr.NewNotFoundErr(fmt.Sprintf("no draft references attachment key %q", key))
+		}
+		return nil, custerr.NewInternalErr(err)
+	}
+	return toDomainDraft(&m), nil
+}
+
 // GetReferencedKeys finds keys still used by another draft; pass excludeId="" for none.
 func (r *packDraftRepository) GetReferencedKeys(ctx context.Context, keys map[string]struct{}, excludeId string) (map[string]struct{}, error) {
 	if len(keys) == 0 {

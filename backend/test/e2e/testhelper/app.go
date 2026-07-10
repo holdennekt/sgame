@@ -12,6 +12,7 @@ import (
 
 	"github.com/holdennekt/sgame/backend/internal/app"
 	"github.com/holdennekt/sgame/backend/internal/config"
+	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -49,7 +50,7 @@ func NewTestApp(t *testing.T, mongoURI, redisAddr string) *TestApp {
 		IdleRoomTTL:          1,
 	}
 
-	application := app.InitializeApp(mdb, rds, &NoopStorage{}, cfg)
+	application := app.InitializeApp(mdb, rds, storage.Raw{Storage: &NoopStorage{}}, storage.Compressed{Storage: &NoopStorage{}}, cfg)
 	handler := application.Start(ctx)
 
 	srv := httptest.NewServer(handler)

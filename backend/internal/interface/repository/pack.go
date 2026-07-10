@@ -17,4 +17,5 @@ type Pack interface {
 	Update(ctx context.Context, pack *domain.Pack) error
 	Delete(ctx context.Context, id string) error
 	GetReferencedKeys(ctx context.Context, keys map[string]struct{}, excludeId string) (map[string]struct{}, error)
+	FindByAttachmentKey(ctx context.Context, key string) (*domain.Pack, error)
 }

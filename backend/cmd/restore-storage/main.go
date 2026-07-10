@@ -16,12 +16,16 @@ import (
 func main() {
 	dryRun := flag.Bool("dry-run", false, "list soft-deleted objects without restoring them")
 	since := flag.Duration("since", 24*time.Hour, "restore objects soft-deleted within this duration (e.g. 2h, 24h, 48h)")
+	bucketFlag := flag.String("bucket", "", "bucket to restore from (default: the compressed/serving bucket)")
 	flag.Parse()
 
 	_ = godotenv.Load()
 	ctx := context.Background()
 
-	bucketName := envvar.GetEnvVar("BUCKET_NAME")
+	bucketName := *bucketFlag
+	if bucketName == "" {
+		bucketName = envvar.GetEnvVar("PROCESSED_BUCKET_NAME")
+	}
 
 	gcsClient, err := gcsstorage.NewClient(ctx)
 	if err != nil {

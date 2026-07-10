@@ -371,6 +371,18 @@ func (r *packRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+func (r *packRepository) FindByAttachmentKey(ctx context.Context, key string) (*domain.Pack, error) {
+	var m mongoPack
+	err := r.db.Collection(PACKS_COLLECTION).FindOne(ctx, attachmentKeyFilter(key)).Decode(&m)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, custerr.NewNotFoundErr(fmt.Sprintf("no pack references attachment key %q", key))
+		}
+		return nil, custerr.NewInternalErr(err)
+	}
+	return toDomainPack(&m), nil
+}
+
 // GetReferencedKeys finds keys still used by another pack; pass excludeId="" for none.
 func (r *packRepository) GetReferencedKeys(ctx context.Context, keys map[string]struct{}, excludeId string) (map[string]struct{}, error) {
 	if len(keys) == 0 {

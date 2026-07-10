@@ -48,7 +48,7 @@ func HandleSubmitAnswerMessage(ctx context.Context, server realtime.Channel, int
 		aiCtx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		iQuestion := buildValidatorQuestion(question, cfg.BucketName)
+		iQuestion := buildValidatorQuestion(question, cfg.CompressedBucketName)
 
 		isCorrect := false
 		if isExactMatch(iQuestion.CorrectAnswers, sap.Answer) {

@@ -244,13 +244,13 @@ func (c *PackController) signURL(ctx *gin.Context) {
 		return
 	}
 
-	signed, getUrl, err := c.packService.SignURL(ctx, user, sr)
+	signed, key, err := c.packService.SignURL(ctx, user, sr)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, dto.SignURLResponse{URL: signed.URL, FormData: signed.FormData, GetUrl: getUrl})
+	ctx.JSON(http.StatusOK, dto.SignURLResponse{URL: signed.URL, FormData: signed.FormData, Key: key})
 }
 
 // @Summary      Get packs created by user

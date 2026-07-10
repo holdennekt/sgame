@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -295,9 +294,9 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 		}
 
 		fileType, mimeType := classifyProbe(probeData)
-		key := s.attachmentService.generateKey(filepath.Base(f.Name), false)
+		key := s.attachmentService.generateKey(false)
 
-		if err := s.storage.Upload(ctx, storage.UploadInput{
+		if err := s.rawStorage.Upload(ctx, storage.UploadInput{
 			Key:      key,
 			Size:     int64(len(data)),
 			MimeType: mimeType,
@@ -312,6 +311,7 @@ func (s *PackDraftService) parseSIQ(ctx context.Context, r io.ReaderAt, size int
 			MimeType: mimeType,
 			Size:     int64(len(data)),
 			Type:     fileType,
+			Status:   domain.AttachmentPending,
 		}
 		if fileType == domain.Video || fileType == domain.Audio {
 			att.Duration = probeData.Format.DurationSeconds

@@ -103,12 +103,12 @@ type UpdatePackRequest struct {
 }
 
 type SignURLRequest struct {
-	Filename string `json:"filename" binding:"required"`
-	Public   *bool  `json:"public" binding:"required"`
+	Public *bool `json:"public" binding:"required"`
 }
 
 type SignURLResponse struct {
 	URL      string            `json:"url"`
 	FormData map[string]string `json:"formData"`
-	GetUrl   string            `json:"getUrl,omitempty"`
+	// must be registered on the draft before the presigned upload is performed
+	Key string `json:"key"`
 }

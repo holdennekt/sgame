@@ -15,4 +15,5 @@ type PackDraft interface {
 	Update(ctx context.Context, draft *domain.PackDraft) error
 	Delete(ctx context.Context, id string) error
 	GetReferencedKeys(ctx context.Context, keys map[string]struct{}, excludeId string) (map[string]struct{}, error)
+	FindByAttachmentKey(ctx context.Context, key string) (*domain.PackDraft, error)
 }

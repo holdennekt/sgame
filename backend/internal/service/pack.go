@@ -21,7 +21,7 @@ import (
 const (
 	GET_URL_TTL                 = 3 * time.Hour
 	POST_URL_TTL                = 5 * time.Minute
-	MAX_FILE_SIZE               = 200 << 20 // 200 MB
+	MAX_FILE_SIZE               = 500 << 20 // 500 MB
 	DEFAULT_ATTACHMENT_DURATION = 1
 )
 
@@ -29,12 +29,24 @@ type PackService struct {
 	packRepository    repository.Pack
 	packDraftRepo     repository.PackDraft
 	userRepository    repository.User
-	storage           storage.Storage
+	rawStorage        storage.Raw
+	compressedStorage storage.Compressed
 	attachmentService *AttachmentService
 }
 
-func NewPackService(packRepository repository.Pack, packDraftRepo repository.PackDraft, userRepository repository.User, storage storage.Storage, attachmentService *AttachmentService) *PackService {
-	return &PackService{packRepository, packDraftRepo, userRepository, storage, attachmentService}
+func NewPackService(packRepository repository.Pack, packDraftRepo repository.PackDraft, userRepository repository.User, rawStorage storage.Raw, compressedStorage storage.Compressed, attachmentService *AttachmentService) *PackService {
+	return &PackService{packRepository, packDraftRepo, userRepository, rawStorage, compressedStorage, attachmentService}
+}
+
+// Absence in either bucket is expected; only real errors are logged.
+func deleteAttachmentObjects(ctx context.Context, raw storage.Raw, compressed storage.Compressed, key string) {
+	for _, stor := range []storage.Storage{raw.Storage, compressed.Storage} {
+		if err := stor.Delete(ctx, key); err != nil {
+			if _, ok := err.(custerr.NotFoundErr); !ok {
+				slog.Error("failed to cleanup attachment", "key", key, "err", err)
+			}
+		}
+	}
 }
 
 // resolveCreator returns the current User for id, falling back to a "Deleted
@@ -62,9 +74,7 @@ func (s *PackService) Create(ctx context.Context, user domain.User, cpr dto.Crea
 	defer func() {
 		if err != nil {
 			for key := range cpr.AttachmentKeys() {
-				if err := s.storage.Delete(context.Background(), key); err != nil {
-					slog.Error("failed to cleanup attachment", "key", key, "err", err)
-				}
+				deleteAttachmentObjects(context.Background(), s.rawStorage, s.compressedStorage, key)
 			}
 		}
 	}()
@@ -115,15 +125,15 @@ func (s *PackService) GetById(ctx context.Context, userId, id string) (any, erro
 		return domain.NewHiddenPack(*pack), nil
 	}
 
-	if err := populatePackAttachmentURLs(ctx, s.storage, pack); err != nil {
+	if err := populatePackAttachmentURLs(ctx, s.compressedStorage, pack); err != nil {
 		return nil, err
 	}
 	return pack, nil
 }
 
-func populatePackAttachmentURLs(ctx context.Context, stor storage.Storage, pack *domain.Pack) error {
+func populatePackAttachmentURLs(ctx context.Context, stor storage.Compressed, pack *domain.Pack) error {
 	setURL := func(a *domain.Attachment) error {
-		if a == nil {
+		if a == nil || !a.IsReady() {
 			return nil
 		}
 		u, err := stor.URL(ctx, a.Key, GET_URL_TTL)
@@ -220,9 +230,7 @@ func (s *PackService) UpdateFromDraft(ctx context.Context, user domain.User, dra
 	}
 
 	for key := range sets.Delta(oldPack.AttachmentKeys(), draft.AttachmentKeys()) {
-		if err := s.storage.Delete(context.Background(), key); err != nil {
-			slog.Error("failed to cleanup attachment", "key", key, "err", err)
-		}
+		deleteAttachmentObjects(context.Background(), s.rawStorage, s.compressedStorage, key)
 	}
 	return nil
 }
@@ -240,9 +248,7 @@ func (s *PackService) Update(ctx context.Context, user domain.User, req dto.Upda
 	defer func() {
 		if err != nil {
 			for key := range sets.Delta(req.AttachmentKeys(), pack.AttachmentKeys()) {
-				if err := s.storage.Delete(context.Background(), key); err != nil {
-					slog.Error("failed to cleanup attachment", "key", key, "err", err)
-				}
+				deleteAttachmentObjects(context.Background(), s.rawStorage, s.compressedStorage, key)
 			}
 		}
 	}()
@@ -258,9 +264,7 @@ func (s *PackService) Update(ctx context.Context, user domain.User, req dto.Upda
 	}
 
 	for key := range sets.Delta(pack.AttachmentKeys(), req.AttachmentKeys()) {
-		if err := s.storage.Delete(context.Background(), key); err != nil {
-			slog.Error("failed to cleanup attachment", "key", key, "err", err)
-		}
+		deleteAttachmentObjects(context.Background(), s.rawStorage, s.compressedStorage, key)
 	}
 	return nil
 }
@@ -288,33 +292,25 @@ func (s *PackService) Delete(ctx context.Context, userId, id string) error {
 
 	go func() {
 		for key := range pack.AttachmentKeys() {
-			if err := s.storage.Delete(context.Background(), key); err != nil {
-				slog.Error("failed to cleanup attachment", "key", key, "err", err)
-			}
+			deleteAttachmentObjects(context.Background(), s.rawStorage, s.compressedStorage, key)
 		}
 	}()
 
 	return nil
 }
 
+// Client must register the key on its draft before uploading, so the notification can't outrun it.
 func (s *PackService) SignURL(ctx context.Context, user domain.User, req dto.SignURLRequest) (*storage.SignUploadPolicyResult, string, error) {
 	if user.IsGuest {
 		return nil, "", custerr.NewForbiddenErr("guest users aren't allowed to upload media")
 	}
 
-	key := s.attachmentService.generateKey(req.Filename, *req.Public)
-	result, err := s.storage.SignUploadPolicy(ctx, storage.SignUploadPolicyInput{Key: key, TTL: POST_URL_TTL})
+	key := s.attachmentService.generateKey(*req.Public)
+	result, err := s.rawStorage.SignUploadPolicy(ctx, storage.SignUploadPolicyInput{Key: key, TTL: POST_URL_TTL, MaxBytes: MAX_FILE_SIZE})
 	if err != nil {
 		return nil, "", err
 	}
-	getUrl := ""
-	if *req.Public {
-		getUrl, err = s.storage.URL(ctx, key, GET_URL_TTL)
-		if err != nil {
-			return nil, "", err
-		}
-	}
-	return result, getUrl, nil
+	return result, key, nil
 }
 
 func (s *PackService) validateRoundsCheckSum(ctx context.Context, userId string, pack dto.CreatePackRequest, ignoreId *string) ([]byte, error) {

@@ -22,13 +22,14 @@ type PackDraftService struct {
 	packDraftRepo     repository.PackDraft
 	packRepo          repository.Pack
 	userRepository    repository.User
-	storage           storage.Storage
+	rawStorage        storage.Raw
+	compressedStorage storage.Compressed
 	attachmentService *AttachmentService
 	packService       *PackService
 	validator         *validator.Validate
 }
 
-func NewPackDraftService(packDraftRepo repository.PackDraft, packRepo repository.Pack, userRepository repository.User, storage storage.Storage, attachmentService *AttachmentService, packService *PackService) *PackDraftService {
+func NewPackDraftService(packDraftRepo repository.PackDraft, packRepo repository.Pack, userRepository repository.User, rawStorage storage.Raw, compressedStorage storage.Compressed, attachmentService *AttachmentService, packService *PackService) *PackDraftService {
 	v := validator.New()
 	v.SetTagName("binding")
 	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
@@ -43,7 +44,8 @@ func NewPackDraftService(packDraftRepo repository.PackDraft, packRepo repository
 		packDraftRepo:     packDraftRepo,
 		packRepo:          packRepo,
 		userRepository:    userRepository,
-		storage:           storage,
+		rawStorage:        rawStorage,
+		compressedStorage: compressedStorage,
 		attachmentService: attachmentService,
 		packService:       packService,
 		validator:         v,
@@ -109,13 +111,13 @@ func (s *PackDraftService) GetById(ctx context.Context, userId, id string) (*dom
 		return nil, custerr.NewForbiddenErr("cannot access another user's draft")
 	}
 	draft.CreatedBy = resolveCreator(ctx, s.userRepository, map[string]domain.User{}, draft.CreatedBy.Id)
-	populateAttachmentURLs(ctx, s.storage, draft)
+	populateAttachmentURLs(ctx, s.compressedStorage, draft)
 	return draft, nil
 }
 
-func populateAttachmentURLs(ctx context.Context, stor storage.Storage, draft *domain.PackDraft) {
+func populateAttachmentURLs(ctx context.Context, stor storage.Compressed, draft *domain.PackDraft) {
 	setURL := func(a *domain.Attachment) {
-		if a == nil {
+		if a == nil || !a.IsReady() {
 			return
 		}
 		u, err := stor.URL(ctx, a.Key, GET_URL_TTL)
@@ -191,7 +193,7 @@ func (s *PackDraftService) Update(ctx context.Context, user domain.User, id stri
 	candidateKeys := sets.Delta(draft.AttachmentKeys(), newDraft.AttachmentKeys())
 	go s.cleanupAttachmentKeys(context.Background(), newDraft.Id, candidateKeys, "draft update")
 
-	populateAttachmentURLs(ctx, s.storage, newDraft)
+	populateAttachmentURLs(ctx, s.compressedStorage, newDraft)
 	return newDraft, nil
 }
 
@@ -214,9 +216,7 @@ func (s *PackDraftService) cleanupAttachmentKeys(ctx context.Context, excludeDra
 
 	stillReferenced := sets.Union(referencedInDrafts, referencedInPacks)
 	for key := range sets.Delta(candidateKeys, stillReferenced) {
-		if err := s.storage.Delete(ctx, key); err != nil {
-			slog.Error("failed to cleanup attachment", "key", key, "err", err)
-		}
+		deleteAttachmentObjects(ctx, s.rawStorage, s.compressedStorage, key)
 	}
 }
 
@@ -253,6 +253,10 @@ func (s *PackDraftService) Publish(ctx context.Context, user domain.User, id str
 		return "", err
 	}
 
+	if err := ensureAttachmentsReady(draft); err != nil {
+		return "", err
+	}
+
 	oldKeys, newKeys, err := s.promoteAttachments(ctx, draft)
 	if err != nil {
 		return "", err
@@ -260,7 +264,7 @@ func (s *PackDraftService) Publish(ctx context.Context, user domain.User, id str
 	if err := s.packDraftRepo.Update(ctx, draft); err != nil {
 		go func() {
 			for _, key := range newKeys {
-				if delErr := s.storage.Delete(context.Background(), key); delErr != nil {
+				if delErr := s.compressedStorage.Delete(context.Background(), key); delErr != nil {
 					slog.Error("publish: failed to clean up promoted attachment after failed update", "key", key, "err", delErr)
 				}
 			}
@@ -269,7 +273,7 @@ func (s *PackDraftService) Publish(ctx context.Context, user domain.User, id str
 	}
 	go func() {
 		for _, key := range oldKeys {
-			if err := s.storage.Delete(context.Background(), key); err != nil {
+			if err := s.compressedStorage.Delete(context.Background(), key); err != nil {
 				slog.Error("publish: failed to delete pre-promotion attachment", "key", key, "err", err)
 			}
 		}
@@ -296,10 +300,7 @@ func (s *PackDraftService) Publish(ctx context.Context, user domain.User, id str
 	return packId, nil
 }
 
-// promoteAttachments re-keys each attachment to draft.Type's privacy prefix via Copy, returning old/new keys for the caller to reconcile.
-func (s *PackDraftService) promoteAttachments(ctx context.Context, draft *domain.PackDraft) (oldKeys, newKeys []string, err error) {
-	targetType := draft.Type
-
+func collectDraftAttachments(draft *domain.PackDraft) []*domain.Attachment {
 	var atts []*domain.Attachment
 	for ri := range draft.Rounds {
 		for ci := range draft.Rounds[ri].Categories {
@@ -323,6 +324,27 @@ func (s *PackDraftService) promoteAttachments(ctx context.Context, draft *domain
 			atts = append(atts, q.Comment.Attachment)
 		}
 	}
+	return atts
+}
+
+func ensureAttachmentsReady(draft *domain.PackDraft) error {
+	for _, att := range collectDraftAttachments(draft) {
+		if att.IsReady() {
+			continue
+		}
+		if att.Status == domain.AttachmentFailed {
+			return custerr.NewConflictErr("draft has a failed attachment; replace it before publishing")
+		}
+		return custerr.NewConflictErr("draft has an attachment that is still being processed; try again shortly")
+	}
+	return nil
+}
+
+// promoteAttachments re-keys each attachment to draft.Type's privacy prefix via Copy, returning old/new keys for the caller to reconcile.
+func (s *PackDraftService) promoteAttachments(ctx context.Context, draft *domain.PackDraft) (oldKeys, newKeys []string, err error) {
+	targetType := draft.Type
+
+	atts := collectDraftAttachments(draft)
 
 	if len(atts) == 0 {
 		return nil, nil, nil
@@ -347,7 +369,7 @@ func (s *PackDraftService) promoteAttachments(ctx context.Context, draft *domain
 					results <- result{att: att, newKey: newKey}
 					continue
 				}
-				results <- result{att: att, oldKey: att.Key, newKey: newKey, err: s.storage.Copy(ctx, att.Key, newKey)}
+				results <- result{att: att, oldKey: att.Key, newKey: newKey, err: s.compressedStorage.Copy(ctx, att.Key, newKey)}
 			}
 		}()
 	}

@@ -4,22 +4,27 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/dto"
+	"github.com/holdennekt/sgame/backend/internal/interface/realtime"
 	"github.com/holdennekt/sgame/backend/internal/service"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
 const MAX_SIQ_SIZE = 500 << 20 // 500 MB
 
+const SSE_KEEPALIVE_INTERVAL = 30 * time.Second
+
 type PackDraftController struct {
 	draftService *service.PackDraftService
+	channels     realtime.ChannelGetter
 }
 
-func NewPackDraftController(draftService *service.PackDraftService) *PackDraftController {
-	return &PackDraftController{draftService}
+func NewPackDraftController(draftService *service.PackDraftService, channels realtime.ChannelGetter) *PackDraftController {
+	return &PackDraftController{draftService, channels}
 }
 
 func (c *PackDraftController) RegisterRoutes(r *gin.RouterGroup) {
@@ -31,6 +36,7 @@ func (c *PackDraftController) RegisterRoutes(r *gin.RouterGroup) {
 	drafts.DELETE("/:id", c.delete)
 	drafts.POST("/import", c.importSIQ)
 	drafts.POST("/:id/publish", c.publish)
+	drafts.GET("/:id/events", c.events)
 }
 
 // @Summary      Create or get an edit draft
@@ -243,6 +249,55 @@ func (c *PackDraftController) importSIQ(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusCreated, dto.CreatePackResponse{Id: id})
+}
+
+// @Summary      Stream attachment processing events
+// @Description  Server-sent events stream announcing attachment status changes (pending → ready/failed) for a draft; only the owning user can subscribe. SSE only announces the next change, so clients should refetch the draft on connect to cover changes that happened before (or between) connections.
+// @Tags         pack-drafts
+// @Produce      text/event-stream
+// @Param        id   path      string  true  "Draft ID"
+// @Success      200  "SSE stream of attachment_updated events"
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized: Session missing or expired"
+// @Failure      403  {object}  dto.ErrorResponse "Forbidden: Not the draft owner"
+// @Failure      404  {object}  dto.ErrorResponse "Draft not found"
+// @Security     CookieAuth
+// @Router       /packs/drafts/{id}/events [get]
+func (c *PackDraftController) events(ctx *gin.Context) {
+	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
+	id := ctx.Param("id")
+
+	if _, err := c.draftService.GetById(ctx, userId, id); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	channel := c.channels.Get(service.DraftAttachmentsChannel(id))
+	defer func() { _ = channel.Close() }()
+	messages := channel.Receive(ctx.Request.Context())
+
+	ctx.Header("Content-Type", "text/event-stream")
+	ctx.Header("Cache-Control", "no-cache")
+	ctx.Header("X-Accel-Buffering", "no")
+	ctx.Writer.Flush()
+
+	keepalive := time.NewTicker(SSE_KEEPALIVE_INTERVAL)
+	defer keepalive.Stop()
+
+	for {
+		select {
+		case <-ctx.Request.Context().Done():
+			return
+		case msg, ok := <-messages:
+			if !ok {
+				return
+			}
+			ctx.SSEvent(string(msg.Event), string(msg.Payload))
+			ctx.Writer.Flush()
+		case <-keepalive.C:
+			_, _ = ctx.Writer.WriteString(": keepalive\n\n")
+			ctx.Writer.Flush()
+		}
+	}
 }
 
 // @Summary      Publish pack draft

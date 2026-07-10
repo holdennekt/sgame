@@ -137,7 +137,9 @@ func collectAvatarKeys(ctx context.Context, db *mongo.Database, publicURLPrefix 
 		if user.Avatar == nil || *user.Avatar == "" {
 			continue
 		}
-		keys[strings.TrimPrefix(*user.Avatar, publicURLPrefix)] = struct{}{}
+		if i := strings.Index(*user.Avatar, publicURLPrefix); i >= 0 {
+			keys[(*user.Avatar)[i+len(publicURLPrefix):]] = struct{}{}
+		}
 	}
 	return keys, cur.Err()
 }
@@ -177,15 +179,16 @@ func main() {
 	defer func() { _ = mongoConn.Disconnect(ctx) }()
 	db := mongoConn.Database(envvar.GetEnvVar("MONGO_NAME"))
 
-	bucketName := envvar.GetEnvVar("BUCKET_NAME")
+	compressedBucket := envvar.GetEnvVar("PROCESSED_BUCKET_NAME")
+	rawBucket := os.Getenv("RAW_BUCKET_NAME")
+	buckets := []string{compressedBucket}
+	if rawBucket != "" {
+		buckets = append(buckets, rawBucket)
+	}
 	provider := os.Getenv("STORAGE_PROVIDER")
 
-	var avatarURLPrefix string
-	if provider == "gcs" {
-		avatarURLPrefix = fmt.Sprintf("https://storage.googleapis.com/%s/", bucketName)
-	} else {
-		avatarURLPrefix = fmt.Sprintf("%s/storage/%s/", envvar.GetEnvVar("FRONTEND_URL"), bucketName)
-	}
+	// avatar URLs vary historically; the key is whatever follows the bucket name
+	avatarURLPrefix := "/" + compressedBucket + "/"
 
 	log.Println("Collecting referenced keys from MongoDB...")
 
@@ -229,30 +232,32 @@ func main() {
 		}
 		defer func() { _ = gcsClient.Close() }()
 
-		log.Printf("Listing objects in GCS bucket %q...", bucketName)
+		for _, bucketName := range buckets {
+			log.Printf("Listing objects in GCS bucket %q...", bucketName)
 
-		it := gcsClient.Bucket(bucketName).Objects(ctx, nil)
-		for {
-			attrs, err := it.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				log.Fatal(err)
-			}
+			it := gcsClient.Bucket(bucketName).Objects(ctx, nil)
+			for {
+				attrs, err := it.Next()
+				if err == iterator.Done {
+					break
+				}
+				if err != nil {
+					log.Fatal(err)
+				}
 
-			totalObjects++
-			totalSize += attrs.Size
+				totalObjects++
+				totalSize += attrs.Size
 
-			if _, ok := referenced[attrs.Name]; !ok {
-				orphaned++
-				orphanedSize += attrs.Size
-				if *dryRun {
-					fmt.Printf("[dry-run] %s (%s)\n", attrs.Name, formatBytes(attrs.Size))
-				} else {
-					log.Printf("Deleting %s...", attrs.Name)
-					if err := gcsClient.Bucket(bucketName).Object(attrs.Name).Delete(ctx); err != nil {
-						log.Printf("ERROR deleting %s: %v", attrs.Name, err)
+				if _, ok := referenced[attrs.Name]; !ok {
+					orphaned++
+					orphanedSize += attrs.Size
+					if *dryRun {
+						fmt.Printf("[dry-run] %s/%s (%s)\n", bucketName, attrs.Name, formatBytes(attrs.Size))
+					} else {
+						log.Printf("Deleting %s/%s...", bucketName, attrs.Name)
+						if err := gcsClient.Bucket(bucketName).Object(attrs.Name).Delete(ctx); err != nil {
+							log.Printf("ERROR deleting %s/%s: %v", bucketName, attrs.Name, err)
+						}
 					}
 				}
 			}
@@ -270,25 +275,27 @@ func main() {
 			log.Fatal(err)
 		}
 
-		log.Printf("Listing objects in MinIO bucket %q...", bucketName)
+		for _, bucketName := range buckets {
+			log.Printf("Listing objects in MinIO bucket %q...", bucketName)
 
-		for obj := range minioClient.ListObjects(ctx, bucketName, minio.ListObjectsOptions{Recursive: true}) {
-			if obj.Err != nil {
-				log.Fatal(obj.Err)
-			}
+			for obj := range minioClient.ListObjects(ctx, bucketName, minio.ListObjectsOptions{Recursive: true}) {
+				if obj.Err != nil {
+					log.Fatal(obj.Err)
+				}
 
-			totalObjects++
-			totalSize += obj.Size
+				totalObjects++
+				totalSize += obj.Size
 
-			if _, ok := referenced[obj.Key]; !ok {
-				orphaned++
-				orphanedSize += obj.Size
-				if *dryRun {
-					fmt.Printf("[dry-run] %s (%s)\n", obj.Key, formatBytes(obj.Size))
-				} else {
-					log.Printf("Deleting %s...", obj.Key)
-					if err := minioClient.RemoveObject(ctx, bucketName, obj.Key, minio.RemoveObjectOptions{}); err != nil {
-						log.Printf("ERROR deleting %s: %v", obj.Key, err)
+				if _, ok := referenced[obj.Key]; !ok {
+					orphaned++
+					orphanedSize += obj.Size
+					if *dryRun {
+						fmt.Printf("[dry-run] %s/%s (%s)\n", bucketName, obj.Key, formatBytes(obj.Size))
+					} else {
+						log.Printf("Deleting %s/%s...", bucketName, obj.Key)
+						if err := minioClient.RemoveObject(ctx, bucketName, obj.Key, minio.RemoveObjectOptions{}); err != nil {
+							log.Printf("ERROR deleting %s/%s: %v", bucketName, obj.Key, err)
+						}
 					}
 				}
 			}
