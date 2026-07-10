@@ -76,9 +76,11 @@ func (s *UserService) Update(ctx context.Context, user *domain.DbUser) error {
 	if err := s.userRepository.Update(ctx, user); err != nil {
 		return err
 	}
-	if sessionId, err := s.sessionCache.GetKey(ctx, user.Id); err == nil {
-		if err := s.sessionCache.Set(ctx, sessionId, &user.User); err != nil {
-			slog.Warn("failed to update session cache", "err", err)
+	if sessionIds, err := s.sessionCache.GetKeys(ctx, user.Id); err == nil {
+		for _, sessionId := range sessionIds {
+			if err := s.sessionCache.Set(ctx, sessionId, &user.User); err != nil {
+				slog.Warn("failed to update session cache", "err", err)
+			}
 		}
 	}
 	return nil
@@ -163,9 +165,11 @@ func (s *UserService) Delete(ctx context.Context, id string) error {
 	if err := s.userRepository.Delete(ctx, id); err != nil {
 		return err
 	}
-	if sessionId, err := s.sessionCache.GetKey(ctx, id); err == nil {
-		if err := s.sessionCache.Delete(ctx, sessionId); err != nil {
-			slog.Warn("failed to delete session from cache", "err", err)
+	if sessionIds, err := s.sessionCache.GetKeys(ctx, id); err == nil {
+		for _, sessionId := range sessionIds {
+			if err := s.sessionCache.Delete(ctx, sessionId); err != nil {
+				slog.Warn("failed to delete session from cache", "err", err)
+			}
 		}
 	}
 	return nil

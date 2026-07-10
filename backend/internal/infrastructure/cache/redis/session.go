@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
-	"github.com/holdennekt/sgame/backend/internal/interface/cache"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 	"github.com/redis/go-redis/v9"
 )
@@ -16,15 +15,15 @@ import (
 const SESSION_KEY_PREFIX = "session:"
 const SESSION_TTL = 7 * 24 * time.Hour
 
-type sessionCache struct {
+type SessionCache struct {
 	client *redis.Client
 }
 
-func NewSessionCache(client *redis.Client) cache.Session {
-	return &sessionCache{client}
+func NewSessionCache(client *redis.Client) *SessionCache {
+	return &SessionCache{client}
 }
 
-func (c *sessionCache) Get(ctx context.Context, sessionId string) (*domain.User, error) {
+func (c *SessionCache) Get(ctx context.Context, sessionId string) (*domain.User, error) {
 	raw, err := c.client.Get(ctx, SESSION_KEY_PREFIX+sessionId).Result()
 	if err != nil {
 		if err == redis.Nil {
@@ -39,12 +38,21 @@ func (c *sessionCache) Get(ctx context.Context, sessionId string) (*domain.User,
 	return &user, nil
 }
 
-func (c *sessionCache) GetKey(ctx context.Context, userId string) (string, error) {
+func (c *SessionCache) GetKey(ctx context.Context, userId string) (string, error) {
+	keys, err := c.GetKeys(ctx, userId)
+	if err != nil {
+		return "", err
+	}
+	return keys[0], nil
+}
+
+func (c *SessionCache) GetKeys(ctx context.Context, userId string) ([]string, error) {
+	var sessionIds []string
 	var cursor uint64
 	for {
 		keys, nextCursor, err := c.client.Scan(ctx, cursor, SESSION_KEY_PREFIX+"*", 100).Result()
 		if err != nil {
-			return "", custerr.NewInternalErr(err)
+			return nil, custerr.NewInternalErr(err)
 		}
 		for _, key := range keys {
 			raw, err := c.client.Get(ctx, key).Result()
@@ -56,7 +64,7 @@ func (c *sessionCache) GetKey(ctx context.Context, userId string) (string, error
 				continue
 			}
 			if user.Id == userId {
-				return strings.TrimPrefix(key, SESSION_KEY_PREFIX), nil
+				sessionIds = append(sessionIds, strings.TrimPrefix(key, SESSION_KEY_PREFIX))
 			}
 		}
 		cursor = nextCursor
@@ -64,10 +72,13 @@ func (c *sessionCache) GetKey(ctx context.Context, userId string) (string, error
 			break
 		}
 	}
-	return "", custerr.NewNotFoundErr(fmt.Sprintf("no session for user \"%s\"", userId))
+	if len(sessionIds) == 0 {
+		return nil, custerr.NewNotFoundErr(fmt.Sprintf("no session for user \"%s\"", userId))
+	}
+	return sessionIds, nil
 }
 
-func (c *sessionCache) Set(ctx context.Context, sessionId string, user *domain.User) error {
+func (c *SessionCache) Set(ctx context.Context, sessionId string, user *domain.User) error {
 	data, err := json.Marshal(user)
 	if err != nil {
 		return custerr.NewInternalErr(err)
@@ -78,7 +89,7 @@ func (c *sessionCache) Set(ctx context.Context, sessionId string, user *domain.U
 	return nil
 }
 
-func (c *sessionCache) Delete(ctx context.Context, sessionId string) error {
+func (c *SessionCache) Delete(ctx context.Context, sessionId string) error {
 	if err := c.client.Del(ctx, SESSION_KEY_PREFIX+sessionId).Err(); err != nil {
 		return custerr.NewInternalErr(err)
 	}
