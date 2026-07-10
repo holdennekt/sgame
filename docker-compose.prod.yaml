@@ -45,6 +45,7 @@ services:
       STORAGE_PROVIDER: gcs
       RAW_BUCKET_NAME: sgame-attachments-raw
       PROCESSED_BUCKET_NAME: sgame-attachments-processed
+      NOTIFICATIONS_TOKEN: ${NOTIFICATIONS_TOKEN}
       GOOGLE_APPLICATION_CREDENTIALS: /app/smart-altar-496311-p4-5cf9bc5fd4e7.json
       FRONTEND_URL: https://sgame.dedyn.io
       USER_AGENT: "SGame/1.0"
@@ -117,7 +118,7 @@ services:
       PROCESSED_BUCKET_NAME: sgame-attachments-processed
       NOTIFICATIONS_TOKEN: ${NOTIFICATIONS_TOKEN}
       GOOGLE_APPLICATION_CREDENTIALS: /app/smart-altar-496311-p4-5cf9bc5fd4e7.json
-      FRONTEND_URL: https://sgame.sgame.dedyn.io
+      FRONTEND_URL: https://sgame.dedyn.io
       USER_AGENT: "SGame/1.0"
     volumes:
       - ./smart-altar-496311-p4-5cf9bc5fd4e7.json:/app/smart-altar-496311-p4-5cf9bc5fd4e7.json
