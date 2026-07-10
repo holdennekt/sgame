@@ -19,11 +19,13 @@ import (
 type GCSStorage struct {
 	client     *gcsstorage.Client
 	bucketName string
+	// off for the raw staging bucket, so nothing there is ever world-readable
+	publicRead bool
 	publicBase string
 	httpClient *http.Client
 }
 
-func NewGCSStorage(ctx context.Context, bucketName string) (storage.Storage, error) {
+func NewGCSStorage(ctx context.Context, bucketName string, publicRead bool) (storage.Storage, error) {
 	client, err := gcsstorage.NewClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GCS client: %w", err)
@@ -37,6 +39,7 @@ func NewGCSStorage(ctx context.Context, bucketName string) (storage.Storage, err
 	return &GCSStorage{
 		client:     client,
 		bucketName: bucketName,
+		publicRead: publicRead,
 		publicBase: "https://storage.googleapis.com",
 		httpClient: &http.Client{
 			Timeout: 60 * time.Minute,
@@ -44,8 +47,13 @@ func NewGCSStorage(ctx context.Context, bucketName string) (storage.Storage, err
 	}, nil
 }
 
+func (s *GCSStorage) isPublicKey(key string) bool {
+	return s.publicRead && strings.HasPrefix(key, "public/")
+}
+
 func (s *GCSStorage) Upload(ctx context.Context, ui storage.UploadInput) error {
-	w := s.client.Bucket(s.bucketName).Object(ui.Key).NewWriter(ctx)
+	obj := s.client.Bucket(s.bucketName).Object(ui.Key)
+	w := obj.NewWriter(ctx)
 	w.ContentType = ui.MimeType
 
 	if _, err := io.Copy(w, ui.Reader); err != nil {
@@ -53,6 +61,12 @@ func (s *GCSStorage) Upload(ctx context.Context, ui storage.UploadInput) error {
 	}
 	if err := w.Close(); err != nil {
 		return custerr.NewInternalErr(fmt.Errorf("failed to finalize upload: %w", err))
+	}
+	if s.isPublicKey(ui.Key) {
+		if err := obj.ACL().Set(ctx, gcsstorage.AllUsers, gcsstorage.RoleReader); err != nil {
+			_ = obj.Delete(ctx)
+			return custerr.NewInternalErr(fmt.Errorf("failed to set public ACL on uploaded file: %w", err))
+		}
 	}
 
 	return nil
@@ -112,6 +126,9 @@ func (s *GCSStorage) Copy(ctx context.Context, oldKey, newKey string) error {
 	dst := s.client.Bucket(s.bucketName).Object(newKey)
 	if _, err := dst.CopierFrom(src).Run(ctx); err != nil {
 		return custerr.NewInternalErr(fmt.Errorf("failed to copy file: %w", err))
+	}
+	if !s.publicRead {
+		return nil
 	}
 	if strings.HasPrefix(newKey, "public/") {
 		if err := dst.ACL().Set(ctx, gcsstorage.AllUsers, gcsstorage.RoleReader); err != nil {
@@ -181,7 +198,7 @@ func (s *GCSStorage) SetContentType(ctx context.Context, key, contentType string
 }
 
 func (s *GCSStorage) URL(ctx context.Context, key string, ttl time.Duration) (string, error) {
-	if strings.HasPrefix(key, "public/") {
+	if s.isPublicKey(key) {
 		return fmt.Sprintf("%s/%s/%s", s.publicBase, s.bucketName, key), nil
 	}
 
@@ -209,7 +226,7 @@ func (s *GCSStorage) SignUploadPolicy(ctx context.Context, in storage.SignUpload
 		Expires:    time.Now().Add(in.TTL),
 		Conditions: conditions,
 	}
-	if strings.HasPrefix(in.Key, "public/") {
+	if s.isPublicKey(in.Key) {
 		opts.Fields = &gcsstorage.PolicyV4Fields{ACL: "public-read"}
 	}
 

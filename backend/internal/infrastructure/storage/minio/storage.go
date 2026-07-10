@@ -18,11 +18,13 @@ import (
 type MinioStorage struct {
 	client     *minio.Client
 	bucketName string
+	// off for the raw staging bucket, so nothing there is ever world-readable
+	publicRead bool
 	userAgent  string
 	httpClient *http.Client
 }
 
-func NewMinioStorage(client *minio.Client, bucketName, userAgent string) storage.Storage {
+func NewMinioStorage(client *minio.Client, bucketName, userAgent string, publicRead bool) storage.Storage {
 	exists, err := client.BucketExists(context.Background(), bucketName)
 	if err != nil {
 		slog.Error("fatal error", "err", err)
@@ -38,27 +40,30 @@ func NewMinioStorage(client *minio.Client, bucketName, userAgent string) storage
 		slog.Info("bucket created", "bucket", bucketName)
 	}
 
-	policy := fmt.Sprintf(`{
-		"Version": "2012-10-17",
-		"Statement": [
-			{
-				"Sid": "AllowPublicGet",
-				"Effect": "Allow",
-				"Principal": "*",
-				"Action": ["s3:GetObject"],
-				"Resource": ["arn:aws:s3:::%s/public/*"]
-			}
-		]
-	}`, bucketName)
-	err = client.SetBucketPolicy(context.Background(), bucketName, policy)
-	if err != nil {
-		slog.Error("fatal error", "err", err)
-		os.Exit(1)
+	if publicRead {
+		policy := fmt.Sprintf(`{
+			"Version": "2012-10-17",
+			"Statement": [
+				{
+					"Sid": "AllowPublicGet",
+					"Effect": "Allow",
+					"Principal": "*",
+					"Action": ["s3:GetObject"],
+					"Resource": ["arn:aws:s3:::%s/public/*"]
+				}
+			]
+		}`, bucketName)
+		err = client.SetBucketPolicy(context.Background(), bucketName, policy)
+		if err != nil {
+			slog.Error("fatal error", "err", err)
+			os.Exit(1)
+		}
 	}
 
 	return &MinioStorage{
 		client:     client,
 		bucketName: bucketName,
+		publicRead: publicRead,
 		userAgent:  userAgent,
 		httpClient: &http.Client{
 			Timeout: 60 * time.Minute,
@@ -204,7 +209,7 @@ func (s *MinioStorage) SetContentType(ctx context.Context, key, contentType stri
 // relative URL resolves correctly regardless of which address (localhost,
 // LAN IP, a tunnel, ...) the browser used to reach the app.
 func (s *MinioStorage) URL(ctx context.Context, key string, ttl time.Duration) (string, error) {
-	if strings.HasPrefix(key, "public/") {
+	if s.publicRead && strings.HasPrefix(key, "public/") {
 		return fmt.Sprintf("/storage/%s/%s", s.bucketName, key), nil
 	}
 

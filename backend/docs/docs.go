@@ -35,7 +35,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.GuestLoginRequest"
+                            "$ref": "#/definitions/dto.GuestLoginRequest"
                         }
                     }
                 ],
@@ -43,7 +43,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully logged in as guest",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.AuthResponse"
+                            "$ref": "#/definitions/dto.AuthResponse"
                         },
                         "headers": {
                             "Set-Cookie": {
@@ -55,13 +55,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid input data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -89,13 +89,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized: Session missing",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -121,7 +121,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateUserRequest"
+                            "$ref": "#/definitions/dto.CreateUserRequest"
                         }
                     }
                 ],
@@ -129,7 +129,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully authenticated",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.AuthResponse"
+                            "$ref": "#/definitions/dto.AuthResponse"
                         },
                         "headers": {
                             "Set-Cookie": {
@@ -141,19 +141,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid input data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized: Invalid credentials",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -178,7 +178,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -205,14 +205,12 @@ const docTemplate = `{
                         "minimum": 1,
                         "type": "integer",
                         "name": "limit",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "name": "orderBy",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -221,41 +219,38 @@ const docTemplate = `{
                         ],
                         "type": "string",
                         "name": "orderDir",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "name": "page",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "maxLength": 30,
                         "type": "string",
                         "name": "search",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SearchResponse"
+                            "$ref": "#/definitions/dto.SearchResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -284,7 +279,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackRequest"
+                            "$ref": "#/definitions/dto.CreatePackRequest"
                         }
                     }
                 ],
@@ -292,25 +287,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse"
+                            "$ref": "#/definitions/dto.CreatePackResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid input data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized: Session missing or expired",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -344,14 +339,12 @@ const docTemplate = `{
                         "minimum": 1,
                         "type": "integer",
                         "name": "limit",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "name": "orderBy",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -360,41 +353,38 @@ const docTemplate = `{
                         ],
                         "type": "string",
                         "name": "orderDir",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "name": "page",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "maxLength": 30,
                         "type": "string",
                         "name": "search",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SearchResponse"
+                            "$ref": "#/definitions/dto.SearchResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -421,14 +411,12 @@ const docTemplate = `{
                         "minimum": 1,
                         "type": "integer",
                         "name": "limit",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "name": "orderBy",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -437,47 +425,44 @@ const docTemplate = `{
                         ],
                         "type": "string",
                         "name": "orderDir",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "name": "page",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "maxLength": 30,
                         "type": "string",
                         "name": "search",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SearchResponse"
+                            "$ref": "#/definitions/dto.SearchResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid query parameters",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized: Session missing or expired",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -505,7 +490,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackDraftRequest"
+                            "$ref": "#/definitions/dto.CreatePackDraftRequest"
                         }
                     }
                 ],
@@ -513,25 +498,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse"
+                            "$ref": "#/definitions/dto.CreatePackResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid input data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized: Session missing or expired",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -568,25 +553,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse"
+                            "$ref": "#/definitions/dto.CreatePackResponse"
                         }
                     },
                     "400": {
                         "description": "Missing or malformed SIQ file",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized: Session missing or expired",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -620,31 +605,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackDraft"
+                            "$ref": "#/definitions/domain.PackDraft"
                         }
                     },
                     "401": {
                         "description": "Unauthorized: Session missing or expired",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden: Not the draft owner",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Draft not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -680,7 +665,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdatePackDraftRequest"
+                            "$ref": "#/definitions/dto.UpdatePackDraftRequest"
                         }
                     }
                 ],
@@ -688,37 +673,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackDraft"
+                            "$ref": "#/definitions/domain.PackDraft"
                         }
                     },
                     "400": {
                         "description": "Invalid input data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized: Session missing or expired",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden: Not the draft owner",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Draft not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -750,25 +735,74 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized: Session missing or expired",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden: Not the draft owner",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Draft not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/packs/drafts/{id}/events": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Server-sent events stream announcing attachment status changes (pending → ready/failed) for a draft; only the owning user can subscribe. SSE only announces the next change, so clients should refetch the draft on connect to cover changes that happened before (or between) connections.",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "pack-drafts"
+                ],
+                "summary": "Stream attachment processing events",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Draft ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SSE stream of attachment_updated events"
+                    },
+                    "401": {
+                        "description": "Unauthorized: Session missing or expired",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: Not the draft owner",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Draft not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -802,37 +836,37 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse"
+                            "$ref": "#/definitions/dto.CreatePackResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized: Session missing or expired",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden: Not the draft owner",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Draft not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "Draft content is invalid for publishing",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -859,14 +893,12 @@ const docTemplate = `{
                         "minimum": 1,
                         "type": "integer",
                         "name": "limit",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "name": "orderBy",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -875,22 +907,19 @@ const docTemplate = `{
                         ],
                         "type": "string",
                         "name": "orderDir",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "name": "page",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "maxLength": 30,
                         "type": "string",
                         "name": "search",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -899,20 +928,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview"
+                                "$ref": "#/definitions/domain.PackPreview"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -935,12 +964,6 @@ const docTemplate = `{
                 "summary": "Get signed upload URL",
                 "parameters": [
                     {
-                        "type": "string",
-                        "name": "filename",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
                         "type": "boolean",
                         "name": "public",
                         "in": "query",
@@ -951,19 +974,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SignURLResponse"
+                            "$ref": "#/definitions/dto.SignURLResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -997,25 +1020,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Pack"
+                            "$ref": "#/definitions/domain.Pack"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Pack not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1051,7 +1074,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdatePackRequest"
+                            "$ref": "#/definitions/dto.UpdatePackRequest"
                         }
                     }
                 ],
@@ -1062,31 +1085,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid input",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden: Not an owner",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Pack not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1118,25 +1141,25 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden: Not an owner",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Pack not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1162,7 +1185,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateUserRequest"
+                            "$ref": "#/definitions/dto.CreateUserRequest"
                         }
                     }
                 ],
@@ -1170,7 +1193,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Account created and logged in",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.AuthResponse"
+                            "$ref": "#/definitions/dto.AuthResponse"
                         },
                         "headers": {
                             "Set-Cookie": {
@@ -1182,13 +1205,13 @@ const docTemplate = `{
                     "400": {
                         "description": "User already exists or validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1216,13 +1239,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized: Session missing",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1249,20 +1272,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomLobby"
+                                "$ref": "#/definitions/domain.RoomLobby"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1291,7 +1314,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateRoomRequest"
+                            "$ref": "#/definitions/dto.CreateRoomRequest"
                         }
                     }
                 ],
@@ -1299,25 +1322,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateRoomResponse"
+                            "$ref": "#/definitions/dto.CreateRoomResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid input data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1344,14 +1367,12 @@ const docTemplate = `{
                         "minimum": 1,
                         "type": "integer",
                         "name": "limit",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "name": "orderBy",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -1360,41 +1381,38 @@ const docTemplate = `{
                         ],
                         "type": "string",
                         "name": "orderDir",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "name": "page",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "maxLength": 30,
                         "type": "string",
                         "name": "search",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SearchResponse"
+                            "$ref": "#/definitions/dto.SearchResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1434,31 +1452,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Can be RoomLobby, RoomModerator, or RoomPlayer",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomPlayer"
+                            "$ref": "#/definitions/domain.RoomPlayer"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden: Invalid password",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Room not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1498,37 +1516,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Room"
+                            "$ref": "#/definitions/domain.Room"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden: Room full or invalid password",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Room not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Room already full",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1562,25 +1580,25 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Room not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Cannot leave ongoing game",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1605,25 +1623,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.DbUser"
+                            "$ref": "#/definitions/domain.DbUser"
                         }
                     },
                     "401": {
                         "description": "Unauthorized: Session missing or invalid",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1654,7 +1672,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.DbUser"
+                            "$ref": "#/definitions/domain.DbUser"
                         }
                     }
                 ],
@@ -1662,19 +1680,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateUserResponse"
+                            "$ref": "#/definitions/dto.CreateUserResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid input data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1708,19 +1726,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.DbUser"
+                            "$ref": "#/definitions/domain.DbUser"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1756,7 +1774,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.DbUser"
+                            "$ref": "#/definitions/domain.DbUser"
                         }
                     }
                 ],
@@ -1767,19 +1785,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid input data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1811,13 +1829,81 @@ const docTemplate = `{
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{id}/avatar": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Accepts a multipart form upload with an \"avatar\" image field (max 5 MB), re-encodes it server-side to a 256×256 webp, and stores its URL on the user",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Upload avatar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Avatar image",
+                        "name": "avatar",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.UploadAvatarResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing, oversized, or non-image file",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized: Session missing or expired",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: Not the user themselves",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -1825,14 +1911,8 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer": {
+        "domain.AnsweringPlayer": {
             "type": "object",
-            "required": [
-                "answer",
-                "id",
-                "timerEndsAt",
-                "timerStartsAt"
-            ],
             "properties": {
                 "answer": {
                     "type": "string"
@@ -1848,19 +1928,14 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.Attachment": {
+        "domain.Attachment": {
             "type": "object",
-            "required": [
-                "duration",
-                "key",
-                "mimeType",
-                "size",
-                "type",
-                "url"
-            ],
             "properties": {
                 "duration": {
                     "type": "number"
+                },
+                "error": {
+                    "type": "string"
                 },
                 "key": {
                     "type": "string"
@@ -1871,20 +1946,32 @@ const docTemplate = `{
                 "size": {
                     "type": "integer"
                 },
+                "status": {
+                    "$ref": "#/definitions/domain.AttachmentStatus"
+                },
                 "type": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FileType"
+                    "$ref": "#/definitions/domain.FileType"
                 },
                 "url": {
                     "type": "string"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.BoardQuestion": {
-            "type": "object",
-            "required": [
-                "hasBeenPlayed",
-                "value"
+        "domain.AttachmentStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "ready",
+                "failed"
             ],
+            "x-enum-varnames": [
+                "AttachmentPending",
+                "AttachmentReady",
+                "AttachmentFailed"
+            ]
+        },
+        "domain.BoardQuestion": {
+            "type": "object",
             "properties": {
                 "hasBeenPlayed": {
                     "type": "boolean"
@@ -1894,13 +1981,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.Category": {
+        "domain.Category": {
             "type": "object",
-            "required": [
-                "comment",
-                "name",
-                "questions"
-            ],
             "properties": {
                 "comment": {
                     "type": "string"
@@ -1911,17 +1993,13 @@ const docTemplate = `{
                 "questions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Question"
+                        "$ref": "#/definitions/domain.Question"
                     }
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions": {
+        "domain.CategoryQuestions": {
             "type": "object",
-            "required": [
-                "category",
-                "questions"
-            ],
             "properties": {
                 "category": {
                     "type": "string"
@@ -1929,45 +2007,24 @@ const docTemplate = `{
                 "questions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.BoardQuestion"
+                        "$ref": "#/definitions/domain.BoardQuestion"
                     }
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.Comment": {
+        "domain.Comment": {
             "type": "object",
-            "required": [
-                "attachment",
-                "text"
-            ],
             "properties": {
                 "attachment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment"
+                    "$ref": "#/definitions/domain.Attachment"
                 },
                 "text": {
                     "type": "string"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.CurrentQuestion": {
+        "domain.CurrentQuestion": {
             "type": "object",
-            "required": [
-                "answers",
-                "attachment",
-                "attachmentRevealEndsAt",
-                "attachmentRevealLastProgress",
-                "bettingEndsAt",
-                "category",
-                "comment",
-                "passingEndsAt",
-                "text",
-                "textRevealLastProgress",
-                "timerEndsAt",
-                "timerLastProgress",
-                "timerStartsAt",
-                "type",
-                "value"
-            ],
             "properties": {
                 "answers": {
                     "type": "array",
@@ -1976,7 +2033,7 @@ const docTemplate = `{
                     }
                 },
                 "attachment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment"
+                    "$ref": "#/definitions/domain.Attachment"
                 },
                 "attachmentRevealEndsAt": {
                     "type": "string"
@@ -1991,7 +2048,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "comment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment"
+                    "$ref": "#/definitions/domain.Comment"
                 },
                 "passingEndsAt": {
                     "type": "string"
@@ -2012,24 +2069,15 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "type": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType"
+                    "$ref": "#/definitions/domain.QuestionType"
                 },
                 "value": {
                     "type": "integer"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.DbUser": {
+        "domain.DbUser": {
             "type": "object",
-            "required": [
-                "avatar",
-                "id",
-                "isDeleted",
-                "isGuest",
-                "login",
-                "name",
-                "password"
-            ],
             "properties": {
                 "avatar": {
                     "type": "string"
@@ -2054,7 +2102,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.FileType": {
+        "domain.FileType": {
             "type": "string",
             "enum": [
                 "image",
@@ -2067,44 +2115,30 @@ const docTemplate = `{
                 "Video"
             ]
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.FinalRound": {
+        "domain.FinalRound": {
             "type": "object",
-            "required": [
-                "categories"
-            ],
             "properties": {
                 "categories": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundCategory"
+                        "$ref": "#/definitions/domain.FinalRoundCategory"
                     }
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.FinalRoundCategory": {
+        "domain.FinalRoundCategory": {
             "type": "object",
-            "required": [
-                "name",
-                "question"
-            ],
             "properties": {
                 "name": {
                     "type": "string"
                 },
                 "question": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundQuestion"
+                    "$ref": "#/definitions/domain.FinalRoundQuestion"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.FinalRoundQuestion": {
+        "domain.FinalRoundQuestion": {
             "type": "object",
-            "required": [
-                "answers",
-                "attachment",
-                "category",
-                "comment",
-                "text"
-            ],
             "properties": {
                 "answers": {
                     "type": "array",
@@ -2113,29 +2147,21 @@ const docTemplate = `{
                     }
                 },
                 "attachment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment"
+                    "$ref": "#/definitions/domain.Attachment"
                 },
                 "category": {
                     "type": "string"
                 },
                 "comment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment"
+                    "$ref": "#/definitions/domain.Comment"
                 },
                 "text": {
                     "type": "string"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState": {
+        "domain.FinalRoundState": {
             "type": "object",
-            "required": [
-                "availableCategories",
-                "bettingEndsAt",
-                "players",
-                "playersAnswers",
-                "question",
-                "timerEndsAt"
-            ],
             "properties": {
                 "availableCategories": {
                     "type": "object",
@@ -2159,33 +2185,18 @@ const docTemplate = `{
                     }
                 },
                 "question": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundQuestion"
+                    "$ref": "#/definitions/domain.FinalRoundQuestion"
                 },
                 "timerEndsAt": {
                     "type": "string"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.HiddenCurrentQuestion": {
+        "domain.HiddenCurrentQuestion": {
             "type": "object",
-            "required": [
-                "attachment",
-                "attachmentRevealEndsAt",
-                "attachmentRevealLastProgress",
-                "bettingEndsAt",
-                "category",
-                "passingEndsAt",
-                "text",
-                "textRevealLastProgress",
-                "timerEndsAt",
-                "timerLastProgress",
-                "timerStartsAt",
-                "type",
-                "value"
-            ],
             "properties": {
                 "attachment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment"
+                    "$ref": "#/definitions/domain.Attachment"
                 },
                 "attachmentRevealEndsAt": {
                     "type": "string"
@@ -2218,23 +2229,18 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "type": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType"
+                    "$ref": "#/definitions/domain.QuestionType"
                 },
                 "value": {
                     "type": "integer"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundQuestion": {
+        "domain.HiddenFinalRoundQuestion": {
             "type": "object",
-            "required": [
-                "attachment",
-                "category",
-                "text"
-            ],
             "properties": {
                 "attachment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment"
+                    "$ref": "#/definitions/domain.Attachment"
                 },
                 "category": {
                     "type": "string"
@@ -2244,16 +2250,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundState": {
+        "domain.HiddenFinalRoundState": {
             "type": "object",
-            "required": [
-                "availableCategories",
-                "bettingEndsAt",
-                "players",
-                "playersAnswers",
-                "question",
-                "timerEndsAt"
-            ],
             "properties": {
                 "availableCategories": {
                     "type": "object",
@@ -2277,23 +2275,15 @@ const docTemplate = `{
                     }
                 },
                 "question": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundQuestion"
+                    "$ref": "#/definitions/domain.HiddenFinalRoundQuestion"
                 },
                 "timerEndsAt": {
                     "type": "string"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.Moderator": {
+        "domain.Moderator": {
             "type": "object",
-            "required": [
-                "avatar",
-                "id",
-                "isConnected",
-                "isDeleted",
-                "isGuest",
-                "name"
-            ],
             "properties": {
                 "avatar": {
                     "type": "string"
@@ -2315,27 +2305,17 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.Pack": {
+        "domain.Pack": {
             "type": "object",
-            "required": [
-                "createdAt",
-                "createdBy",
-                "finalRound",
-                "id",
-                "name",
-                "rounds",
-                "type",
-                "updatedAt"
-            ],
             "properties": {
                 "createdAt": {
                     "type": "string"
                 },
                 "createdBy": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.User"
+                    "$ref": "#/definitions/domain.User"
                 },
                 "finalRound": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRound"
+                    "$ref": "#/definitions/domain.FinalRound"
                 },
                 "id": {
                     "type": "string"
@@ -2346,39 +2326,28 @@ const docTemplate = `{
                 "rounds": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Round"
+                        "$ref": "#/definitions/domain.Round"
                     }
                 },
                 "type": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType"
+                    "$ref": "#/definitions/domain.PrivacyType"
                 },
                 "updatedAt": {
                     "type": "string"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.PackDraft": {
+        "domain.PackDraft": {
             "type": "object",
-            "required": [
-                "createdAt",
-                "createdBy",
-                "finalRound",
-                "id",
-                "linkedPackId",
-                "name",
-                "rounds",
-                "type",
-                "updatedAt"
-            ],
             "properties": {
                 "createdAt": {
                     "type": "string"
                 },
                 "createdBy": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.User"
+                    "$ref": "#/definitions/domain.User"
                 },
                 "finalRound": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRound"
+                    "$ref": "#/definitions/domain.FinalRound"
                 },
                 "id": {
                     "type": "string"
@@ -2392,23 +2361,19 @@ const docTemplate = `{
                 "rounds": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Round"
+                        "$ref": "#/definitions/domain.Round"
                     }
                 },
                 "type": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType"
+                    "$ref": "#/definitions/domain.PrivacyType"
                 },
                 "updatedAt": {
                     "type": "string"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.PackPreview": {
+        "domain.PackPreview": {
             "type": "object",
-            "required": [
-                "id",
-                "name"
-            ],
             "properties": {
                 "id": {
                     "type": "string"
@@ -2418,12 +2383,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.PausedState": {
+        "domain.PausedState": {
             "type": "object",
-            "required": [
-                "paused",
-                "pausedAt"
-            ],
             "properties": {
                 "paused": {
                     "type": "boolean"
@@ -2433,18 +2394,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.Player": {
+        "domain.Player": {
             "type": "object",
-            "required": [
-                "avatar",
-                "betAmount",
-                "id",
-                "isConnected",
-                "isDeleted",
-                "isGuest",
-                "name",
-                "score"
-            ],
             "properties": {
                 "avatar": {
                     "type": "string"
@@ -2472,7 +2423,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.PrivacyType": {
+        "domain.PrivacyType": {
             "type": "string",
             "enum": [
                 "public",
@@ -2483,17 +2434,8 @@ const docTemplate = `{
                 "Private"
             ]
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.Question": {
+        "domain.Question": {
             "type": "object",
-            "required": [
-                "answers",
-                "attachment",
-                "category",
-                "comment",
-                "text",
-                "type",
-                "value"
-            ],
             "properties": {
                 "answers": {
                     "type": "array",
@@ -2502,26 +2444,26 @@ const docTemplate = `{
                     }
                 },
                 "attachment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment"
+                    "$ref": "#/definitions/domain.Attachment"
                 },
                 "category": {
                     "type": "string"
                 },
                 "comment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment"
+                    "$ref": "#/definitions/domain.Comment"
                 },
                 "text": {
                     "type": "string"
                 },
                 "type": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType"
+                    "$ref": "#/definitions/domain.QuestionType"
                 },
                 "value": {
                     "type": "integer"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.QuestionType": {
+        "domain.QuestionType": {
             "type": "string",
             "enum": [
                 "regular",
@@ -2534,28 +2476,8 @@ const docTemplate = `{
                 "CatInBag"
             ]
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.Room": {
+        "domain.Room": {
             "type": "object",
-            "required": [
-                "allowedToAnswer",
-                "answeringPlayer",
-                "banList",
-                "createdBy",
-                "currentPlayer",
-                "currentQuestion",
-                "currentRoundName",
-                "currentRoundQuestions",
-                "finalRoundState",
-                "finishedAt",
-                "id",
-                "moderator",
-                "name",
-                "options",
-                "packPreview",
-                "pausedState",
-                "players",
-                "state"
-            ],
             "properties": {
                 "allowedToAnswer": {
                     "type": "array",
@@ -2564,7 +2486,7 @@ const docTemplate = `{
                     }
                 },
                 "answeringPlayer": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer"
+                    "$ref": "#/definitions/domain.AnsweringPlayer"
                 },
                 "banList": {
                     "type": "array",
@@ -2579,7 +2501,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "currentQuestion": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentQuestion"
+                    "$ref": "#/definitions/domain.CurrentQuestion"
                 },
                 "currentRoundName": {
                     "type": "string"
@@ -2587,11 +2509,11 @@ const docTemplate = `{
                 "currentRoundQuestions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions"
+                        "$ref": "#/definitions/domain.CategoryQuestions"
                     }
                 },
                 "finalRoundState": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState"
+                    "$ref": "#/definitions/domain.FinalRoundState"
                 },
                 "finishedAt": {
                     "type": "string"
@@ -2600,44 +2522,33 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "moderator": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator"
+                    "$ref": "#/definitions/domain.Moderator"
                 },
                 "name": {
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions"
+                    "$ref": "#/definitions/domain.RoomOptions"
                 },
                 "packPreview": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview"
+                    "$ref": "#/definitions/domain.PackPreview"
                 },
                 "pausedState": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PausedState"
+                    "$ref": "#/definitions/domain.PausedState"
                 },
                 "players": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player"
+                        "$ref": "#/definitions/domain.Player"
                     }
                 },
                 "state": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomState"
+                    "$ref": "#/definitions/domain.RoomState"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.RoomLobby": {
+        "domain.RoomLobby": {
             "type": "object",
-            "required": [
-                "id",
-                "maxPlayers",
-                "moderator",
-                "name",
-                "options",
-                "packPreview",
-                "players",
-                "status",
-                "type"
-            ],
             "properties": {
                 "id": {
                     "type": "string"
@@ -2646,51 +2557,33 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "moderator": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator"
+                    "$ref": "#/definitions/domain.Moderator"
                 },
                 "name": {
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions"
+                    "$ref": "#/definitions/domain.RoomOptions"
                 },
                 "packPreview": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview"
+                    "$ref": "#/definitions/domain.PackPreview"
                 },
                 "players": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player"
+                        "$ref": "#/definitions/domain.Player"
                     }
                 },
                 "status": {
                     "type": "string"
                 },
                 "type": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType"
+                    "$ref": "#/definitions/domain.PrivacyType"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.RoomModerator": {
+        "domain.RoomModerator": {
             "type": "object",
-            "required": [
-                "allowedToAnswer",
-                "answeringPlayer",
-                "currentPlayer",
-                "currentQuestion",
-                "currentRoundName",
-                "currentRoundQuestions",
-                "finalRoundState",
-                "id",
-                "moderator",
-                "name",
-                "options",
-                "packPreview",
-                "pausedState",
-                "players",
-                "spectatorCount",
-                "state"
-            ],
             "properties": {
                 "allowedToAnswer": {
                     "type": "array",
@@ -2699,13 +2592,13 @@ const docTemplate = `{
                     }
                 },
                 "answeringPlayer": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer"
+                    "$ref": "#/definitions/domain.AnsweringPlayer"
                 },
                 "currentPlayer": {
                     "type": "string"
                 },
                 "currentQuestion": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentQuestion"
+                    "$ref": "#/definitions/domain.CurrentQuestion"
                 },
                 "currentRoundName": {
                     "type": "string"
@@ -2713,57 +2606,46 @@ const docTemplate = `{
                 "currentRoundQuestions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions"
+                        "$ref": "#/definitions/domain.CategoryQuestions"
                     }
                 },
                 "finalRoundState": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState"
+                    "$ref": "#/definitions/domain.FinalRoundState"
                 },
                 "id": {
                     "type": "string"
                 },
                 "moderator": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator"
+                    "$ref": "#/definitions/domain.Moderator"
                 },
                 "name": {
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions"
+                    "$ref": "#/definitions/domain.RoomOptions"
                 },
                 "packPreview": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview"
+                    "$ref": "#/definitions/domain.PackPreview"
                 },
                 "pausedState": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PausedState"
+                    "$ref": "#/definitions/domain.PausedState"
                 },
                 "players": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player"
+                        "$ref": "#/definitions/domain.Player"
                     }
                 },
                 "spectatorCount": {
                     "type": "integer"
                 },
                 "state": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomState"
+                    "$ref": "#/definitions/domain.RoomState"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.RoomOptions": {
+        "domain.RoomOptions": {
             "type": "object",
-            "required": [
-                "aiHost",
-                "answerThinkingTime",
-                "falseStartEnabled",
-                "maxPlayers",
-                "password",
-                "questionThinkingTime",
-                "questionThinkingTimeFinal",
-                "readingSymbolsPerSecond",
-                "type"
-            ],
             "properties": {
                 "aiHost": {
                     "type": "boolean"
@@ -2814,32 +2696,14 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType"
+                            "$ref": "#/definitions/domain.PrivacyType"
                         }
                     ]
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.RoomPlayer": {
+        "domain.RoomPlayer": {
             "type": "object",
-            "required": [
-                "allowedToAnswer",
-                "answeringPlayer",
-                "currentPlayer",
-                "currentQuestion",
-                "currentRoundName",
-                "currentRoundQuestions",
-                "finalRoundState",
-                "id",
-                "moderator",
-                "name",
-                "options",
-                "packPreview",
-                "pausedState",
-                "players",
-                "spectatorCount",
-                "state"
-            ],
             "properties": {
                 "allowedToAnswer": {
                     "type": "array",
@@ -2848,13 +2712,13 @@ const docTemplate = `{
                     }
                 },
                 "answeringPlayer": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer"
+                    "$ref": "#/definitions/domain.AnsweringPlayer"
                 },
                 "currentPlayer": {
                     "type": "string"
                 },
                 "currentQuestion": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.HiddenCurrentQuestion"
+                    "$ref": "#/definitions/domain.HiddenCurrentQuestion"
                 },
                 "currentRoundName": {
                     "type": "string"
@@ -2862,45 +2726,45 @@ const docTemplate = `{
                 "currentRoundQuestions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions"
+                        "$ref": "#/definitions/domain.CategoryQuestions"
                     }
                 },
                 "finalRoundState": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundState"
+                    "$ref": "#/definitions/domain.HiddenFinalRoundState"
                 },
                 "id": {
                     "type": "string"
                 },
                 "moderator": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator"
+                    "$ref": "#/definitions/domain.Moderator"
                 },
                 "name": {
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions"
+                    "$ref": "#/definitions/domain.RoomOptions"
                 },
                 "packPreview": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview"
+                    "$ref": "#/definitions/domain.PackPreview"
                 },
                 "pausedState": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PausedState"
+                    "$ref": "#/definitions/domain.PausedState"
                 },
                 "players": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player"
+                        "$ref": "#/definitions/domain.Player"
                     }
                 },
                 "spectatorCount": {
                     "type": "integer"
                 },
                 "state": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomState"
+                    "$ref": "#/definitions/domain.RoomState"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.RoomState": {
+        "domain.RoomState": {
             "type": "string",
             "enum": [
                 "waiting_for_start",
@@ -2931,17 +2795,13 @@ const docTemplate = `{
                 "GameOver"
             ]
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.Round": {
+        "domain.Round": {
             "type": "object",
-            "required": [
-                "categories",
-                "name"
-            ],
             "properties": {
                 "categories": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Category"
+                        "$ref": "#/definitions/domain.Category"
                     }
                 },
                 "name": {
@@ -2949,15 +2809,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_domain.User": {
+        "domain.User": {
             "type": "object",
-            "required": [
-                "avatar",
-                "id",
-                "isDeleted",
-                "isGuest",
-                "name"
-            ],
             "properties": {
                 "avatar": {
                     "type": "string"
@@ -2976,11 +2829,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.AuthResponse": {
+        "dto.AuthResponse": {
             "type": "object",
-            "required": [
-                "userId"
-            ],
             "properties": {
                 "userId": {
                     "type": "string",
@@ -2988,12 +2838,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest": {
+        "dto.CreateAttachmentRequest": {
             "type": "object",
-            "required": [
-                "key",
-                "url"
-            ],
             "properties": {
                 "key": {
                     "type": "string"
@@ -3003,12 +2849,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreateCategoryRequest": {
+        "dto.CreateCategoryRequest": {
             "type": "object",
-            "required": [
-                "name",
-                "questions"
-            ],
             "properties": {
                 "comment": {
                     "type": "string",
@@ -3024,19 +2866,16 @@ const docTemplate = `{
                     "maxItems": 20,
                     "minItems": 1,
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateQuestionRequest"
+                        "$ref": "#/definitions/dto.CreateQuestionRequest"
                     }
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreateCommentRequest": {
+        "dto.CreateCommentRequest": {
             "type": "object",
-            "required": [
-                "text"
-            ],
             "properties": {
                 "attachment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest"
+                    "$ref": "#/definitions/dto.CreateAttachmentRequest"
                 },
                 "text": {
                     "type": "string",
@@ -3044,12 +2883,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundCategoryRequest": {
+        "dto.CreateFinalRoundCategoryRequest": {
             "type": "object",
-            "required": [
-                "name",
-                "question"
-            ],
             "properties": {
                 "name": {
                     "type": "string",
@@ -3057,11 +2892,11 @@ const docTemplate = `{
                     "minLength": 1
                 },
                 "question": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundQuestionRequest"
+                    "$ref": "#/definitions/dto.CreateFinalRoundQuestionRequest"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundQuestionRequest": {
+        "dto.CreateFinalRoundQuestionRequest": {
             "type": "object",
             "required": [
                 "answers"
@@ -3076,10 +2911,10 @@ const docTemplate = `{
                     }
                 },
                 "attachment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest"
+                    "$ref": "#/definitions/dto.CreateAttachmentRequest"
                 },
                 "comment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCommentRequest"
+                    "$ref": "#/definitions/dto.CreateCommentRequest"
                 },
                 "text": {
                     "type": "string",
@@ -3087,11 +2922,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundRequest": {
+        "dto.CreateFinalRoundRequest": {
             "type": "object",
-            "required": [
-                "categories"
-            ],
             "properties": {
                 "categories": {
                     "type": "array",
@@ -3099,33 +2931,24 @@ const docTemplate = `{
                     "minItems": 1,
                     "uniqueItems": true,
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundCategoryRequest"
+                        "$ref": "#/definitions/dto.CreateFinalRoundCategoryRequest"
                     }
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreatePackDraftRequest": {
+        "dto.CreatePackDraftRequest": {
             "type": "object",
-            "required": [
-                "from"
-            ],
             "properties": {
                 "from": {
                     "type": "string"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreatePackRequest": {
+        "dto.CreatePackRequest": {
             "type": "object",
-            "required": [
-                "finalRound",
-                "name",
-                "rounds",
-                "type"
-            ],
             "properties": {
                 "finalRound": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundRequest"
+                    "$ref": "#/definitions/dto.CreateFinalRoundRequest"
                 },
                 "name": {
                     "type": "string",
@@ -3138,7 +2961,7 @@ const docTemplate = `{
                     "minItems": 1,
                     "uniqueItems": true,
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateRoundRequest"
+                        "$ref": "#/definitions/dto.CreateRoundRequest"
                     }
                 },
                 "type": {
@@ -3148,17 +2971,14 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType"
+                            "$ref": "#/definitions/domain.PrivacyType"
                         }
                     ]
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse": {
+        "dto.CreatePackResponse": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "id": {
                     "type": "string",
@@ -3166,13 +2986,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreateQuestionRequest": {
+        "dto.CreateQuestionRequest": {
             "type": "object",
-            "required": [
-                "answers",
-                "type",
-                "value"
-            ],
             "properties": {
                 "answers": {
                     "type": "array",
@@ -3183,10 +2998,10 @@ const docTemplate = `{
                     }
                 },
                 "attachment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest"
+                    "$ref": "#/definitions/dto.CreateAttachmentRequest"
                 },
                 "comment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCommentRequest"
+                    "$ref": "#/definitions/dto.CreateCommentRequest"
                 },
                 "text": {
                     "type": "string",
@@ -3201,7 +3016,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType"
+                            "$ref": "#/definitions/domain.QuestionType"
                         }
                     ]
                 },
@@ -3211,11 +3026,9 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreateRoomRequest": {
+        "dto.CreateRoomRequest": {
             "type": "object",
             "required": [
-                "name",
-                "options",
                 "packId"
             ],
             "properties": {
@@ -3225,18 +3038,15 @@ const docTemplate = `{
                     "minLength": 1
                 },
                 "options": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions"
+                    "$ref": "#/definitions/domain.RoomOptions"
                 },
                 "packId": {
                     "type": "string"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreateRoomResponse": {
+        "dto.CreateRoomResponse": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "id": {
                     "type": "string",
@@ -3244,12 +3054,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreateRoundRequest": {
+        "dto.CreateRoundRequest": {
             "type": "object",
-            "required": [
-                "categories",
-                "name"
-            ],
             "properties": {
                 "categories": {
                     "type": "array",
@@ -3257,7 +3063,7 @@ const docTemplate = `{
                     "minItems": 1,
                     "uniqueItems": true,
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCategoryRequest"
+                        "$ref": "#/definitions/dto.CreateCategoryRequest"
                     }
                 },
                 "name": {
@@ -3267,12 +3073,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreateUserRequest": {
+        "dto.CreateUserRequest": {
             "type": "object",
-            "required": [
-                "login",
-                "password"
-            ],
             "properties": {
                 "login": {
                     "type": "string",
@@ -3286,11 +3088,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.CreateUserResponse": {
+        "dto.CreateUserResponse": {
             "type": "object",
-            "required": [
-                "id"
-            ],
             "properties": {
                 "id": {
                     "type": "string",
@@ -3298,11 +3097,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse": {
+        "dto.ErrorResponse": {
             "type": "object",
-            "required": [
-                "error"
-            ],
             "properties": {
                 "error": {
                     "type": "string",
@@ -3310,7 +3106,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.GuestLoginRequest": {
+        "dto.GuestLoginRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -3323,15 +3119,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.SearchResponse": {
+        "dto.SearchResponse": {
             "type": "object",
-            "required": [
-                "hasNext",
-                "items",
-                "page",
-                "pageSize",
-                "total"
-            ],
             "properties": {
                 "hasNext": {
                     "type": "boolean"
@@ -3348,12 +3137,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.SignURLResponse": {
+        "dto.SignURLResponse": {
             "type": "object",
-            "required": [
-                "formData",
-                "url"
-            ],
             "properties": {
                 "formData": {
                     "type": "object",
@@ -3361,7 +3146,8 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
-                "getUrl": {
+                "key": {
+                    "description": "Key is what the client registers on its draft (creating a pending\nattachment) before performing the presigned upload.",
                     "type": "string"
                 },
                 "url": {
@@ -3369,12 +3155,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.UpdateCategoryDraftRequest": {
+        "dto.UpdateCategoryDraftRequest": {
             "type": "object",
-            "required": [
-                "name",
-                "questions"
-            ],
             "properties": {
                 "comment": {
                     "type": "string",
@@ -3388,16 +3170,16 @@ const docTemplate = `{
                     "type": "array",
                     "maxItems": 20,
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateQuestionDraftRequest"
+                        "$ref": "#/definitions/dto.UpdateQuestionDraftRequest"
                     }
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest": {
+        "dto.UpdateCommentDraftRequest": {
             "type": "object",
             "properties": {
                 "attachment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest"
+                    "$ref": "#/definitions/dto.CreateAttachmentRequest"
                 },
                 "text": {
                     "type": "string",
@@ -3405,12 +3187,8 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundCategoryDraftRequest": {
+        "dto.UpdateFinalRoundCategoryDraftRequest": {
             "type": "object",
-            "required": [
-                "name",
-                "question"
-            ],
             "properties": {
                 "name": {
                     "type": "string",
@@ -3418,31 +3196,25 @@ const docTemplate = `{
                     "minLength": 1
                 },
                 "question": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundQuestionDraftRequest"
+                    "$ref": "#/definitions/dto.UpdateFinalRoundQuestionDraftRequest"
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundDraftRequest": {
+        "dto.UpdateFinalRoundDraftRequest": {
             "type": "object",
-            "required": [
-                "categories"
-            ],
             "properties": {
                 "categories": {
                     "type": "array",
                     "maxItems": 10,
                     "uniqueItems": true,
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundCategoryDraftRequest"
+                        "$ref": "#/definitions/dto.UpdateFinalRoundCategoryDraftRequest"
                     }
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundQuestionDraftRequest": {
+        "dto.UpdateFinalRoundQuestionDraftRequest": {
             "type": "object",
-            "required": [
-                "answers"
-            ],
             "properties": {
                 "answers": {
                     "type": "array",
@@ -3452,10 +3224,10 @@ const docTemplate = `{
                     }
                 },
                 "attachment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest"
+                    "$ref": "#/definitions/dto.CreateAttachmentRequest"
                 },
                 "comment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest"
+                    "$ref": "#/definitions/dto.UpdateCommentDraftRequest"
                 },
                 "text": {
                     "type": "string",
@@ -3463,17 +3235,11 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.UpdatePackDraftRequest": {
+        "dto.UpdatePackDraftRequest": {
             "type": "object",
-            "required": [
-                "finalRound",
-                "name",
-                "rounds",
-                "type"
-            ],
             "properties": {
                 "finalRound": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundDraftRequest"
+                    "$ref": "#/definitions/dto.UpdateFinalRoundDraftRequest"
                 },
                 "name": {
                     "type": "string",
@@ -3484,7 +3250,7 @@ const docTemplate = `{
                     "maxItems": 20,
                     "uniqueItems": true,
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateRoundDraftRequest"
+                        "$ref": "#/definitions/dto.UpdateRoundDraftRequest"
                     }
                 },
                 "type": {
@@ -3494,24 +3260,20 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType"
+                            "$ref": "#/definitions/domain.PrivacyType"
                         }
                     ]
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.UpdatePackRequest": {
+        "dto.UpdatePackRequest": {
             "type": "object",
             "required": [
-                "finalRound",
-                "id",
-                "name",
-                "rounds",
-                "type"
+                "id"
             ],
             "properties": {
                 "finalRound": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundRequest"
+                    "$ref": "#/definitions/dto.CreateFinalRoundRequest"
                 },
                 "id": {
                     "type": "string"
@@ -3527,7 +3289,7 @@ const docTemplate = `{
                     "minItems": 1,
                     "uniqueItems": true,
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateRoundRequest"
+                        "$ref": "#/definitions/dto.CreateRoundRequest"
                     }
                 },
                 "type": {
@@ -3537,19 +3299,14 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType"
+                            "$ref": "#/definitions/domain.PrivacyType"
                         }
                     ]
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.UpdateQuestionDraftRequest": {
+        "dto.UpdateQuestionDraftRequest": {
             "type": "object",
-            "required": [
-                "answers",
-                "type",
-                "value"
-            ],
             "properties": {
                 "answers": {
                     "type": "array",
@@ -3559,10 +3316,10 @@ const docTemplate = `{
                     }
                 },
                 "attachment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest"
+                    "$ref": "#/definitions/dto.CreateAttachmentRequest"
                 },
                 "comment": {
-                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest"
+                    "$ref": "#/definitions/dto.UpdateCommentDraftRequest"
                 },
                 "text": {
                     "type": "string",
@@ -3576,7 +3333,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType"
+                            "$ref": "#/definitions/domain.QuestionType"
                         }
                     ]
                 },
@@ -3585,24 +3342,28 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_holdennekt_sgame_backend_internal_dto.UpdateRoundDraftRequest": {
+        "dto.UpdateRoundDraftRequest": {
             "type": "object",
-            "required": [
-                "categories",
-                "name"
-            ],
             "properties": {
                 "categories": {
                     "type": "array",
                     "maxItems": 20,
                     "uniqueItems": true,
                     "items": {
-                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCategoryDraftRequest"
+                        "$ref": "#/definitions/dto.UpdateCategoryDraftRequest"
                     }
                 },
                 "name": {
                     "type": "string",
                     "maxLength": 200
+                }
+            }
+        },
+        "dto.UploadAvatarResponse": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "type": "string"
                 }
             }
         }

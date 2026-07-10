@@ -68,7 +68,8 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_DB: 0
       STORAGE_PROVIDER: minio
-      BUCKET_NAME: attachments
+      RAW_BUCKET_NAME: attachments-raw
+      PROCESSED_BUCKET_NAME: attachments-processed
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_ENDPOINT: minio:9000
@@ -103,6 +104,50 @@ services:
 
         Use confidence < 0.6 only when the answer is genuinely ambiguous. Do not explain your reasoning.
       AI_VALIDATION_TIMEOUT: 10
+
+  # Triggered by Minio bucket notifications (webhook target on the minio
+  # service; bucket event rule added by minio-init).
+  attachment-processor:
+    image: sgame-backend-dev
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    command: ["go", "run", "./cmd/attachment-processor"]
+    volumes:
+      - ./backend:/app
+      - backend_go_mod:/go/pkg/mod
+      - backend_go_build_cache:/root/.cache/go-build
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      HOST: 0.0.0.0
+      PORT: 80
+      MONGO_ROOT_USER: ${MONGO_ROOT_USER}
+      MONGO_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_HOST: mongodb
+      MONGO_PORT: 27017
+      MONGO_NAME: sgame
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_USER: ${REDIS_USERNAME}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: 0
+      STORAGE_PROVIDER: minio
+      RAW_BUCKET_NAME: attachments-raw
+      PROCESSED_BUCKET_NAME: attachments-processed
+      NOTIFICATIONS_TOKEN: ${NOTIFICATIONS_TOKEN}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_USE_SSL: false
+      FRONTEND_URL: http://localhost:3000
+      USER_AGENT: "SGame/1.0"
 
   mongodb:
     image: mongo:6.0
@@ -176,6 +221,11 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BROWSER: on
+      # queue dir persists undelivered events for redelivery
+      MINIO_NOTIFY_WEBHOOK_ENABLE_SGAME: "on"
+      MINIO_NOTIFY_WEBHOOK_ENDPOINT_SGAME: http://attachment-processor/notifications/attachments
+      MINIO_NOTIFY_WEBHOOK_AUTH_TOKEN_SGAME: ${NOTIFICATIONS_TOKEN}
+      MINIO_NOTIFY_WEBHOOK_QUEUE_DIR_SGAME: /data/.notify-sgame
     volumes:
       - minio_data:/data
     healthcheck:
@@ -184,6 +234,19 @@ services:
       timeout: 3s
       retries: 10
       start_period: 5s
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mc alias set local http://minio:9000 "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWORD}"
+        mc mb --ignore-existing local/attachments-raw local/attachments-processed
+        mc event add local/attachments-raw arn:minio:sqs::SGAME:webhook --event put || true
+        mc ilm rule add local/attachments-raw --expire-days 1 || true
 
 volumes:
   redis_data:

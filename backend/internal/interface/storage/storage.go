@@ -24,6 +24,15 @@ type Storage interface {
 	SetContentType(ctx context.Context, key, contentType string) error
 }
 
+// Raw is the staging bucket for originals; Compressed is the serving bucket.
+type Raw struct {
+	Storage
+}
+
+type Compressed struct {
+	Storage
+}
+
 type UploadInput struct {
 	Key      string
 	Size     int64

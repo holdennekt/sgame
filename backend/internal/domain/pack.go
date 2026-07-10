@@ -46,13 +46,28 @@ const (
 	Video FileType = "video"
 )
 
+type AttachmentStatus string
+
+const (
+	AttachmentPending AttachmentStatus = "pending"
+	AttachmentReady   AttachmentStatus = "ready"
+	AttachmentFailed  AttachmentStatus = "failed"
+)
+
 type Attachment struct {
-	Key      string   `json:"key" bson:"key"`
-	URL      string   `json:"url" bson:"-"`
-	Type     FileType `json:"type" bson:"type"`
-	MimeType string   `json:"mimeType" bson:"mimeType"`
-	Size     int64    `json:"size" bson:"size"`
-	Duration float64  `json:"duration" bson:"duration"`
+	Key      string           `json:"key" bson:"key"`
+	URL      string           `json:"url" bson:"-"`
+	Type     FileType         `json:"type" bson:"type"`
+	MimeType string           `json:"mimeType" bson:"mimeType"`
+	Size     int64            `json:"size" bson:"size"`
+	Duration float64          `json:"duration" bson:"duration"`
+	Status   AttachmentStatus `json:"status" bson:"status"`
+	Error    string           `json:"error,omitempty" bson:"error,omitempty"`
+}
+
+// Missing status means the attachment predates the raw/compressed split.
+func (a *Attachment) IsReady() bool {
+	return a.Status == AttachmentReady || a.Status == ""
 }
 
 type Comment struct {

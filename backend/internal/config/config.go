@@ -20,10 +20,12 @@ type Config struct {
 	RedisPassword string
 	RedisDB       int
 
-	StorageProvider string
-	BucketName      string
-	FrontendURL     string
-	UserAgent       string
+	StorageProvider      string
+	RawBucketName        string // env: RAW_BUCKET_NAME; staging bucket for original uploads
+	CompressedBucketName string // env: PROCESSED_BUCKET_NAME; serving bucket
+	NotificationsToken   string // env: NOTIFICATIONS_TOKEN; optional shared secret for storage webhook pushes
+	FrontendURL          string
+	UserAgent            string
 
 	MinioEndpoint string
 	MinioUser     string
@@ -87,8 +89,10 @@ func Load() (*Config, error) {
 		RedisPassword: os.Getenv("REDIS_PASSWORD"),
 		RedisDB:       redisDB,
 
-		StorageProvider: os.Getenv("STORAGE_PROVIDER"),
-		BucketName:      os.Getenv("BUCKET_NAME"),
+		StorageProvider:      os.Getenv("STORAGE_PROVIDER"),
+		RawBucketName:        os.Getenv("RAW_BUCKET_NAME"),
+		CompressedBucketName: os.Getenv("PROCESSED_BUCKET_NAME"),
+		NotificationsToken:   os.Getenv("NOTIFICATIONS_TOKEN"),
 
 		MinioEndpoint: os.Getenv("MINIO_ENDPOINT"),
 		MinioUser:     os.Getenv("MINIO_ROOT_USER"),
@@ -120,18 +124,19 @@ func Load() (*Config, error) {
 
 func (c *Config) validate() error {
 	required := map[string]string{
-		"MONGO_ROOT_USER":     c.MongoUser,
-		"MONGO_ROOT_PASSWORD": c.MongoPassword,
-		"MONGO_HOST":          c.MongoHost,
-		"MONGO_PORT":          c.MongoPort,
-		"MONGO_NAME":          c.MongoName,
-		"REDIS_HOST":          c.RedisHost,
-		"REDIS_PORT":          c.RedisPort,
-		"STORAGE_PROVIDER":    c.StorageProvider,
-		"BUCKET_NAME":         c.BucketName,
-		"FRONTEND_URL":        c.FrontendURL,
-		"HOST":                c.Host,
-		"PORT":                c.Port,
+		"MONGO_ROOT_USER":       c.MongoUser,
+		"MONGO_ROOT_PASSWORD":   c.MongoPassword,
+		"MONGO_HOST":            c.MongoHost,
+		"MONGO_PORT":            c.MongoPort,
+		"MONGO_NAME":            c.MongoName,
+		"REDIS_HOST":            c.RedisHost,
+		"REDIS_PORT":            c.RedisPort,
+		"STORAGE_PROVIDER":      c.StorageProvider,
+		"RAW_BUCKET_NAME":       c.RawBucketName,
+		"PROCESSED_BUCKET_NAME": c.CompressedBucketName,
+		"FRONTEND_URL":          c.FrontendURL,
+		"HOST":                  c.Host,
+		"PORT":                  c.Port,
 	}
 
 	var missing []string
