@@ -16,6 +16,7 @@ export default function SortableCategory({
   category,
   selected,
   readOnly,
+  processing,
   onSelect,
   onDuplicate,
   onDelete,
@@ -24,6 +25,7 @@ export default function SortableCategory({
   category: CategoryFormData;
   selected: boolean;
   readOnly: boolean;
+  processing: boolean;
   onSelect: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
@@ -61,6 +63,14 @@ export default function SortableCategory({
       <span className="shrink-0 text-[10px] font-medium px-1 rounded leading-4">
         {category.questions.length}
       </span>
+      {processing && (
+        <span
+          className={`shrink-0 border-2 border-primary border-t-transparent rounded-full animate-spin${
+            readOnly ? "" : " can-hover:group-hover:hidden"
+          }`}
+          style={{ width: 11, height: 11 }}
+        />
+      )}
       {!readOnly && (
         <div className="flex items-center gap-0.5 shrink-0 overflow-hidden transition-[max-width] duration-150 can-hover:max-w-0 group-hover:max-w-20">
           <button

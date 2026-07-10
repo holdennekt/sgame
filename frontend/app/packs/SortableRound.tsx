@@ -17,6 +17,7 @@ export default function SortableRound({
   round,
   expanded,
   readOnly,
+  processing,
   children,
   onToggleExpand,
   onRename,
@@ -27,6 +28,7 @@ export default function SortableRound({
   round: RoundFormData;
   expanded: boolean;
   readOnly: boolean;
+  processing: boolean;
   children: React.ReactNode;
   onToggleExpand: () => void;
   onRename: (name: string) => void;
@@ -74,6 +76,14 @@ export default function SortableRound({
           onChange={(e) => onRename(e.target.value)}
           readOnly={readOnly}
         />
+        {processing && (
+          <span
+            className={`shrink-0 border-2 border-primary border-t-transparent rounded-full animate-spin${
+              readOnly ? "" : " can-hover:group-hover:hidden"
+            }`}
+            style={{ width: 12, height: 12 }}
+          />
+        )}
         {!readOnly && (
           <div className="flex items-center gap-0.5 shrink-0 overflow-hidden transition-[max-width] duration-150 can-hover:max-w-0 group-hover:max-w-28">
             <button

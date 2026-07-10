@@ -38,6 +38,9 @@ import {
   convertPackFormDataToRequest,
   mapPackAttachments,
   packHasPendingAttachments,
+  roundHasPendingAttachments,
+  categoryHasPendingAttachments,
+  finalRoundCategoryHasPendingAttachments,
 } from "@/types/pack";
 
 function isFinalRoundCategoryFormData(
@@ -167,6 +170,7 @@ function SortableFinalCategoryItem({
   id,
   cat,
   readOnly,
+  processing,
   onOpen,
   onDuplicate,
   onCopyJson,
@@ -175,6 +179,7 @@ function SortableFinalCategoryItem({
   id: string;
   cat: FinalRoundCategoryFormData;
   readOnly: boolean;
+  processing: boolean;
   onOpen: () => void;
   onDuplicate: () => void;
   onCopyJson: () => void;
@@ -204,6 +209,14 @@ function SortableFinalCategoryItem({
       onClick={onOpen}
     >
       <span className="truncate flex-1 min-w-0">{cat.name}</span>
+      {processing && (
+        <span
+          className={`shrink-0 border-2 border-primary border-t-transparent rounded-full animate-spin${
+            readOnly ? "" : " can-hover:group-hover:hidden"
+          }`}
+          style={{ width: 11, height: 11 }}
+        />
+      )}
       {!readOnly && (
         <div className="flex items-center gap-0.5 shrink-0 overflow-hidden transition-[max-width] duration-150 can-hover:max-w-0 group-hover:max-w-28">
           <button
@@ -778,6 +791,7 @@ export default function PackEditor({
                         round={round}
                         expanded={expandedRounds[ri]}
                         readOnly={readOnly}
+                        processing={roundHasPendingAttachments(round)}
                         onToggleExpand={() => toggleRoundExpand(ri)}
                         onRename={(name) => renameRound(ri, name)}
                         onDuplicate={() => duplicateRound(ri)}
@@ -807,6 +821,9 @@ export default function PackEditor({
                                     selectedCategoryIndex === ci
                                   }
                                   readOnly={readOnly}
+                                  processing={categoryHasPendingAttachments(
+                                    cat
+                                  )}
                                   onSelect={() => selectCategory(ri, ci)}
                                   onDuplicate={() => duplicateCategory(ri, ci)}
                                   onDelete={() => deleteCategory(ri, ci)}
@@ -912,6 +929,9 @@ export default function PackEditor({
                           id={String(i)}
                           cat={cat}
                           readOnly={readOnly}
+                          processing={finalRoundCategoryHasPendingAttachments(
+                            cat
+                          )}
                           onOpen={() =>
                             setFinalRoundCategoryModal({
                               isOpen: true,

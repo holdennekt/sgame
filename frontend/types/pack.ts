@@ -423,9 +423,37 @@ export function* packAttachments(
   }
 }
 
+function isPending(a: AttachmentFormData): boolean {
+  return a.kind === "existing" && a.status === "pending";
+}
+
 export function packHasPendingAttachments(pack: PackFormData): boolean {
   for (const a of packAttachments(pack)) {
-    if (a.kind === "existing" && a.status === "pending") return true;
+    if (isPending(a)) return true;
+  }
+  return false;
+}
+
+export function categoryHasPendingAttachments(
+  category: CategoryFormData
+): boolean {
+  for (const q of category.questions) {
+    for (const a of questionAttachments(q)) {
+      if (isPending(a)) return true;
+    }
+  }
+  return false;
+}
+
+export function roundHasPendingAttachments(round: RoundFormData): boolean {
+  return round.categories.some(categoryHasPendingAttachments);
+}
+
+export function finalRoundCategoryHasPendingAttachments(
+  category: FinalRoundCategoryFormData
+): boolean {
+  for (const a of questionAttachments(category.question)) {
+    if (isPending(a)) return true;
   }
   return false;
 }
