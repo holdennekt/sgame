@@ -62,7 +62,7 @@ export default function FinalRoundCategoryModal({
     if (!text || text.length > 200)
       return setError("Text must be between 1 and 200 characters long");
     if (
-      attachment.type === "url" &&
+      attachment.kind === "url" &&
       attachment.url &&
       attachment.url.length > 2000
     )
@@ -73,7 +73,7 @@ export default function FinalRoundCategoryModal({
     if (comment.text.length > 400)
       return setError("Comment text must be under 400 characters long");
     if (
-      comment.attachment.type === "url" &&
+      comment.attachment.kind === "url" &&
       comment.attachment.url &&
       comment.attachment.url.length > 2000
     )

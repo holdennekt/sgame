@@ -68,10 +68,10 @@ export default function CategoryEditor({
       question: {
         value: 0,
         text: "",
-        attachment: { type: "file" },
+        attachment: { kind: "file" },
         type: "regular",
         answers: [],
-        comment: { text: "", attachment: { type: "file" } },
+        comment: { text: "", attachment: { kind: "file" } },
       },
       saveQuestion: (q) =>
         setPack((pack) => {

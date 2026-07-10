@@ -6,12 +6,33 @@ import {
   FiFile,
   FiExternalLink,
   FiPaperclip,
+  FiAlertCircle,
 } from "react-icons/fi";
 
 const labelCls = "block text-xs font-medium text-on-surface-muted";
 
 function AttachmentPreview({ attachment }: { attachment: AttachmentFormData }) {
-  if (attachment.type === "existing") {
+  if (attachment.kind === "existing" && attachment.status === "pending") {
+    return (
+      <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-surface-raised">
+        <div className="w-3.5 h-3.5 shrink-0 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <span className="flex-1 min-w-0 text-xs text-on-surface-muted truncate">
+          Processing…
+        </span>
+      </div>
+    );
+  }
+  if (attachment.kind === "existing" && attachment.status === "failed") {
+    return (
+      <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-danger/60 bg-surface-raised">
+        <FiAlertCircle size={15} className="shrink-0 text-danger" />
+        <span className="flex-1 min-w-0 text-xs text-danger truncate">
+          {attachment.error || "Processing failed, try a different file"}
+        </span>
+      </div>
+    );
+  }
+  if (attachment.kind === "existing") {
     return (
       <a
         href={attachment.url}
@@ -33,7 +54,7 @@ function AttachmentPreview({ attachment }: { attachment: AttachmentFormData }) {
       </a>
     );
   }
-  if (attachment.type === "url" && attachment.url) {
+  if (attachment.kind === "url" && attachment.url) {
     return (
       <a
         href={attachment.url}
@@ -55,7 +76,7 @@ function AttachmentPreview({ attachment }: { attachment: AttachmentFormData }) {
       </a>
     );
   }
-  if (attachment.type === "file" && attachment.file) {
+  if (attachment.kind === "file" && attachment.file) {
     return (
       <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-surface-raised">
         <FiFile size={15} className="shrink-0 text-on-surface-muted" />
@@ -108,14 +129,10 @@ export default function AttachmentEditor({
 
   const switchTab = (t: typeof tabs[number]) => {
     if (t === "existing") {
-      if (attachment.type !== "existing") return;
-      saveAttachment({
-        type: "existing",
-        key: attachment.key,
-        url: attachment.url,
-      });
+      if (attachment.kind !== "existing") return;
+      saveAttachment({ ...attachment });
     } else {
-      saveAttachment({ type: t });
+      saveAttachment({ kind: t });
     }
   };
 
@@ -126,8 +143,8 @@ export default function AttachmentEditor({
       {/* Tab switcher */}
       <div className="flex rounded-lg border border-border overflow-hidden">
         {tabs.map((t) => {
-          const active = attachment.type === t;
-          const disabled = t === "existing" && attachment.type !== "existing";
+          const active = attachment.kind === t;
+          const disabled = t === "existing" && attachment.kind !== "existing";
           return (
             <button
               key={t}
@@ -151,11 +168,11 @@ export default function AttachmentEditor({
       </div>
 
       {/* Tab content */}
-      {attachment.type === "existing" && (
+      {attachment.kind === "existing" && (
         <AttachmentPreview attachment={attachment} />
       )}
 
-      {attachment.type === "file" && (
+      {attachment.kind === "file" && (
         <div>
           {attachment.file ? (
             <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-surface-raised">
@@ -165,7 +182,7 @@ export default function AttachmentEditor({
               </span>
               <button
                 type="button"
-                onClick={() => saveAttachment({ type: "file" })}
+                onClick={() => saveAttachment({ kind: "file" })}
                 className="shrink-0 text-on-surface-muted hover:text-on-surface transition-colors duration-150"
               >
                 <IoIosClose size={16} />
@@ -185,7 +202,7 @@ export default function AttachmentEditor({
               onDrop={(e) => {
                 e.preventDefault();
                 const file = e.dataTransfer.files?.[0];
-                if (file) saveAttachment({ type: "file", file });
+                if (file) saveAttachment({ kind: "file", file });
               }}
               className="w-full flex flex-col items-center gap-2 px-3 py-5 rounded-lg border-2 border-dashed border-border hover:border-primary hover:bg-surface-raised text-on-surface-muted hover:text-on-surface transition-colors duration-150"
             >
@@ -206,13 +223,13 @@ export default function AttachmentEditor({
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) saveAttachment({ type: "file", file });
+              if (file) saveAttachment({ kind: "file", file });
             }}
           />
         </div>
       )}
 
-      {attachment.type === "url" && (
+      {attachment.kind === "url" && (
         <div className="flex items-center rounded-lg border border-border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary transition-[border-color] duration-150">
           <div className="pl-3 pr-1 text-on-surface-muted shrink-0">
             <IoIosLink size={15} />
@@ -223,7 +240,7 @@ export default function AttachmentEditor({
             placeholder="https://example.com/video.mp4"
             value={attachment.url ?? ""}
             onChange={(e) =>
-              saveAttachment({ type: "url", url: e.target.value })
+              saveAttachment({ kind: "url", url: e.target.value })
             }
           />
         </div>

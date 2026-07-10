@@ -36,9 +36,16 @@ export interface QuestionFormData {
 }
 
 export type AttachmentFormData =
-  | { type: "existing"; key: string; url: string }
-  | { type: "file"; file?: File }
-  | { type: "url"; url?: string };
+  | {
+      kind: "existing";
+      key: string;
+      url: string;
+      type: FileType;
+      status?: AttachmentStatus;
+      error?: string;
+    }
+  | { kind: "file"; file?: File }
+  | { kind: "url"; url?: string };
 
 export interface FinalRoundFormData {
   categories: FinalRoundCategoryFormData[];
@@ -114,14 +121,14 @@ export interface CreatePackResponse {
 }
 
 export interface SignURLRequest {
-  filename: string;
   public: boolean;
 }
 
 export interface SignURLResponse {
   url: string;
   formData: Record<string, string>;
-  getUrl?: string;
+  // must be registered on the draft before the presigned upload is performed
+  key: string;
 }
 
 export interface Pack {
@@ -153,6 +160,9 @@ export interface Category {
 
 export type FileType = "image" | "audio" | "video";
 
+// missing status means the attachment predates the raw/compressed split
+export type AttachmentStatus = "pending" | "ready" | "failed";
+
 export interface Attachment {
   key: string;
   url: string;
@@ -160,6 +170,8 @@ export interface Attachment {
   mimeType: string;
   size: number;
   duration: number;
+  status?: AttachmentStatus;
+  error?: string;
 }
 
 const dummyAttachment: Attachment = {
@@ -312,8 +324,15 @@ function convertQuestionToFormData(question: Question): QuestionFormData {
 function convertAttachmentToFormData(
   attachment: Attachment | null
 ): AttachmentFormData {
-  if (!attachment) return { type: "file" };
-  return { type: "existing", key: attachment.key, url: attachment.url };
+  if (!attachment) return { kind: "file" };
+  return {
+    kind: "existing",
+    key: attachment.key,
+    url: attachment.url,
+    type: attachment.type,
+    status: attachment.status,
+    error: attachment.error,
+  };
 }
 
 function convertCommentToFormData(comment: Comment | null): CommentFormData {
@@ -347,19 +366,93 @@ function convertFinalRoundCategoryToFormData(
   };
 }
 
+export function mapPackAttachments(
+  pack: PackFormData,
+  fn: (a: AttachmentFormData) => AttachmentFormData
+): PackFormData {
+  const mapQuestion = (q: QuestionFormData): QuestionFormData => ({
+    ...q,
+    attachment: fn(q.attachment),
+    comment: { ...q.comment, attachment: fn(q.comment.attachment) },
+  });
+  return {
+    ...pack,
+    rounds: pack.rounds.map((r) => ({
+      ...r,
+      categories: r.categories.map((c) => ({
+        ...c,
+        questions: c.questions.map(mapQuestion),
+      })),
+    })),
+    finalRound: {
+      categories: pack.finalRound.categories.map((c) => ({
+        ...c,
+        question: {
+          ...c.question,
+          attachment: fn(c.question.attachment),
+          comment: {
+            ...c.question.comment,
+            attachment: fn(c.question.comment.attachment),
+          },
+        },
+      })),
+    },
+  };
+}
+
+function* questionAttachments(q: {
+  attachment: AttachmentFormData;
+  comment: { attachment: AttachmentFormData };
+}): Generator<AttachmentFormData> {
+  yield q.attachment;
+  yield q.comment.attachment;
+}
+
+export function* packAttachments(
+  pack: PackFormData
+): Generator<AttachmentFormData> {
+  for (const round of pack.rounds) {
+    for (const category of round.categories) {
+      for (const question of category.questions) {
+        yield* questionAttachments(question);
+      }
+    }
+  }
+  for (const category of pack.finalRound.categories) {
+    yield* questionAttachments(category.question);
+  }
+}
+
+export function packHasPendingAttachments(pack: PackFormData): boolean {
+  for (const a of packAttachments(pack)) {
+    if (a.kind === "existing" && a.status === "pending") return true;
+  }
+  return false;
+}
+
+type SignURLFn = (
+  params: SignURLRequest
+) => Promise<SignURLResponse | { error: string }>;
+
+// deferred until the draft save that registers its key has succeeded
+export interface PendingUpload {
+  key: string;
+  upload: () => Promise<void>;
+}
+
+export interface ConvertedPackRequest {
+  request: CreatePackRequest;
+  uploads: PendingUpload[];
+}
+
 export async function convertPackFormDataToRequest(
   formData: PackFormData,
-  signURL: (params: {
-    filename: string;
-    public: boolean;
-  }) => Promise<
-    | { url: string; formData: Record<string, string>; getUrl?: string }
-    | { error: string }
-  >,
+  signURL: SignURLFn,
   fileCache?: Map<File, string>,
   urlCache?: Map<string, string>
-): Promise<CreatePackRequest> {
+): Promise<ConvertedPackRequest> {
   const isPublic = false;
+  const uploads: PendingUpload[] = [];
 
   const rounds = await Promise.all(
     formData.rounds.map(async (round) => ({
@@ -375,6 +468,7 @@ export async function convertPackFormDataToRequest(
                 question.comment.attachment,
                 isPublic,
                 signURL,
+                uploads,
                 fileCache,
                 urlCache
               );
@@ -392,6 +486,7 @@ export async function convertPackFormDataToRequest(
                   question.attachment,
                   isPublic,
                   signURL,
+                  uploads,
                   fileCache,
                   urlCache
                 ),
@@ -411,6 +506,7 @@ export async function convertPackFormDataToRequest(
           question.comment.attachment,
           isPublic,
           signURL,
+          uploads,
           fileCache,
           urlCache
         );
@@ -430,6 +526,7 @@ export async function convertPackFormDataToRequest(
               question.attachment,
               isPublic,
               signURL,
+              uploads,
               fileCache,
               urlCache
             ),
@@ -440,58 +537,60 @@ export async function convertPackFormDataToRequest(
   };
 
   return {
-    name: formData.name,
-    type: formData.type,
-    rounds,
-    finalRound,
+    request: {
+      name: formData.name,
+      type: formData.type,
+      rounds,
+      finalRound,
+    },
+    uploads,
   };
 }
 
 async function convertAttachment(
   attachment: AttachmentFormData,
   isPublic: boolean,
-  signURL: (params: {
-    filename: string;
-    public: boolean;
-  }) => Promise<
-    | { url: string; formData: Record<string, string>; getUrl?: string }
-    | { error: string }
-  >,
+  signURL: SignURLFn,
+  uploads: PendingUpload[],
   fileCache?: Map<File, string>,
   urlCache?: Map<string, string>
 ): Promise<CreateAttachmentRequest | null> {
-  switch (attachment.type) {
+  switch (attachment.kind) {
     case "file": {
-      if (!attachment.file) return null;
+      const file = attachment.file;
+      if (!file) return null;
 
-      if (fileCache?.has(attachment.file)) {
-        return { key: fileCache.get(attachment.file)! };
+      if (fileCache?.has(file)) {
+        return { key: fileCache.get(file)! };
       }
 
-      const signResult = await signURL({
-        filename: attachment.file.name,
-        public: isPublic,
-      });
+      const signResult = await signURL({ public: isPublic });
       if ("error" in signResult) throw new Error(signResult.error);
-      const { url, formData: reqFormData } = signResult;
+      const { url, formData: reqFormData, key } = signResult;
 
-      const formData = new FormData();
-      Object.entries(reqFormData).forEach(([key, value]) => {
-        formData.append(key, value);
+      uploads.push({
+        key,
+        upload: async () => {
+          const formData = new FormData();
+          Object.entries(reqFormData).forEach(([k, v]) => {
+            formData.append(k, v);
+          });
+          formData.append("file", file);
+
+          const response = await fetch(url, {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            fileCache?.delete(file);
+            throw new Error(`Failed to upload ${file.name}`);
+          }
+        },
       });
-      formData.append("file", attachment.file);
 
-      const response = await fetch(url, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to upload ${attachment.file.name} to S3`);
-      }
-
-      fileCache?.set(attachment.file, reqFormData.key);
-      return { key: reqFormData.key };
+      fileCache?.set(file, key);
+      return { key };
     }
 
     case "url":

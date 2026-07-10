@@ -29,12 +29,15 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  Attachment,
   AttachmentFormData,
   CategoryFormData,
   FinalRoundCategoryFormData,
   PackFormData,
   QuestionFormData,
   convertPackFormDataToRequest,
+  mapPackAttachments,
+  packHasPendingAttachments,
 } from "@/types/pack";
 
 function isFinalRoundCategoryFormData(
@@ -49,6 +52,7 @@ function isFinalRoundCategoryFormData(
   );
 }
 import { signURL, createDraft, updateDraft, publishDraft } from "@/app/api";
+import { useDraftAttachmentEvents } from "@/hooks/useDraftAttachmentEvents";
 import {
   isConflictError,
   isError,
@@ -80,8 +84,8 @@ function formatErrorPath(path: string): string {
 }
 
 function stripFileFromAttachment(att: AttachmentFormData): AttachmentFormData {
-  if (att.type === "file") return { type: "file" };
-  if (att.type === "existing") return { type: "url", url: att.url };
+  if (att.kind === "file") return { kind: "file" };
+  if (att.kind === "existing") return { kind: "url", url: att.url };
   return att;
 }
 
@@ -121,7 +125,7 @@ function cacheUrlMappings(
   cache: Map<string, string>
 ) {
   const sync = (s: AttachmentFormData, r: AttachmentFormData) => {
-    if (s.type === "url" && s.url && r.type === "existing")
+    if (s.kind === "url" && s.url && r.kind === "existing")
       cache.set(s.url, r.key);
   };
   saved.rounds.forEach((round, ri) => {
@@ -335,10 +339,10 @@ export default function PackEditor({
     question: {
       value: 0,
       text: "",
-      attachment: { type: "file" },
+      attachment: { kind: "file" },
       type: "regular",
       answers: [],
-      comment: { text: "", attachment: { type: "file" } },
+      comment: { text: "", attachment: { kind: "file" } },
     },
     saveQuestion: () => {},
   });
@@ -353,9 +357,9 @@ export default function PackEditor({
       name: "",
       question: {
         text: "",
-        attachment: { type: "file" },
+        attachment: { kind: "file" },
         answers: [],
-        comment: { text: "", attachment: { type: "file" } },
+        comment: { text: "", attachment: { kind: "file" } },
       },
     },
     saveCategory: () => {},
@@ -429,13 +433,14 @@ export default function PackEditor({
     if (!draftId) return;
     setSaveStatus({ type: "saving" });
     try {
-      const req = await convertPackFormDataToRequest(
+      const { request, uploads } = await convertPackFormDataToRequest(
         packToSave,
         signURL,
         uploadFileCache.current,
         uploadUrlCache.current
       );
-      const newDraft = await updateDraftWithRetry(draftId, req);
+      const newDraft = await updateDraftWithRetry(draftId, request);
+      await Promise.all(uploads.map((u) => u.upload()));
       setSaveErrors([]);
       setSaveStatus({ type: "saved", at: new Date() });
       const serverFormData = convertDraftToFormData(newDraft);
@@ -454,17 +459,42 @@ export default function PackEditor({
     }
   };
 
+  const applyAttachmentEvent = (event: Attachment) => {
+    skipNextAutosave.current = true;
+    setPack((current) =>
+      mapPackAttachments(current, (a) =>
+        a.kind === "existing" && a.key === event.key
+          ? {
+              kind: "existing",
+              key: event.key,
+              url: event.url,
+              type: event.type,
+              status: event.status,
+              error: event.error,
+            }
+          : a
+      )
+    );
+  };
+
+  useDraftAttachmentEvents(
+    draftId,
+    packHasPendingAttachments(pack),
+    applyAttachmentEvent
+  );
+
   const handlePublish = async () => {
-    if (!draftId) return;
+    if (!draftId || packHasPendingAttachments(pack)) return;
     setIsPublishing(true);
     try {
-      const req = await convertPackFormDataToRequest(
+      const { request, uploads } = await convertPackFormDataToRequest(
         pack,
         signURL,
         uploadFileCache.current,
         uploadUrlCache.current
       );
-      await updateDraftWithRetry(draftId, req);
+      await updateDraftWithRetry(draftId, request);
+      await Promise.all(uploads.map((u) => u.upload()));
       skipNextAutosave.current = true;
       setSaveErrors([]);
     } catch (e) {
@@ -573,7 +603,7 @@ export default function PackEditor({
       type="button"
       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-md text-sm font-medium bg-primary text-on-primary hover:bg-primary-hover transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
       onClick={handlePublish}
-      disabled={isPublishing}
+      disabled={isPublishing || packHasPendingAttachments(pack)}
     >
       {isPublishing && (
         <svg
@@ -914,11 +944,11 @@ export default function PackEditor({
                               name: "",
                               question: {
                                 text: "",
-                                attachment: { type: "file" },
+                                attachment: { kind: "file" },
                                 answers: [],
                                 comment: {
                                   text: "",
-                                  attachment: { type: "file" },
+                                  attachment: { kind: "file" },
                                 },
                               },
                             },

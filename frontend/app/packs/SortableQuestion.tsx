@@ -11,6 +11,7 @@ import {
   FiVideo,
   FiPaperclip,
   FiAlignLeft,
+  FiAlertCircle,
 } from "react-icons/fi";
 
 const iconBtnCls =
@@ -29,6 +30,8 @@ const attLabel: Record<string, string> = {
   audio: "Audio",
   video: "Video",
   other: "File",
+  processing: "Processing…",
+  failed: "Failed",
 };
 
 const imageExts = new Set([
@@ -52,11 +55,21 @@ function extType(path: string): "image" | "audio" | "video" | "other" {
   return "other";
 }
 
-function attachmentType(
-  att: AttachmentFormData
-): "image" | "audio" | "video" | "other" | null {
-  if (att.type === "existing") return extType(att.key);
-  if (att.type === "file") {
+type AttachmentTypeLabel =
+  | "image"
+  | "audio"
+  | "video"
+  | "other"
+  | "processing"
+  | "failed";
+
+function attachmentType(att: AttachmentFormData): AttachmentTypeLabel | null {
+  if (att.kind === "existing") {
+    if (att.status === "pending") return "processing";
+    if (att.status === "failed") return "failed";
+    return att.type;
+  }
+  if (att.kind === "file") {
     if (!att.file) return null;
     const mime = att.file.type;
     if (mime.startsWith("image/")) return "image";
@@ -64,7 +77,7 @@ function attachmentType(
     if (mime.startsWith("video/")) return "video";
     return "other";
   }
-  if (att.type === "url") {
+  if (att.kind === "url") {
     if (!att.url) return null;
     return extType(att.url);
   }
@@ -73,9 +86,9 @@ function attachmentType(
 
 function hasAtt(att: AttachmentFormData) {
   return (
-    att.type === "existing" ||
-    (att.type === "file" && att.file != null) ||
-    (att.type === "url" && att.url != null)
+    att.kind === "existing" ||
+    (att.kind === "file" && att.file != null) ||
+    (att.kind === "url" && att.url != null)
   );
 }
 
@@ -83,9 +96,18 @@ function AttachmentIcon({
   type,
   size = 12,
 }: {
-  type: "image" | "audio" | "video" | "other";
+  type: AttachmentTypeLabel;
   size?: number;
 }) {
+  if (type === "processing")
+    return (
+      <span
+        className="shrink-0 border-2 border-primary border-t-transparent rounded-full animate-spin"
+        style={{ width: size, height: size }}
+      />
+    );
+  if (type === "failed")
+    return <FiAlertCircle size={size} className="shrink-0 text-danger" />;
   const cls = "shrink-0 text-on-surface-muted";
   if (type === "image") return <FiImage size={size} className={cls} />;
   if (type === "audio") return <FiMic size={size} className={cls} />;
@@ -93,13 +115,13 @@ function AttachmentIcon({
   return <FiPaperclip size={size} className={cls} />;
 }
 
-function AttachmentLabel({
-  type,
-}: {
-  type: "image" | "audio" | "video" | "other";
-}) {
+function AttachmentLabel({ type }: { type: AttachmentTypeLabel }) {
   return (
-    <span className="inline-flex items-center gap-1 text-on-surface-muted shrink-0">
+    <span
+      className={`inline-flex items-center gap-1 shrink-0 ${
+        type === "failed" ? "text-danger" : "text-on-surface-muted"
+      }`}
+    >
       <AttachmentIcon type={type} size={12} />
       <span>{attLabel[type]}</span>
     </span>
