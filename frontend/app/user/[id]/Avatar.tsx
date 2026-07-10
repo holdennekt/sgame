@@ -1,7 +1,7 @@
 "use client";
 
 import { User } from "@/middleware";
-import { signURL } from "@/app/api";
+import { uploadAvatar } from "@/app/api";
 import { isError } from "@/middleware";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
@@ -68,7 +68,7 @@ function CropModal({
     if (!el) return;
     const handler = (e: WheelEvent) => {
       e.preventDefault();
-      setScale((s) => Math.min(10, Math.max(0.2, s * (1 - e.deltaY * 0.001))));
+      setScale((s) => Math.min(3, Math.max(0.2, s * (1 - e.deltaY * 0.001))));
     };
     el.addEventListener("wheel", handler, { passive: false });
     return () => el.removeEventListener("wheel", handler);
@@ -182,7 +182,7 @@ function CropModal({
           <input
             type="range"
             min={0.2}
-            max={10}
+            max={3}
             step={0.01}
             value={scale}
             onChange={(e) => setScale(Number(e.target.value))}
@@ -218,9 +218,11 @@ function CropModal({
 }
 
 export function AvatarPicker({
+  userId,
   current,
   onChange,
 }: {
+  userId: string;
   current: string | null;
   onChange: (url: string) => void;
 }) {
@@ -239,18 +241,9 @@ export function AvatarPicker({
     setCropSrc(null);
     setUploading(true);
     try {
-      const {
-        url,
-        formData: fields,
-        getUrl,
-      } = await signURL({ filename: "avatar.jpg", public: true });
-      const body = new FormData();
-      Object.entries(fields).forEach(([k, v]) => body.append(k, v));
-      body.append("file", blob, "avatar.jpg");
-      const resp = await fetch(url, { method: "POST", body });
-      if (!resp.ok) throw new Error("Upload failed");
-      setPreview(getUrl!);
-      onChange(getUrl!);
+      const { avatar } = await uploadAvatar(userId, blob);
+      setPreview(avatar);
+      onChange(avatar);
     } catch (e) {
       toast.error(
         isError(e) ? e.error : e instanceof Error ? e.message : "Upload failed",

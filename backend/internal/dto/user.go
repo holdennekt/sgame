@@ -15,6 +15,10 @@ type UpdateUserRequest struct {
 	Password string  `json:"password" binding:"omitempty,min=8,max=40"`
 }
 
+type UploadAvatarResponse struct {
+	Avatar string `json:"avatar"`
+}
+
 type AuthResponse struct {
 	UserId string `json:"userId" example:"507f1f77bcf86cd799439011"`
 }

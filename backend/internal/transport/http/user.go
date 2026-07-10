@@ -10,6 +10,8 @@ import (
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
+const MAX_AVATAR_SIZE = 5 << 20
+
 type UserController struct {
 	userService *service.UserService
 }
@@ -25,6 +27,7 @@ func (c *UserController) RegisterRoutes(r *gin.RouterGroup) {
 	users.GET("/:id", c.getById)
 	users.PUT("/:id", c.update)
 	users.DELETE("/:id", c.delete)
+	users.POST("/:id/avatar", c.uploadAvatar)
 }
 
 // @Summary      Get current user
@@ -128,6 +131,50 @@ func (c *UserController) update(ctx *gin.Context) {
 	}
 
 	ctx.Status(http.StatusNoContent)
+}
+
+// @Summary      Upload avatar
+// @Description  Accepts a multipart form upload with an "avatar" image field (max 5 MB), re-encodes it server-side to a 256×256 webp, and stores its URL on the user
+// @Tags         users
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        id      path      string  true  "User ID"
+// @Param        avatar  formData  file    true  "Avatar image"
+// @Success      200  {object}  dto.UploadAvatarResponse
+// @Failure      400  {object}  dto.ErrorResponse "Missing, oversized, or non-image file"
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized: Session missing or expired"
+// @Failure      403  {object}  dto.ErrorResponse "Forbidden: Not the user themselves"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /users/{id}/avatar [post]
+func (c *UserController) uploadAvatar(ctx *gin.Context) {
+	requester := ctx.MustGet(USER_CONTEXT_KEY).(domain.User)
+	id := ctx.Param("id")
+	if requester.Id != id {
+		_ = ctx.Error(custerr.NewForbiddenErr("not allowed to update other users"))
+		return
+	}
+	if requester.IsGuest {
+		_ = ctx.Error(custerr.NewForbiddenErr("guest users aren't allowed to upload media"))
+		return
+	}
+
+	ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, MAX_AVATAR_SIZE)
+
+	file, _, err := ctx.Request.FormFile("avatar")
+	if err != nil {
+		_ = ctx.Error(custerr.NewBadRequestErr("missing or oversized avatar file (max 5 MB)"))
+		return
+	}
+	defer func() { _ = file.Close() }()
+
+	url, err := c.userService.UploadAvatar(ctx, id, file)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.UploadAvatarResponse{Avatar: url})
 }
 
 // @Summary      Delete user

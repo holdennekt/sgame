@@ -53,7 +53,11 @@ export function EditForm({ user, onDone }: { user: User; onDone: () => void }) {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col sm:flex-row items-start gap-6">
-        <AvatarPicker current={user.avatar} onChange={setAvatarUrl} />
+        <AvatarPicker
+          userId={user.id}
+          current={user.avatar}
+          onChange={setAvatarUrl}
+        />
 
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
           <label className={labelCls}>

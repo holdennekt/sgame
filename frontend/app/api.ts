@@ -174,6 +174,20 @@ export const deleteUser = async (id: string): Promise<void> => {
   if (!resp.ok) throw await resp.json();
 };
 
+export const uploadAvatar = async (
+  id: string,
+  blob: Blob
+): Promise<{ avatar: string }> => {
+  const body = new FormData();
+  body.append("avatar", blob, "avatar");
+  const resp = await fetch(`/api/users/${id}/avatar`, {
+    method: "POST",
+    body,
+  });
+  if (!resp.ok) throw await resp.json();
+  return resp.json();
+};
+
 export const signURL = async (
   dto: SignURLRequest
 ): Promise<SignURLResponse> => {
