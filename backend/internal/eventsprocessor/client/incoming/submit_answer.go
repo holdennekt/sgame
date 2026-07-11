@@ -44,27 +44,10 @@ func HandleSubmitAnswerMessage(ctx context.Context, server realtime.Channel, int
 	}
 
 	go func() {
-		timeout := time.Duration(cfg.AIValidationTimeout) * time.Second
-		aiCtx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-
 		iQuestion := buildValidatorQuestion(question, cfg.CompressedBucketName)
-
-		isCorrect := false
-		if isExactMatch(iQuestion.CorrectAnswers, sap.Answer) {
-			isCorrect = true
-		} else {
-			result, err := validator.Validate(aiCtx, iQuestion, sap.Answer)
-			if err != nil {
-				slog.Error("AI validation failed, defaulting to wrong answer", "err", err, "room_id", roomId)
-			} else {
-				isCorrect = result.IsCorrect
-			}
-		}
+		isCorrect := resolveIsCorrect(validator, cfg, roomId, iQuestion, sap.Answer)
 
 		finalCtx, finalCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer finalCancel()
-
 		newRoom, err := roomCache.SafeUpdate(finalCtx, roomId, func(room *domain.Room) error {
 			answeringEnded :=
 				room.State != domain.Answering ||
@@ -78,6 +61,8 @@ func HandleSubmitAnswerMessage(ctx context.Context, server realtime.Channel, int
 			}
 			return room.ValidateAnswer(domain.SYSTEM, isCorrect)
 		})
+		finalCancel()
+
 		if err != nil {
 			if !errors.Is(err, serverevent.ErrDeferredFunctionCancelled) {
 				slog.Error("error applying AI validation result", "err", err, "room_id", roomId)
@@ -85,12 +70,12 @@ func HandleSubmitAnswerMessage(ctx context.Context, server realtime.Channel, int
 			return
 		}
 
-		if err := server.Send(finalCtx, outgoing.NewRoomUpdatedMessage(roomId)); err != nil {
+		if err := server.Send(context.Background(), outgoing.NewRoomUpdatedMessage(roomId)); err != nil {
 			slog.Error("error sending room_updated after AI validation", "err", err)
 			return
 		}
 
-		if err := handlePostValidate(finalCtx, internalServer, newRoom, question); err != nil {
+		if err := handlePostValidate(context.Background(), internalServer, newRoom, question); err != nil {
 			slog.Error("error in post-validate handler", "err", err)
 		}
 	}()
@@ -108,17 +93,51 @@ func isExactMatch(correctAnswers []string, playerAnswer string) bool {
 	return false
 }
 
+// resolveIsCorrect judges playerAnswer against iQuestion, checking for an
+// exact match before falling back to the AI validator
+func resolveIsCorrect(validator ivalidator.AnswerValidator, cfg *config.Config, roomId string, iQuestion ivalidator.Question, playerAnswer string) bool {
+	if isExactMatch(iQuestion.CorrectAnswers, playerAnswer) {
+		return true
+	}
+
+	timeout := time.Duration(cfg.AIValidationTimeout) * time.Second
+	aiCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	result, err := validator.Validate(aiCtx, iQuestion, playerAnswer)
+	if err != nil {
+		slog.Error("AI validation failed, defaulting to wrong answer", "err", err, "room_id", roomId)
+		return false
+	}
+	slog.Info("AI validation result",
+		"room_id", roomId,
+		"player_answer", playerAnswer,
+		"correct_answers", iQuestion.CorrectAnswers,
+		"is_correct", result.IsCorrect,
+		"confidence", result.Confidence,
+	)
+	return result.IsCorrect
+}
+
 func buildValidatorQuestion(question domain.Question, bucketName string) ivalidator.Question {
+	return buildValidatorQuestionFrom(question.Answers, question.Text, question.Attachment, bucketName)
+}
+
+func buildFinalRoundValidatorQuestion(question domain.FinalRoundQuestion, bucketName string) ivalidator.Question {
+	return buildValidatorQuestionFrom(question.Answers, question.Text, question.Attachment, bucketName)
+}
+
+func buildValidatorQuestionFrom(answers []string, text *string, attachment *domain.Attachment, bucketName string) ivalidator.Question {
 	q := ivalidator.Question{
-		CorrectAnswers: question.Answers,
+		CorrectAnswers: answers,
 	}
-	if question.Text != nil {
-		q.Text = *question.Text
+	if text != nil {
+		q.Text = *text
 	}
-	if question.Attachment != nil {
-		q.MediaURI = "gs://" + bucketName + "/" + question.Attachment.Key
-		q.MediaMIMEType = question.Attachment.MimeType
-		switch question.Attachment.Type {
+	if attachment != nil {
+		q.MediaURI = "gs://" + bucketName + "/" + attachment.Key
+		q.MediaMIMEType = attachment.MimeType
+		switch attachment.Type {
 		case domain.Image:
 			q.MediaType = ivalidator.MediaTypeImage
 		case domain.Audio:

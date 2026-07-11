@@ -143,7 +143,7 @@ func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg messa
 	case domain.PlaceFinalRoundBet:
 		return incoming.HandlePlaceFinalRoundBetMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, p.id, p.user, msg)
 	case domain.SubmitFinalRoundAnswer:
-		return incoming.HandleSubmitFinalRoundAnswerMessage(ctx, p.roomServer, p.roomCache, p.id, p.user, msg)
+		return incoming.HandleSubmitFinalRoundAnswerMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, getURL, p.id, p.user, p.validator, p.cfg, msg)
 	case domain.ValidateFinalRoundAnswer:
 		return incoming.HandleValidateFinalRoundAnswerMessage(ctx, p.roomServer, p.roomInternalServer, p.roomCache, getURL, p.id, p.user, msg)
 	case domain.SkipQuestion:

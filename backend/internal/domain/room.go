@@ -763,7 +763,10 @@ func (r *Room) ValidateFinalRoundAnswer(userId string, isCorrect bool) error {
 	if r.State != ValidatingFinalRoundAnswers {
 		return custerr.NewConflictErr("can not validate final round answer now")
 	}
-	if !r.IsUserModerator(userId) {
+	if r.Options.AIHost && userId != SYSTEM {
+		return custerr.NewForbiddenErr("answer validation is handled by AI in this room")
+	}
+	if !r.IsUserModerator(userId) && userId != SYSTEM {
 		return custerr.NewForbiddenErr("not allowed to validate final round answer")
 	}
 
