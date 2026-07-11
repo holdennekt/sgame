@@ -103,7 +103,7 @@ services:
         {"is_correct": <true|false>, "confidence": <float between 0.0 and 1.0>}
 
         Use confidence < 0.6 only when the answer is genuinely ambiguous. Do not explain your reasoning.
-      AI_VALIDATION_TIMEOUT: 10
+      AI_VALIDATION_TIMEOUT: 60
 
   # Pulls raw-bucket upload notifications from a Redis-list-backed queue,
   # fed by Minio's Redis notification target (bucket event rule added by minio-init)
