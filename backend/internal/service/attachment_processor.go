@@ -254,7 +254,7 @@ func (s *AttachmentProcessorService) transcode(ctx context.Context, probeData *f
 	switch fileType {
 	case domain.Image:
 		result.mimeType = IMAGE_MIME_TYPE
-		err = transcodeImage(transcodeCtx, inPath, outPath)
+		err = transcodeImage(transcodeCtx, inPath, outPath, isAnimatedSource(probeData))
 	case domain.Audio:
 		result.mimeType = AUDIO_MIME_TYPE
 		result.duration = probeData.Format.DurationSeconds

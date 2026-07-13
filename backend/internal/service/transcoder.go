@@ -48,14 +48,21 @@ func runFFmpeg(ctx context.Context, args ...string) error {
 	return nil
 }
 
-// -loop 0 keeps animated sources (gif) animated.
-func transcodeImage(ctx context.Context, inPath, outPath string) error {
-	return runFFmpeg(ctx,
-		"-i", inPath,
-		"-vf", downscaleFilter,
+// -loop 0 keeps animated sources (gif, animated webp, apng) animated.
+// Anything else is capped to its first frame: ffmpeg's demuxer can surface
+// multiple frames for formats that aren't really animations — e.g. a
+// phone's "motion photo" JPEG with a video clip appended after the still
+// image — which -loop 0 would otherwise mux into a garbled animated WebP.
+func transcodeImage(ctx context.Context, inPath, outPath string, animated bool) error {
+	args := []string{"-i", inPath, "-vf", downscaleFilter}
+	if !animated {
+		args = append(args, "-frames:v", "1")
+	}
+	args = append(args,
 		"-c:v", "libwebp", "-quality", fmt.Sprint(webpQuality), "-loop", "0",
 		"-f", "webp", outPath,
 	)
+	return runFFmpeg(ctx, args...)
 }
 
 func audioBitRate(sourceBitRate int) int {

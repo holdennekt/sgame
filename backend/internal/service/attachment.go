@@ -179,6 +179,23 @@ func classifyProbe(data *ffprobe.ProbeData) (domain.FileType, string) {
 	}
 }
 
+// isAnimatedSource reports whether the probed content is a format that can
+// itself carry multiple frames (gif, animated webp, apng). Everything else
+// gets capped to its first frame during transcoding, even if ffmpeg's
+// demuxer finds more than one — see transcodeImage.
+func isAnimatedSource(data *ffprobe.ProbeData) bool {
+	for _, stream := range data.Streams {
+		if stream.CodecType != "video" {
+			continue
+		}
+		switch stream.CodecName {
+		case "gif", "webp", "apng":
+			return true
+		}
+	}
+	return false
+}
+
 // containerMIMEType maps ffprobe's (often comma-separated, ambiguous) container
 // format name to a concrete MIME type, using fileType to disambiguate formats
 // ffmpeg can't tell apart from the container alone (e.g. mp4 video vs m4a audio).
