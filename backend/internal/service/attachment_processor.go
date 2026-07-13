@@ -71,7 +71,7 @@ func (s *AttachmentProcessorService) Process(ctx context.Context, key string) (e
 			outcome = "retry"
 		}
 		metrics.AttachmentsProcessedTotal.WithLabelValues(outcome).Inc()
-		slog.Info("finished processing attachment", "key", key, "outcome", outcome, "duration", duration)
+		slog.Info("finished processing attachment", "key", key, "outcome", outcome, "duration", duration.Round(time.Millisecond).String())
 	}()
 
 	doc, err := s.locate(ctx, key)
