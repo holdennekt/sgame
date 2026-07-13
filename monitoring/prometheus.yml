@@ -6,3 +6,8 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ["backend:80"]
+
+  - job_name: sgame-attachment-processor
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["attachment-processor:80"]

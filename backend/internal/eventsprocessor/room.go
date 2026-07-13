@@ -18,6 +18,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	ivalidator "github.com/holdennekt/sgame/backend/internal/interface/validator"
 	"github.com/holdennekt/sgame/backend/internal/message"
+	"github.com/holdennekt/sgame/backend/pkg/metrics"
 )
 
 const (
@@ -118,6 +119,7 @@ func (p *RoomEventsProcessor) handleClientMessage(ctx context.Context, msg messa
 	if p.isSpectator {
 		return nil
 	}
+	metrics.GameEventsTotal.WithLabelValues(string(msg.Event), "incoming").Inc()
 	getURL := func(key string) (string, error) {
 		return p.storage.URL(ctx, key, GET_URL_TTL)
 	}
@@ -186,6 +188,7 @@ func (p *RoomEventsProcessor) handleClientClosure(ctx context.Context) error {
 }
 
 func (p *RoomEventsProcessor) handleServerMessage(ctx context.Context, msg message.Message) error {
+	metrics.GameEventsTotal.WithLabelValues(string(msg.Event), "outgoing").Inc()
 	switch msg.Event {
 	case domain.Chat:
 		return client.HandleServerChatMessage(ctx, p.client, msg)
@@ -292,6 +295,7 @@ func (p *RoomInternalEventsProcessor) Listen(ctx context.Context) {
 }
 
 func (p *RoomInternalEventsProcessor) handleMessage(ctx context.Context, msg message.Message) error {
+	metrics.GameEventsTotal.WithLabelValues(string(msg.Event), "internal").Inc()
 	getURL := func(key string) (string, error) {
 		return p.storage.URL(ctx, key, GET_URL_TTL)
 	}

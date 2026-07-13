@@ -19,6 +19,7 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/internal/message"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/pkg/metrics"
 	"gopkg.in/vansante/go-ffprobe.v2"
 )
 
@@ -55,18 +56,36 @@ func NewAttachmentProcessorService(
 	return &AttachmentProcessorService{packDraftRepo, packRepo, rawStorage, compressedStorage, channels, attempts}
 }
 
-// A nil return settles the notification; an error asks for redelivery.
-func (s *AttachmentProcessorService) Process(ctx context.Context, key string) error {
+// A nil return settles the notification; an error asks for redelivery,
+// reported to Prometheus as outcome "retry" regardless of which step failed.
+func (s *AttachmentProcessorService) Process(ctx context.Context, key string) (err error) {
+	start := time.Now()
+	slog.Info("processing attachment", "key", key)
+	metrics.AttachmentsProcessingInFlight.Inc()
+	outcome := "ready"
+	defer func() {
+		metrics.AttachmentsProcessingInFlight.Dec()
+		duration := time.Since(start)
+		metrics.AttachmentProcessingDuration.Observe(duration.Seconds())
+		if err != nil {
+			outcome = "retry"
+		}
+		metrics.AttachmentsProcessedTotal.WithLabelValues(outcome).Inc()
+		slog.Info("finished processing attachment", "key", key, "outcome", outcome, "duration", duration)
+	}()
+
 	doc, err := s.locate(ctx, key)
 	if err != nil {
 		if _, ok := err.(custerr.NotFoundErr); !ok {
 			return err
 		}
+		outcome = "dropped"
 		return s.handleNotRegistered(ctx, key)
 	}
 
 	att := doc.getAttachment(key)
 	if att.Status != domain.AttachmentPending {
+		outcome = "skipped"
 		return nil
 	}
 
@@ -78,6 +97,7 @@ func (s *AttachmentProcessorService) Process(ctx context.Context, key string) er
 	if contentErr != nil {
 		slog.Error("attachment processing failed", "key", key, "err", contentErr)
 		att.Status = domain.AttachmentFailed
+		outcome = "failed"
 		if errors.Is(contentErr, errSourceGone) {
 			att.Error = "the upload never completed or has expired, try uploading again"
 		} else {

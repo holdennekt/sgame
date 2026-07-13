@@ -36,4 +36,20 @@ var (
 		Name: "sgame_game_events_total",
 		Help: "Total game events processed",
 	}, []string{"event", "direction"})
+
+	AttachmentsProcessedTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sgame_attachments_processed_total",
+		Help: "Total attachment notifications processed by outcome (ready, failed, skipped, dropped, retry)",
+	}, []string{"outcome"})
+
+	AttachmentProcessingDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "sgame_attachment_processing_duration_seconds",
+		Help:    "Time spent processing a single attachment notification",
+		Buckets: prometheus.DefBuckets,
+	})
+
+	AttachmentsProcessingInFlight = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "sgame_attachments_processing_in_flight",
+		Help: "Number of attachment notifications currently being processed",
+	})
 )

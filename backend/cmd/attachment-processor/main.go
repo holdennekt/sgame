@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/holdennekt/sgame/backend/internal/config"
 	redisCache "github.com/holdennekt/sgame/backend/internal/infrastructure/cache/redis"
 	mongoDatabase "github.com/holdennekt/sgame/backend/internal/infrastructure/database/mongo"
@@ -22,7 +21,6 @@ import (
 	storageFactory "github.com/holdennekt/sgame/backend/internal/infrastructure/storage/factory"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/internal/service"
-	myHttp "github.com/holdennekt/sgame/backend/internal/transport/http"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
@@ -108,20 +106,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	engine := gin.New()
-	engine.GET("/metrics", gin.WrapH(promhttp.Handler()))
-	engine.Use(
-		gin.Recovery(),
-		myHttp.RequestIDMiddleware,
-		myHttp.LoggingMiddleware,
-		myHttp.ErrorMiddleware,
-	)
-
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+
 	servAddress := cfg.Host + ":" + cfg.Port
-	srv := &http.Server{Addr: servAddress, Handler: engine}
+	srv := &http.Server{Addr: servAddress, Handler: mux}
 
 	go func() {
 		slog.Info("starting attachment processor", "addr", servAddress)
