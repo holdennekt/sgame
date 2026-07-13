@@ -31,7 +31,8 @@ type Config struct {
 	MinioPassword string
 	MinioUseSSL   bool
 
-	GCPProjectID         string // env: GCP_PROJECT_ID; required when STORAGE_PROVIDER=gcs
+	GCPProjectID         string // env: GCP_PROJECT_ID
+	GCPLocation          string // env: GCP_LOCATION
 	PubSubSubscriptionID string // env: PUBSUB_SUBSCRIPTION_ID; pull subscription for raw-bucket upload notifications
 
 	AppEnv string
@@ -46,8 +47,6 @@ type Config struct {
 	ValidatorType       string // env: VALIDATOR_TYPE; "ollama" | "gemini" | "" (disabled)
 	OllamaURL           string // env: OLLAMA_URL
 	OllamaSystemPrompt  string // env: OLLAMA_SYSTEM_PROMPT
-	GeminiProjectID     string // env: GEMINI_PROJECT_ID
-	GeminiLocation      string // env: GEMINI_LOCATION
 	GeminiSystemPrompt  string // env: GEMINI_SYSTEM_PROMPT
 	AIValidationTimeout int    // env: AI_VALIDATION_TIMEOUT; seconds; default 10
 }
@@ -101,6 +100,7 @@ func Load() (*Config, error) {
 		MinioUseSSL:   minioUseSSL,
 
 		GCPProjectID:         os.Getenv("GCP_PROJECT_ID"),
+		GCPLocation:          os.Getenv("GCP_LOCATION"),
 		PubSubSubscriptionID: os.Getenv("PUBSUB_SUBSCRIPTION_ID"),
 
 		AppEnv:      os.Getenv("APP_ENV"),
@@ -117,8 +117,6 @@ func Load() (*Config, error) {
 		ValidatorType:       os.Getenv("VALIDATOR_TYPE"),
 		OllamaURL:           os.Getenv("OLLAMA_URL"),
 		OllamaSystemPrompt:  os.Getenv("OLLAMA_SYSTEM_PROMPT"),
-		GeminiProjectID:     os.Getenv("GEMINI_PROJECT_ID"),
-		GeminiLocation:      os.Getenv("GEMINI_LOCATION"),
 		GeminiSystemPrompt:  os.Getenv("GEMINI_SYSTEM_PROMPT"),
 		AIValidationTimeout: aiValidationTimeout,
 	}

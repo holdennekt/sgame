@@ -1,6 +1,6 @@
 basePath: /api
 definitions:
-  domain.AnsweringPlayer:
+  github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer:
     properties:
       answer:
         type: string
@@ -10,8 +10,13 @@ definitions:
         type: string
       timerStartsAt:
         type: string
+    required:
+    - answer
+    - id
+    - timerEndsAt
+    - timerStartsAt
     type: object
-  domain.Attachment:
+  github_com_holdennekt_sgame_backend_internal_domain.Attachment:
     properties:
       duration:
         type: number
@@ -24,13 +29,21 @@ definitions:
       size:
         type: integer
       status:
-        $ref: '#/definitions/domain.AttachmentStatus'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.AttachmentStatus'
       type:
-        $ref: '#/definitions/domain.FileType'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FileType'
       url:
         type: string
+    required:
+    - duration
+    - key
+    - mimeType
+    - size
+    - status
+    - type
+    - url
     type: object
-  domain.AttachmentStatus:
+  github_com_holdennekt_sgame_backend_internal_domain.AttachmentStatus:
     enum:
     - pending
     - ready
@@ -40,14 +53,17 @@ definitions:
     - AttachmentPending
     - AttachmentReady
     - AttachmentFailed
-  domain.BoardQuestion:
+  github_com_holdennekt_sgame_backend_internal_domain.BoardQuestion:
     properties:
       hasBeenPlayed:
         type: boolean
       value:
         type: integer
+    required:
+    - hasBeenPlayed
+    - value
     type: object
-  domain.Category:
+  github_com_holdennekt_sgame_backend_internal_domain.Category:
     properties:
       comment:
         type: string
@@ -55,33 +71,43 @@ definitions:
         type: string
       questions:
         items:
-          $ref: '#/definitions/domain.Question'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Question'
         type: array
+    required:
+    - comment
+    - name
+    - questions
     type: object
-  domain.CategoryQuestions:
+  github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions:
     properties:
       category:
         type: string
       questions:
         items:
-          $ref: '#/definitions/domain.BoardQuestion'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.BoardQuestion'
         type: array
+    required:
+    - category
+    - questions
     type: object
-  domain.Comment:
+  github_com_holdennekt_sgame_backend_internal_domain.Comment:
     properties:
       attachment:
-        $ref: '#/definitions/domain.Attachment'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
       text:
         type: string
+    required:
+    - attachment
+    - text
     type: object
-  domain.CurrentQuestion:
+  github_com_holdennekt_sgame_backend_internal_domain.CurrentQuestion:
     properties:
       answers:
         items:
           type: string
         type: array
       attachment:
-        $ref: '#/definitions/domain.Attachment'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
       attachmentRevealEndsAt:
         type: string
       attachmentRevealLastProgress:
@@ -91,7 +117,7 @@ definitions:
       category:
         type: string
       comment:
-        $ref: '#/definitions/domain.Comment'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment'
       passingEndsAt:
         type: string
       text:
@@ -105,11 +131,27 @@ definitions:
       timerStartsAt:
         type: string
       type:
-        $ref: '#/definitions/domain.QuestionType'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType'
       value:
         type: integer
+    required:
+    - answers
+    - attachment
+    - attachmentRevealEndsAt
+    - attachmentRevealLastProgress
+    - bettingEndsAt
+    - category
+    - comment
+    - passingEndsAt
+    - text
+    - textRevealLastProgress
+    - timerEndsAt
+    - timerLastProgress
+    - timerStartsAt
+    - type
+    - value
     type: object
-  domain.DbUser:
+  github_com_holdennekt_sgame_backend_internal_domain.DbUser:
     properties:
       avatar:
         type: string
@@ -125,8 +167,16 @@ definitions:
         type: string
       password:
         type: string
+    required:
+    - avatar
+    - id
+    - isDeleted
+    - isGuest
+    - login
+    - name
+    - password
     type: object
-  domain.FileType:
+  github_com_holdennekt_sgame_backend_internal_domain.FileType:
     enum:
     - image
     - audio
@@ -136,36 +186,47 @@ definitions:
     - Image
     - Audio
     - Video
-  domain.FinalRound:
+  github_com_holdennekt_sgame_backend_internal_domain.FinalRound:
     properties:
       categories:
         items:
-          $ref: '#/definitions/domain.FinalRoundCategory'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundCategory'
         type: array
+    required:
+    - categories
     type: object
-  domain.FinalRoundCategory:
+  github_com_holdennekt_sgame_backend_internal_domain.FinalRoundCategory:
     properties:
       name:
         type: string
       question:
-        $ref: '#/definitions/domain.FinalRoundQuestion'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundQuestion'
+    required:
+    - name
+    - question
     type: object
-  domain.FinalRoundQuestion:
+  github_com_holdennekt_sgame_backend_internal_domain.FinalRoundQuestion:
     properties:
       answers:
         items:
           type: string
         type: array
       attachment:
-        $ref: '#/definitions/domain.Attachment'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
       category:
         type: string
       comment:
-        $ref: '#/definitions/domain.Comment'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment'
       text:
         type: string
+    required:
+    - answers
+    - attachment
+    - category
+    - comment
+    - text
     type: object
-  domain.FinalRoundState:
+  github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState:
     properties:
       availableCategories:
         additionalProperties:
@@ -182,14 +243,21 @@ definitions:
           type: string
         type: object
       question:
-        $ref: '#/definitions/domain.FinalRoundQuestion'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundQuestion'
       timerEndsAt:
         type: string
+    required:
+    - availableCategories
+    - bettingEndsAt
+    - players
+    - playersAnswers
+    - question
+    - timerEndsAt
     type: object
-  domain.HiddenCurrentQuestion:
+  github_com_holdennekt_sgame_backend_internal_domain.HiddenCurrentQuestion:
     properties:
       attachment:
-        $ref: '#/definitions/domain.Attachment'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
       attachmentRevealEndsAt:
         type: string
       attachmentRevealLastProgress:
@@ -211,20 +279,38 @@ definitions:
       timerStartsAt:
         type: string
       type:
-        $ref: '#/definitions/domain.QuestionType'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType'
       value:
         type: integer
+    required:
+    - attachment
+    - attachmentRevealEndsAt
+    - attachmentRevealLastProgress
+    - bettingEndsAt
+    - category
+    - passingEndsAt
+    - text
+    - textRevealLastProgress
+    - timerEndsAt
+    - timerLastProgress
+    - timerStartsAt
+    - type
+    - value
     type: object
-  domain.HiddenFinalRoundQuestion:
+  github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundQuestion:
     properties:
       attachment:
-        $ref: '#/definitions/domain.Attachment'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
       category:
         type: string
       text:
         type: string
+    required:
+    - attachment
+    - category
+    - text
     type: object
-  domain.HiddenFinalRoundState:
+  github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundState:
     properties:
       availableCategories:
         additionalProperties:
@@ -241,11 +327,18 @@ definitions:
           type: boolean
         type: object
       question:
-        $ref: '#/definitions/domain.HiddenFinalRoundQuestion'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundQuestion'
       timerEndsAt:
         type: string
+    required:
+    - availableCategories
+    - bettingEndsAt
+    - players
+    - playersAnswers
+    - question
+    - timerEndsAt
     type: object
-  domain.Moderator:
+  github_com_holdennekt_sgame_backend_internal_domain.Moderator:
     properties:
       avatar:
         type: string
@@ -259,36 +352,52 @@ definitions:
         type: boolean
       name:
         type: string
+    required:
+    - avatar
+    - id
+    - isConnected
+    - isDeleted
+    - isGuest
+    - name
     type: object
-  domain.Pack:
+  github_com_holdennekt_sgame_backend_internal_domain.Pack:
     properties:
       createdAt:
         type: string
       createdBy:
-        $ref: '#/definitions/domain.User'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.User'
       finalRound:
-        $ref: '#/definitions/domain.FinalRound'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRound'
       id:
         type: string
       name:
         type: string
       rounds:
         items:
-          $ref: '#/definitions/domain.Round'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Round'
         type: array
       type:
-        $ref: '#/definitions/domain.PrivacyType'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
       updatedAt:
         type: string
+    required:
+    - createdAt
+    - createdBy
+    - finalRound
+    - id
+    - name
+    - rounds
+    - type
+    - updatedAt
     type: object
-  domain.PackDraft:
+  github_com_holdennekt_sgame_backend_internal_domain.PackDraft:
     properties:
       createdAt:
         type: string
       createdBy:
-        $ref: '#/definitions/domain.User'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.User'
       finalRound:
-        $ref: '#/definitions/domain.FinalRound'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRound'
       id:
         type: string
       linkedPackId:
@@ -297,28 +406,44 @@ definitions:
         type: string
       rounds:
         items:
-          $ref: '#/definitions/domain.Round'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Round'
         type: array
       type:
-        $ref: '#/definitions/domain.PrivacyType'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
       updatedAt:
         type: string
+    required:
+    - createdAt
+    - createdBy
+    - finalRound
+    - id
+    - linkedPackId
+    - name
+    - rounds
+    - type
+    - updatedAt
     type: object
-  domain.PackPreview:
+  github_com_holdennekt_sgame_backend_internal_domain.PackPreview:
     properties:
       id:
         type: string
       name:
         type: string
+    required:
+    - id
+    - name
     type: object
-  domain.PausedState:
+  github_com_holdennekt_sgame_backend_internal_domain.PausedState:
     properties:
       paused:
         type: boolean
       pausedAt:
         type: string
+    required:
+    - paused
+    - pausedAt
     type: object
-  domain.Player:
+  github_com_holdennekt_sgame_backend_internal_domain.Player:
     properties:
       avatar:
         type: string
@@ -336,8 +461,17 @@ definitions:
         type: string
       score:
         type: integer
+    required:
+    - avatar
+    - betAmount
+    - id
+    - isConnected
+    - isDeleted
+    - isGuest
+    - name
+    - score
     type: object
-  domain.PrivacyType:
+  github_com_holdennekt_sgame_backend_internal_domain.PrivacyType:
     enum:
     - public
     - private
@@ -345,26 +479,34 @@ definitions:
     x-enum-varnames:
     - Public
     - Private
-  domain.Question:
+  github_com_holdennekt_sgame_backend_internal_domain.Question:
     properties:
       answers:
         items:
           type: string
         type: array
       attachment:
-        $ref: '#/definitions/domain.Attachment'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Attachment'
       category:
         type: string
       comment:
-        $ref: '#/definitions/domain.Comment'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Comment'
       text:
         type: string
       type:
-        $ref: '#/definitions/domain.QuestionType'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType'
       value:
         type: integer
+    required:
+    - answers
+    - attachment
+    - category
+    - comment
+    - text
+    - type
+    - value
     type: object
-  domain.QuestionType:
+  github_com_holdennekt_sgame_backend_internal_domain.QuestionType:
     enum:
     - regular
     - auction
@@ -374,14 +516,14 @@ definitions:
     - Regular
     - Auction
     - CatInBag
-  domain.Room:
+  github_com_holdennekt_sgame_backend_internal_domain.Room:
     properties:
       allowedToAnswer:
         items:
           type: string
         type: array
       answeringPlayer:
-        $ref: '#/definitions/domain.AnsweringPlayer'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer'
       banList:
         items:
           type: string
@@ -391,101 +533,147 @@ definitions:
       currentPlayer:
         type: string
       currentQuestion:
-        $ref: '#/definitions/domain.CurrentQuestion'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentQuestion'
       currentRoundName:
         type: string
       currentRoundQuestions:
         items:
-          $ref: '#/definitions/domain.CategoryQuestions'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions'
         type: array
       finalRoundState:
-        $ref: '#/definitions/domain.FinalRoundState'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState'
       finishedAt:
         type: string
       id:
         type: string
       moderator:
-        $ref: '#/definitions/domain.Moderator'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator'
       name:
         type: string
       options:
-        $ref: '#/definitions/domain.RoomOptions'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions'
       packPreview:
-        $ref: '#/definitions/domain.PackPreview'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
       pausedState:
-        $ref: '#/definitions/domain.PausedState'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PausedState'
       players:
         items:
-          $ref: '#/definitions/domain.Player'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player'
         type: array
       state:
-        $ref: '#/definitions/domain.RoomState'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomState'
+    required:
+    - allowedToAnswer
+    - answeringPlayer
+    - banList
+    - createdBy
+    - currentPlayer
+    - currentQuestion
+    - currentRoundName
+    - currentRoundQuestions
+    - finalRoundState
+    - finishedAt
+    - id
+    - moderator
+    - name
+    - options
+    - packPreview
+    - pausedState
+    - players
+    - state
     type: object
-  domain.RoomLobby:
+  github_com_holdennekt_sgame_backend_internal_domain.RoomLobby:
     properties:
       id:
         type: string
       maxPlayers:
         type: integer
       moderator:
-        $ref: '#/definitions/domain.Moderator'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator'
       name:
         type: string
       options:
-        $ref: '#/definitions/domain.RoomOptions'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions'
       packPreview:
-        $ref: '#/definitions/domain.PackPreview'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
       players:
         items:
-          $ref: '#/definitions/domain.Player'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player'
         type: array
       status:
         type: string
       type:
-        $ref: '#/definitions/domain.PrivacyType'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
+    required:
+    - id
+    - maxPlayers
+    - moderator
+    - name
+    - options
+    - packPreview
+    - players
+    - status
+    - type
     type: object
-  domain.RoomModerator:
+  github_com_holdennekt_sgame_backend_internal_domain.RoomModerator:
     properties:
       allowedToAnswer:
         items:
           type: string
         type: array
       answeringPlayer:
-        $ref: '#/definitions/domain.AnsweringPlayer'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer'
       currentPlayer:
         type: string
       currentQuestion:
-        $ref: '#/definitions/domain.CurrentQuestion'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CurrentQuestion'
       currentRoundName:
         type: string
       currentRoundQuestions:
         items:
-          $ref: '#/definitions/domain.CategoryQuestions'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions'
         type: array
       finalRoundState:
-        $ref: '#/definitions/domain.FinalRoundState'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState'
       id:
         type: string
       moderator:
-        $ref: '#/definitions/domain.Moderator'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator'
       name:
         type: string
       options:
-        $ref: '#/definitions/domain.RoomOptions'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions'
       packPreview:
-        $ref: '#/definitions/domain.PackPreview'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
       pausedState:
-        $ref: '#/definitions/domain.PausedState'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PausedState'
       players:
         items:
-          $ref: '#/definitions/domain.Player'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player'
         type: array
       spectatorCount:
         type: integer
       state:
-        $ref: '#/definitions/domain.RoomState'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomState'
+    required:
+    - allowedToAnswer
+    - answeringPlayer
+    - currentPlayer
+    - currentQuestion
+    - currentRoundName
+    - currentRoundQuestions
+    - finalRoundState
+    - id
+    - moderator
+    - name
+    - options
+    - packPreview
+    - pausedState
+    - players
+    - spectatorCount
+    - state
     type: object
-  domain.RoomOptions:
+  github_com_holdennekt_sgame_backend_internal_domain.RoomOptions:
     properties:
       aiHost:
         type: boolean
@@ -521,53 +709,80 @@ definitions:
         type: integer
       type:
         allOf:
-        - $ref: '#/definitions/domain.PrivacyType'
+        - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
         enum:
         - public
         - private
+    required:
+    - aiHost
+    - answerThinkingTime
+    - falseStartEnabled
+    - maxPlayers
+    - password
+    - questionThinkingTime
+    - questionThinkingTimeFinal
+    - readingSymbolsPerSecond
+    - type
     type: object
-  domain.RoomPlayer:
+  github_com_holdennekt_sgame_backend_internal_domain.RoomPlayer:
     properties:
       allowedToAnswer:
         items:
           type: string
         type: array
       answeringPlayer:
-        $ref: '#/definitions/domain.AnsweringPlayer'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.AnsweringPlayer'
       currentPlayer:
         type: string
       currentQuestion:
-        $ref: '#/definitions/domain.HiddenCurrentQuestion'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.HiddenCurrentQuestion'
       currentRoundName:
         type: string
       currentRoundQuestions:
         items:
-          $ref: '#/definitions/domain.CategoryQuestions'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions'
         type: array
       finalRoundState:
-        $ref: '#/definitions/domain.HiddenFinalRoundState'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.HiddenFinalRoundState'
       id:
         type: string
       moderator:
-        $ref: '#/definitions/domain.Moderator'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Moderator'
       name:
         type: string
       options:
-        $ref: '#/definitions/domain.RoomOptions'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions'
       packPreview:
-        $ref: '#/definitions/domain.PackPreview'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
       pausedState:
-        $ref: '#/definitions/domain.PausedState'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PausedState'
       players:
         items:
-          $ref: '#/definitions/domain.Player'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Player'
         type: array
       spectatorCount:
         type: integer
       state:
-        $ref: '#/definitions/domain.RoomState'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomState'
+    required:
+    - allowedToAnswer
+    - answeringPlayer
+    - currentPlayer
+    - currentQuestion
+    - currentRoundName
+    - currentRoundQuestions
+    - finalRoundState
+    - id
+    - moderator
+    - name
+    - options
+    - packPreview
+    - pausedState
+    - players
+    - spectatorCount
+    - state
     type: object
-  domain.RoomState:
+  github_com_holdennekt_sgame_backend_internal_domain.RoomState:
     enum:
     - waiting_for_start
     - selecting_question
@@ -595,16 +810,19 @@ definitions:
     - ShowingFinalRoundQuestion
     - ValidatingFinalRoundAnswers
     - GameOver
-  domain.Round:
+  github_com_holdennekt_sgame_backend_internal_domain.Round:
     properties:
       categories:
         items:
-          $ref: '#/definitions/domain.Category'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Category'
         type: array
       name:
         type: string
+    required:
+    - categories
+    - name
     type: object
-  domain.User:
+  github_com_holdennekt_sgame_backend_internal_domain.User:
     properties:
       avatar:
         type: string
@@ -616,21 +834,32 @@ definitions:
         type: boolean
       name:
         type: string
+    required:
+    - avatar
+    - id
+    - isDeleted
+    - isGuest
+    - name
     type: object
-  dto.AuthResponse:
+  github_com_holdennekt_sgame_backend_internal_dto.AuthResponse:
     properties:
       userId:
         example: 507f1f77bcf86cd799439011
         type: string
+    required:
+    - userId
     type: object
-  dto.CreateAttachmentRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest:
     properties:
       key:
         type: string
       url:
         type: string
+    required:
+    - key
+    - url
     type: object
-  dto.CreateCategoryRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.CreateCategoryRequest:
     properties:
       comment:
         maxLength: 250
@@ -641,29 +870,37 @@ definitions:
         type: string
       questions:
         items:
-          $ref: '#/definitions/dto.CreateQuestionRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateQuestionRequest'
         maxItems: 20
         minItems: 1
         type: array
+    required:
+    - name
+    - questions
     type: object
-  dto.CreateCommentRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.CreateCommentRequest:
     properties:
       attachment:
-        $ref: '#/definitions/dto.CreateAttachmentRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
       text:
         maxLength: 1000
         type: string
+    required:
+    - text
     type: object
-  dto.CreateFinalRoundCategoryRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundCategoryRequest:
     properties:
       name:
         maxLength: 50
         minLength: 1
         type: string
       question:
-        $ref: '#/definitions/dto.CreateFinalRoundQuestionRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundQuestionRequest'
+    required:
+    - name
+    - question
     type: object
-  dto.CreateFinalRoundQuestionRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundQuestionRequest:
     properties:
       answers:
         items:
@@ -672,59 +909,70 @@ definitions:
         minItems: 1
         type: array
       attachment:
-        $ref: '#/definitions/dto.CreateAttachmentRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
       comment:
-        $ref: '#/definitions/dto.CreateCommentRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCommentRequest'
       text:
         maxLength: 1000
         type: string
     required:
     - answers
     type: object
-  dto.CreateFinalRoundRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundRequest:
     properties:
       categories:
         items:
-          $ref: '#/definitions/dto.CreateFinalRoundCategoryRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundCategoryRequest'
         maxItems: 10
         minItems: 1
         type: array
         uniqueItems: true
+    required:
+    - categories
     type: object
-  dto.CreatePackDraftRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.CreatePackDraftRequest:
     properties:
       from:
         type: string
+    required:
+    - from
     type: object
-  dto.CreatePackRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.CreatePackRequest:
     properties:
       finalRound:
-        $ref: '#/definitions/dto.CreateFinalRoundRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundRequest'
       name:
         maxLength: 50
         minLength: 1
         type: string
       rounds:
         items:
-          $ref: '#/definitions/dto.CreateRoundRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateRoundRequest'
         maxItems: 10
         minItems: 1
         type: array
         uniqueItems: true
       type:
         allOf:
-        - $ref: '#/definitions/domain.PrivacyType'
+        - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
         enum:
         - public
         - private
+    required:
+    - finalRound
+    - name
+    - rounds
+    - type
     type: object
-  dto.CreatePackResponse:
+  github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse:
     properties:
       id:
         example: 507f1f77bcf86cd799439011
         type: string
+    required:
+    - id
     type: object
-  dto.CreateQuestionRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.CreateQuestionRequest:
     properties:
       answers:
         items:
@@ -733,16 +981,16 @@ definitions:
         minItems: 1
         type: array
       attachment:
-        $ref: '#/definitions/dto.CreateAttachmentRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
       comment:
-        $ref: '#/definitions/dto.CreateCommentRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCommentRequest'
       text:
         maxLength: 1000
         minLength: 1
         type: string
       type:
         allOf:
-        - $ref: '#/definitions/domain.QuestionType'
+        - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType'
         enum:
         - regular
         - catInBag
@@ -750,31 +998,39 @@ definitions:
       value:
         maximum: 10000
         type: integer
+    required:
+    - answers
+    - type
+    - value
     type: object
-  dto.CreateRoomRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.CreateRoomRequest:
     properties:
       name:
         maxLength: 50
         minLength: 1
         type: string
       options:
-        $ref: '#/definitions/domain.RoomOptions'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomOptions'
       packId:
         type: string
     required:
+    - name
+    - options
     - packId
     type: object
-  dto.CreateRoomResponse:
+  github_com_holdennekt_sgame_backend_internal_dto.CreateRoomResponse:
     properties:
       id:
         example: 507f1f77bcf86cd799439011
         type: string
+    required:
+    - id
     type: object
-  dto.CreateRoundRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.CreateRoundRequest:
     properties:
       categories:
         items:
-          $ref: '#/definitions/dto.CreateCategoryRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateCategoryRequest'
         maxItems: 15
         minItems: 1
         type: array
@@ -783,8 +1039,11 @@ definitions:
         maxLength: 100
         minLength: 1
         type: string
+    required:
+    - categories
+    - name
     type: object
-  dto.CreateUserRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.CreateUserRequest:
     properties:
       login:
         maxLength: 20
@@ -794,20 +1053,27 @@ definitions:
         maxLength: 40
         minLength: 8
         type: string
+    required:
+    - login
+    - password
     type: object
-  dto.CreateUserResponse:
+  github_com_holdennekt_sgame_backend_internal_dto.CreateUserResponse:
     properties:
       id:
         example: 507f1f77bcf86cd799439011
         type: string
+    required:
+    - id
     type: object
-  dto.ErrorResponse:
+  github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse:
     properties:
       error:
         example: invalid password
         type: string
+    required:
+    - error
     type: object
-  dto.GuestLoginRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.GuestLoginRequest:
     properties:
       name:
         maxLength: 50
@@ -816,7 +1082,7 @@ definitions:
     required:
     - name
     type: object
-  dto.SearchResponse:
+  github_com_holdennekt_sgame_backend_internal_dto.SearchResponse:
     properties:
       hasNext:
         type: boolean
@@ -827,22 +1093,31 @@ definitions:
         type: integer
       total:
         type: integer
+    required:
+    - hasNext
+    - items
+    - page
+    - pageSize
+    - total
     type: object
-  dto.SignURLResponse:
+  github_com_holdennekt_sgame_backend_internal_dto.SignURLResponse:
     properties:
       formData:
         additionalProperties:
           type: string
         type: object
       key:
-        description: |-
-          Key is what the client registers on its draft (creating a pending
-          attachment) before performing the presigned upload.
+        description: must be registered on the draft before the presigned upload is
+          performed
         type: string
       url:
         type: string
+    required:
+    - formData
+    - key
+    - url
     type: object
-  dto.UpdateCategoryDraftRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateCategoryDraftRequest:
     properties:
       comment:
         maxLength: 2000
@@ -852,37 +1127,45 @@ definitions:
         type: string
       questions:
         items:
-          $ref: '#/definitions/dto.UpdateQuestionDraftRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateQuestionDraftRequest'
         maxItems: 20
         type: array
+    required:
+    - name
+    - questions
     type: object
-  dto.UpdateCommentDraftRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest:
     properties:
       attachment:
-        $ref: '#/definitions/dto.CreateAttachmentRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
       text:
         maxLength: 2000
         type: string
     type: object
-  dto.UpdateFinalRoundCategoryDraftRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundCategoryDraftRequest:
     properties:
       name:
         maxLength: 25
         minLength: 1
         type: string
       question:
-        $ref: '#/definitions/dto.UpdateFinalRoundQuestionDraftRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundQuestionDraftRequest'
+    required:
+    - name
+    - question
     type: object
-  dto.UpdateFinalRoundDraftRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundDraftRequest:
     properties:
       categories:
         items:
-          $ref: '#/definitions/dto.UpdateFinalRoundCategoryDraftRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundCategoryDraftRequest'
         maxItems: 10
         type: array
         uniqueItems: true
+    required:
+    - categories
     type: object
-  dto.UpdateFinalRoundQuestionDraftRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundQuestionDraftRequest:
     properties:
       answers:
         items:
@@ -890,37 +1173,44 @@ definitions:
         maxItems: 50
         type: array
       attachment:
-        $ref: '#/definitions/dto.CreateAttachmentRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
       comment:
-        $ref: '#/definitions/dto.UpdateCommentDraftRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest'
       text:
         maxLength: 2000
         type: string
+    required:
+    - answers
     type: object
-  dto.UpdatePackDraftRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.UpdatePackDraftRequest:
     properties:
       finalRound:
-        $ref: '#/definitions/dto.UpdateFinalRoundDraftRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateFinalRoundDraftRequest'
       name:
         maxLength: 200
         type: string
       rounds:
         items:
-          $ref: '#/definitions/dto.UpdateRoundDraftRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateRoundDraftRequest'
         maxItems: 20
         type: array
         uniqueItems: true
       type:
         allOf:
-        - $ref: '#/definitions/domain.PrivacyType'
+        - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
         enum:
         - public
         - private
+    required:
+    - finalRound
+    - name
+    - rounds
+    - type
     type: object
-  dto.UpdatePackRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.UpdatePackRequest:
     properties:
       finalRound:
-        $ref: '#/definitions/dto.CreateFinalRoundRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateFinalRoundRequest'
       id:
         type: string
       name:
@@ -929,21 +1219,25 @@ definitions:
         type: string
       rounds:
         items:
-          $ref: '#/definitions/dto.CreateRoundRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateRoundRequest'
         maxItems: 10
         minItems: 1
         type: array
         uniqueItems: true
       type:
         allOf:
-        - $ref: '#/definitions/domain.PrivacyType'
+        - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PrivacyType'
         enum:
         - public
         - private
     required:
+    - finalRound
     - id
+    - name
+    - rounds
+    - type
     type: object
-  dto.UpdateQuestionDraftRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateQuestionDraftRequest:
     properties:
       answers:
         items:
@@ -951,38 +1245,47 @@ definitions:
         maxItems: 50
         type: array
       attachment:
-        $ref: '#/definitions/dto.CreateAttachmentRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateAttachmentRequest'
       comment:
-        $ref: '#/definitions/dto.UpdateCommentDraftRequest'
+        $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCommentDraftRequest'
       text:
         maxLength: 2000
         type: string
       type:
         allOf:
-        - $ref: '#/definitions/domain.QuestionType'
+        - $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.QuestionType'
         enum:
         - regular
         - catInBag
         - auction
       value:
         type: integer
+    required:
+    - answers
+    - type
+    - value
     type: object
-  dto.UpdateRoundDraftRequest:
+  github_com_holdennekt_sgame_backend_internal_dto.UpdateRoundDraftRequest:
     properties:
       categories:
         items:
-          $ref: '#/definitions/dto.UpdateCategoryDraftRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdateCategoryDraftRequest'
         maxItems: 20
         type: array
         uniqueItems: true
       name:
         maxLength: 200
         type: string
+    required:
+    - categories
+    - name
     type: object
-  dto.UploadAvatarResponse:
+  github_com_holdennekt_sgame_backend_internal_dto.UploadAvatarResponse:
     properties:
       avatar:
         type: string
+    required:
+    - avatar
     type: object
 host: localhost:8080
 info:
@@ -1003,7 +1306,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.GuestLoginRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.GuestLoginRequest'
       produces:
       - application/json
       responses:
@@ -1014,15 +1317,15 @@ paths:
               description: session_id=abc...; HttpOnly; Path=/
               type: string
           schema:
-            $ref: '#/definitions/dto.AuthResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.AuthResponse'
         "400":
           description: Invalid input data
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       summary: Guest Login
       tags:
       - auth
@@ -1039,11 +1342,11 @@ paths:
         "401":
           description: 'Unauthorized: Session missing'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Connect to Lobby WebSocket
@@ -1060,7 +1363,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.CreateUserRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateUserRequest'
       produces:
       - application/json
       responses:
@@ -1071,19 +1374,19 @@ paths:
               description: session_id=abc...; HttpOnly; Path=/
               type: string
           schema:
-            $ref: '#/definitions/dto.AuthResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.AuthResponse'
         "400":
           description: Invalid input data
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "401":
           description: 'Unauthorized: Invalid credentials'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       summary: User Login
       tags:
       - auth
@@ -1096,7 +1399,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: User Logout
@@ -1110,23 +1413,28 @@ paths:
         maximum: 100
         minimum: 1
         name: limit
+        required: true
         type: integer
       - in: query
         name: orderBy
+        required: true
         type: string
       - enum:
         - ASC
         - DESC
         in: query
         name: orderDir
+        required: true
         type: string
       - in: query
         minimum: 1
         name: page
+        required: true
         type: integer
       - in: query
         maxLength: 30
         name: search
+        required: true
         type: string
       produces:
       - application/json
@@ -1134,15 +1442,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.SearchResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SearchResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Get user's hidden packs
@@ -1158,26 +1466,26 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.CreatePackRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dto.CreatePackResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse'
         "400":
           description: Invalid input data
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "401":
           description: 'Unauthorized: Session missing or expired'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Create a new pack
@@ -1198,19 +1506,19 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "403":
           description: 'Forbidden: Not an owner'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "404":
           description: Pack not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Delete pack
@@ -1230,19 +1538,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Pack'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Pack'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "404":
           description: Pack not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Get pack by ID
@@ -1263,7 +1571,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.UpdatePackRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdatePackRequest'
       produces:
       - application/json
       responses:
@@ -1272,23 +1580,23 @@ paths:
         "400":
           description: Invalid input
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "403":
           description: 'Forbidden: Not an owner'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "404":
           description: Pack not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Update pack
@@ -1308,23 +1616,28 @@ paths:
         maximum: 100
         minimum: 1
         name: limit
+        required: true
         type: integer
       - in: query
         name: orderBy
+        required: true
         type: string
       - enum:
         - ASC
         - DESC
         in: query
         name: orderDir
+        required: true
         type: string
       - in: query
         minimum: 1
         name: page
+        required: true
         type: integer
       - in: query
         maxLength: 30
         name: search
+        required: true
         type: string
       produces:
       - application/json
@@ -1332,15 +1645,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.SearchResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SearchResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Get packs created by user
@@ -1355,23 +1668,28 @@ paths:
         maximum: 100
         minimum: 1
         name: limit
+        required: true
         type: integer
       - in: query
         name: orderBy
+        required: true
         type: string
       - enum:
         - ASC
         - DESC
         in: query
         name: orderDir
+        required: true
         type: string
       - in: query
         minimum: 1
         name: page
+        required: true
         type: integer
       - in: query
         maxLength: 30
         name: search
+        required: true
         type: string
       produces:
       - application/json
@@ -1379,19 +1697,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.SearchResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SearchResponse'
         "400":
           description: Invalid query parameters
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "401":
           description: 'Unauthorized: Session missing or expired'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: List user's pack drafts
@@ -1407,26 +1725,26 @@ paths:
         in: body
         name: request
         schema:
-          $ref: '#/definitions/dto.CreatePackDraftRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackDraftRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.CreatePackResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse'
         "400":
           description: Invalid input data
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "401":
           description: 'Unauthorized: Session missing or expired'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Create or get an edit draft
@@ -1447,19 +1765,19 @@ paths:
         "401":
           description: 'Unauthorized: Session missing or expired'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "403":
           description: 'Forbidden: Not the draft owner'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "404":
           description: Draft not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Delete pack draft
@@ -1480,23 +1798,23 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.PackDraft'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackDraft'
         "401":
           description: 'Unauthorized: Session missing or expired'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "403":
           description: 'Forbidden: Not the draft owner'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "404":
           description: Draft not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Get pack draft by ID
@@ -1518,34 +1836,34 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.UpdatePackDraftRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UpdatePackDraftRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.PackDraft'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackDraft'
         "400":
           description: Invalid input data
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "401":
           description: 'Unauthorized: Session missing or expired'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "403":
           description: 'Forbidden: Not the draft owner'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "404":
           description: Draft not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Update pack draft
@@ -1571,15 +1889,15 @@ paths:
         "401":
           description: 'Unauthorized: Session missing or expired'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "403":
           description: 'Forbidden: Not the draft owner'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "404":
           description: Draft not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Stream attachment processing events
@@ -1601,27 +1919,27 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dto.CreatePackResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse'
         "401":
           description: 'Unauthorized: Session missing or expired'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "403":
           description: 'Forbidden: Not the draft owner'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "404":
           description: Draft not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "422":
           description: Draft content is invalid for publishing
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Publish pack draft
@@ -1645,19 +1963,19 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dto.CreatePackResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse'
         "400":
           description: Missing or malformed SIQ file
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "401":
           description: 'Unauthorized: Session missing or expired'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Import SIQ file as a pack draft
@@ -1671,23 +1989,28 @@ paths:
         maximum: 100
         minimum: 1
         name: limit
+        required: true
         type: integer
       - in: query
         name: orderBy
+        required: true
         type: string
       - enum:
         - ASC
         - DESC
         in: query
         name: orderDir
+        required: true
         type: string
       - in: query
         minimum: 1
         name: page
+        required: true
         type: integer
       - in: query
         maxLength: 30
         name: search
+        required: true
         type: string
       produces:
       - application/json
@@ -1696,16 +2019,16 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/domain.PackPreview'
+              $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.PackPreview'
             type: array
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Get pack previews
@@ -1725,15 +2048,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.SignURLResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SignURLResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Get signed upload URL
@@ -1751,7 +2074,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.CreateUserRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateUserRequest'
       produces:
       - application/json
       responses:
@@ -1762,15 +2085,15 @@ paths:
               description: session_id=abc...; HttpOnly; Path=/
               type: string
           schema:
-            $ref: '#/definitions/dto.AuthResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.AuthResponse'
         "400":
           description: User already exists or validation failed
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       summary: User Registration
       tags:
       - auth
@@ -1787,11 +2110,11 @@ paths:
         "401":
           description: 'Unauthorized: Session missing'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Connect to Room WebSocket
@@ -1807,16 +2130,16 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/domain.RoomLobby'
+              $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomLobby'
             type: array
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: List all rooms
@@ -1832,26 +2155,26 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.CreateRoomRequest'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateRoomRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dto.CreateRoomResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateRoomResponse'
         "400":
           description: Invalid input data
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Create a new room
@@ -1877,23 +2200,23 @@ paths:
         "200":
           description: Can be RoomLobby, RoomModerator, or RoomPlayer
           schema:
-            $ref: '#/definitions/domain.RoomPlayer'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.RoomPlayer'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "403":
           description: 'Forbidden: Invalid password'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "404":
           description: Room not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Get room projection
@@ -1918,27 +2241,27 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Room'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.Room'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "403":
           description: 'Forbidden: Room full or invalid password'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "404":
           description: Room not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "409":
           description: Room already full
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Join room
@@ -1959,19 +2282,19 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "404":
           description: Room not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "409":
           description: Cannot leave ongoing game
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Leave room
@@ -1986,23 +2309,28 @@ paths:
         maximum: 100
         minimum: 1
         name: limit
+        required: true
         type: integer
       - in: query
         name: orderBy
+        required: true
         type: string
       - enum:
         - ASC
         - DESC
         in: query
         name: orderDir
+        required: true
         type: string
       - in: query
         minimum: 1
         name: page
+        required: true
         type: integer
       - in: query
         maxLength: 30
         name: search
+        required: true
         type: string
       produces:
       - application/json
@@ -2010,15 +2338,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.SearchResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.SearchResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Get room history
@@ -2034,19 +2362,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.DbUser'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.DbUser'
         "401":
           description: 'Unauthorized: Session missing or invalid'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Get current user
@@ -2063,22 +2391,22 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/domain.DbUser'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.DbUser'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dto.CreateUserResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreateUserResponse'
         "400":
           description: Invalid input data
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Create a new user
@@ -2099,11 +2427,11 @@ paths:
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Delete user
@@ -2123,15 +2451,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.DbUser'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.DbUser'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Get user by ID
@@ -2152,7 +2480,7 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/domain.DbUser'
+          $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_domain.DbUser'
       produces:
       - application/json
       responses:
@@ -2161,15 +2489,15 @@ paths:
         "400":
           description: Invalid input data
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Update user
@@ -2199,23 +2527,23 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.UploadAvatarResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.UploadAvatarResponse'
         "400":
           description: Missing, oversized, or non-image file
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "401":
           description: 'Unauthorized: Session missing or expired'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "403":
           description: 'Forbidden: Not the user themselves'
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Upload avatar

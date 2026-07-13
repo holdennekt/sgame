@@ -14,7 +14,7 @@ services:
       - grafana
 
   frontend:
-    image: europe-central2-docker.pkg.dev/smart-altar-496311-p4/sgame-images/sgame-frontend:latest
+    image: europe-central2-docker.pkg.dev/${GCP_PROJECT_ID}/sgame-images/sgame-frontend:latest
     depends_on:
       - backend
     environment:
@@ -22,7 +22,7 @@ services:
       BACKEND_HOST: backend
 
   backend:
-    image: europe-central2-docker.pkg.dev/smart-altar-496311-p4/sgame-images/sgame-backend:latest
+    image: europe-central2-docker.pkg.dev/${GCP_PROJECT_ID}/sgame-images/sgame-backend:latest
     depends_on:
       redis:
         condition: service_healthy
@@ -45,15 +45,15 @@ services:
       STORAGE_PROVIDER: gcs
       RAW_BUCKET_NAME: sgame-attachments-raw
       PROCESSED_BUCKET_NAME: sgame-attachments-processed
-      GOOGLE_APPLICATION_CREDENTIALS: /app/smart-altar-496311-p4-5cf9bc5fd4e7.json
+      GOOGLE_APPLICATION_CREDENTIALS: /app/${GCP_CREDENTIALS_FILE}
       FRONTEND_URL: https://sgame.dedyn.io
       USER_AGENT: "SGame/1.0"
       TIME_TO_BET: 60
       TIME_TO_PASS: 60
       QUESTION_DEMO_DURATION: 5
       VALIDATOR_TYPE: gemini
-      GEMINI_PROJECT_ID: ${GEMINI_PROJECT_ID}
-      GEMINI_LOCATION: ${GEMINI_LOCATION}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+      GCP_LOCATION: ${GCP_LOCATION}
       GEMINI_SYSTEM_PROMPT: |-
         You are a quiz answer validator for a real-time multiplayer trivia game.
 
@@ -79,15 +79,16 @@ services:
 
         Use confidence < 0.6 only when the answer is genuinely ambiguous. Do not explain your reasoning.
       AI_VALIDATION_TIMEOUT: 10
+      PUBSUB_SUBSCRIPTION_ID: sgame-attachment-uploads-push
     volumes:
-      - ./smart-altar-496311-p4-5cf9bc5fd4e7.json:/app/smart-altar-496311-p4-5cf9bc5fd4e7.json
+      - ./${GCP_CREDENTIALS_FILE}:/app/${GCP_CREDENTIALS_FILE}
     tmpfs:
       - /tmp
 
   # Pulls raw-bucket upload notifications (OBJECT_FINALIZE) from a GCS
   # Pub/Sub pull subscription at its own pace (bounded by maxConcurrentProcessors)
   attachment-processor:
-    image: europe-central2-docker.pkg.dev/smart-altar-496311-p4/sgame-images/sgame-backend:latest
+    image: europe-central2-docker.pkg.dev/${GCP_PROJECT_ID}/sgame-images/sgame-backend:latest
     entrypoint: ["/attachment-processor"]
     depends_on:
       redis:
@@ -113,13 +114,13 @@ services:
       STORAGE_PROVIDER: gcs
       RAW_BUCKET_NAME: sgame-attachments-raw
       PROCESSED_BUCKET_NAME: sgame-attachments-processed
-      GCP_PROJECT_ID: smart-altar-496311-p4
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
       PUBSUB_SUBSCRIPTION_ID: sgame-attachment-uploads-push
-      GOOGLE_APPLICATION_CREDENTIALS: /app/smart-altar-496311-p4-5cf9bc5fd4e7.json
+      GOOGLE_APPLICATION_CREDENTIALS: /app/${GCP_CREDENTIALS_FILE}
       FRONTEND_URL: https://sgame.dedyn.io
       USER_AGENT: "SGame/1.0"
     volumes:
-      - ./smart-altar-496311-p4-5cf9bc5fd4e7.json:/app/smart-altar-496311-p4-5cf9bc5fd4e7.json
+      - ./${GCP_CREDENTIALS_FILE}:/app/${GCP_CREDENTIALS_FILE}
       - attachment_processor_tmp:/tmp
     restart: unless-stopped
 

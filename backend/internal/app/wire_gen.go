@@ -109,7 +109,7 @@ func provideAnswerValidator(cfg *config.Config) validator.AnswerValidator {
 	case "ollama":
 		return validator2.NewLocalLLMValidator(cfg.OllamaURL, cfg.OllamaSystemPrompt)
 	case "gemini":
-		v, err := validator2.NewGeminiValidator(context.Background(), cfg.GeminiProjectID, cfg.GeminiLocation, cfg.GeminiSystemPrompt)
+		v, err := validator2.NewGeminiValidator(context.Background(), cfg.GCPProjectID, cfg.GCPLocation, cfg.GeminiSystemPrompt)
 		if err != nil {
 			panic("failed to initialize Gemini validator: " + err.Error())
 		}
