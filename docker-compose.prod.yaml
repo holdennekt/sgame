@@ -79,7 +79,7 @@ services:
 
         Use confidence < 0.6 only when the answer is genuinely ambiguous. Do not explain your reasoning.
       AI_VALIDATION_TIMEOUT: 10
-      PUBSUB_SUBSCRIPTION_ID: sgame-attachment-uploads-push
+      PUBSUB_SUBSCRIPTION_ID: sgame-attachment-uploads-sub
     volumes:
       - ./${GCP_CREDENTIALS_FILE}:/app/${GCP_CREDENTIALS_FILE}
     tmpfs:
@@ -115,7 +115,7 @@ services:
       RAW_BUCKET_NAME: sgame-attachments-raw
       PROCESSED_BUCKET_NAME: sgame-attachments-processed
       GCP_PROJECT_ID: ${GCP_PROJECT_ID}
-      PUBSUB_SUBSCRIPTION_ID: sgame-attachment-uploads-push
+      PUBSUB_SUBSCRIPTION_ID: sgame-attachment-uploads-sub
       GOOGLE_APPLICATION_CREDENTIALS: /app/${GCP_CREDENTIALS_FILE}
       FRONTEND_URL: https://sgame.dedyn.io
       USER_AGENT: "SGame/1.0"
