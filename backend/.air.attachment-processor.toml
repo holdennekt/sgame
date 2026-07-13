@@ -1,0 +1,12 @@
+root = "."
+test_exited = false
+
+[build]
+  cmd = "CGO_ENABLED=0 go build -o ./tmp/attachment-processor ./cmd/attachment-processor"
+  bin = "./tmp/attachment-processor"
+  delay = 1000
+  exclude_dir = ["tmp", "vendor"]
+  include_ext = ["go", "tpl", "tmpl", "html", "env"]
+
+[log]
+  time = true

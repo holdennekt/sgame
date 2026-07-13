@@ -112,7 +112,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    command: ["go", "run", "./cmd/attachment-processor"]
+    command: ["air", "-c", ".air.attachment-processor.toml"]
     volumes:
       - ./backend:/app
       - backend_go_mod:/go/pkg/mod
