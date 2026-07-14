@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/config"
 	"github.com/holdennekt/sgame/backend/internal/domain"
+	clientevent "github.com/holdennekt/sgame/backend/internal/eventsprocessor/client"
 	"github.com/holdennekt/sgame/backend/internal/eventsprocessor/client/outgoing"
 	serverevent "github.com/holdennekt/sgame/backend/internal/eventsprocessor/server"
 	"github.com/holdennekt/sgame/backend/internal/interface/cache"
@@ -40,6 +42,11 @@ func HandleSubmitAnswerMessage(ctx context.Context, server realtime.Channel, int
 	}
 
 	if err := server.Send(ctx, outgoing.NewRoomUpdatedMessage(roomId)); err != nil {
+		return err
+	}
+
+	answerChatMsg := clientevent.NewSystemChatMessage(fmt.Sprintf("%s answered: %s", user.Name, sap.Answer))
+	if err := server.Send(ctx, answerChatMsg); err != nil {
 		return err
 	}
 
