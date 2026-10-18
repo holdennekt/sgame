@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/infrastructure/realtime/pubsub"
 	"github.com/holdennekt/sgame/backend/internal/message"
-	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -59,7 +59,7 @@ func (v *LocalLLMValidator) Validate(ctx context.Context, question ivalidator.Qu
 	if err != nil {
 		return ivalidator.ValidatorResponse{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return ivalidator.ValidatorResponse{}, fmt.Errorf("ollama returned status %d", resp.StatusCode)

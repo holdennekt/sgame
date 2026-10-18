@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	mongoRepo "github.com/holdennekt/sgame/backend/internal/infrastructure/database/mongo"
 	"github.com/holdennekt/sgame/backend/internal/domain"
+	mongoRepo "github.com/holdennekt/sgame/backend/internal/infrastructure/database/mongo"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

@@ -47,7 +47,7 @@ type importResult struct {
 
 func importRequest(t *testing.T, app *testhelper.TestApp, session, contentType string, body io.Reader) (*http.Request, error) {
 	t.Helper()
-	req, err := http.NewRequest(http.MethodPost, app.Server.URL+"/api/packs/drafts/import", body)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, app.Server.URL+"/api/packs/drafts/import", body)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func importSIQ(t *testing.T, app *testhelper.TestApp, session string, siq []byte
 	require.NoError(t, err)
 	resp, err := app.Server.Client().Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	out, _ := io.ReadAll(resp.Body)
 	return importResult{resp.StatusCode, string(out)}
 }
@@ -97,7 +97,7 @@ func startHeldImport(t *testing.T, app *testhelper.TestApp, session string) *hel
 			h.result <- importResult{0, err.Error()}
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		out, _ := io.ReadAll(resp.Body)
 		h.result <- importResult{resp.StatusCode, string(out)}
 	}()
@@ -158,12 +158,12 @@ func TestSIQImport(t *testing.T) {
 		require.NoError(t, json.Unmarshal([]byte(res.body), &created))
 		require.NotEmpty(t, created.Id)
 
-		req, err := http.NewRequest(http.MethodGet, app.Server.URL+"/api/packs/drafts/"+created.Id, nil)
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, app.Server.URL+"/api/packs/drafts/"+created.Id, nil)
 		require.NoError(t, err)
 		req.AddCookie(&http.Cookie{Name: testhelper.SessionCookieName, Value: session})
 		resp, err := app.Server.Client().Do(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		out, _ := io.ReadAll(resp.Body)
 		require.Equal(t, http.StatusOK, resp.StatusCode, string(out))
 		assert.Contains(t, string(out), "E2E SIQ")

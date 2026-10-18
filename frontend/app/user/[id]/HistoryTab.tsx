@@ -21,7 +21,7 @@ export default function HistoryTab() {
 
   const onIntersect = useRef<() => void>(() => {});
   onIntersect.current = () => {
-    if (hasNextPage) fetchNextPage();
+    if (hasNextPage) void fetchNextPage();
   };
 
   useEffect(() => {

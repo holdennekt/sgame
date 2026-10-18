@@ -66,18 +66,26 @@ func NewTestApp(t *testing.T, mongoURI, redisAddr string) *TestApp {
 	return &TestApp{Server: srv, cancel: cancel}
 }
 
+// PostJSON POSTs a JSON body to an /api path; the caller closes the response body.
+func (a *TestApp) PostJSON(t *testing.T, path string, body []byte) *http.Response {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, a.Server.URL+path, bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := a.Server.Client().Do(req)
+	require.NoError(t, err)
+	return resp
+}
+
 // Guest POSTs to /api/guest and returns the session cookie and user ID.
 func (a *TestApp) Guest(t *testing.T, name string) (sessionCookie, userId string) {
 	t.Helper()
 
 	body, _ := json.Marshal(map[string]string{"name": name})
-	resp, err := a.Server.Client().Post(
-		a.Server.URL+"/api/guest",
-		"application/json",
-		bytes.NewReader(body),
-	)
-	require.NoError(t, err)
-	defer resp.Body.Close()
+	resp := a.PostJSON(t, "/api/guest", body)
+	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var result struct {
@@ -99,9 +107,8 @@ func (a *TestApp) Register(t *testing.T, login, password string) (sessionCookie,
 	t.Helper()
 
 	body, _ := json.Marshal(map[string]string{"login": login, "password": password})
-	resp, err := a.Server.Client().Post(a.Server.URL+"/api/register", "application/json", bytes.NewReader(body))
-	require.NoError(t, err)
-	defer resp.Body.Close()
+	resp := a.PostJSON(t, "/api/register", body)
+	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode, "register")
 
 	var result struct {
@@ -135,14 +142,14 @@ func (a *TestApp) CreateRoom(t *testing.T, sessionCookie, name, packId string, o
 	}
 	body, _ := json.Marshal(payload)
 
-	req, err := http.NewRequest(http.MethodPost, a.Server.URL+"/api/rooms", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, a.Server.URL+"/api/rooms", bytes.NewReader(body))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: SessionCookieName, Value: sessionCookie})
 
 	resp, err := a.Server.Client().Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusCreated, resp.StatusCode, "create room")
 
 	var result struct {
@@ -157,12 +164,12 @@ func (a *TestApp) CreateRoom(t *testing.T, sessionCookie, name, packId string, o
 func (a *TestApp) JoinRoom(t *testing.T, sessionCookie, roomId string) {
 	t.Helper()
 
-	req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("%s/api/rooms/%s/join", a.Server.URL, roomId), nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPatch, fmt.Sprintf("%s/api/rooms/%s/join", a.Server.URL, roomId), nil)
 	require.NoError(t, err)
 	req.AddCookie(&http.Cookie{Name: SessionCookieName, Value: sessionCookie})
 
 	resp, err := a.Server.Client().Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode, "join room")
 }

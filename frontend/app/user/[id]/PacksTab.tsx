@@ -48,7 +48,7 @@ export default function PacksTab({
 
   const onIntersect = useRef<() => void>(() => {});
   onIntersect.current = () => {
-    if (hasNextPage) fetchNextPage();
+    if (hasNextPage) void fetchNextPage();
   };
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export default function PacksTab({
     if (!confirm("Delete this pack?")) return;
     try {
       await deletePack(packId);
-      refetch();
+      void refetch();
     } catch (e) {
       toast.error(isError(e) ? e.error : "Delete failed", {
         containerId: "profile",

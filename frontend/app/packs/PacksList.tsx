@@ -185,7 +185,7 @@ export default function PacksList() {
       hasNextPage &&
       !isFetchingNextPage
     ) {
-      fetchNextPage();
+      void fetchNextPage();
     }
   }, [
     lastVirtualItem?.index,
@@ -202,7 +202,7 @@ export default function PacksList() {
   const handleEdit = async (packId: string) => {
     try {
       const { id } = await createDraft(packId);
-      queryClient.invalidateQueries({ queryKey: ["drafts"] });
+      void queryClient.invalidateQueries({ queryKey: ["drafts"] });
       router.push(`/packs/drafts/${id}`);
     } catch (e) {
       toast.error(isError(e) ? e.error : "Failed to create draft", {
@@ -252,7 +252,7 @@ export default function PacksList() {
     setImporting(true);
     try {
       const { id } = await importDraft(formData);
-      queryClient.invalidateQueries({ queryKey: ["drafts"] });
+      void queryClient.invalidateQueries({ queryKey: ["drafts"] });
       router.push(`/packs/drafts/${id}`);
     } catch (e) {
       toast.error(isError(e) ? e.error : "Import failed", {
@@ -273,7 +273,7 @@ export default function PacksList() {
   const handleNew = async () => {
     try {
       const { id } = await createDraft();
-      queryClient.invalidateQueries({ queryKey: ["drafts"] });
+      void queryClient.invalidateQueries({ queryKey: ["drafts"] });
       router.push(`/packs/drafts/${id}`);
     } catch (e) {
       toast.error(isError(e) ? e.error : "Failed to create draft", {

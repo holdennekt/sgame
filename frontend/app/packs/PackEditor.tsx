@@ -66,7 +66,7 @@ import { usePack } from "@/hooks/usePack";
 import { convertDraftToFormData, PackDraft } from "@/types/pack_draft";
 
 function parsePath(path: string): string[] {
-  return path.split(/[.\[\]]+/).filter(Boolean);
+  return path.split(/[.[\]]+/).filter(Boolean);
 }
 
 function formatErrorPath(path: string): string {
@@ -403,7 +403,7 @@ export default function PackEditor({
       return;
     }
 
-    autosaveTimer.current = setTimeout(() => saveDraft(pack), 1000);
+    autosaveTimer.current = setTimeout(() => void saveDraft(pack), 1000);
     return () => clearTimeout(autosaveTimer.current);
   }, [pack, draftId]);
 
@@ -433,7 +433,7 @@ export default function PackEditor({
   const handleEdit = async () => {
     try {
       const { id } = await createDraft(packId);
-      queryClient.invalidateQueries({ queryKey: ["drafts"] });
+      void queryClient.invalidateQueries({ queryKey: ["drafts"] });
       router.push(`/packs/drafts/${id}`);
     } catch (e) {
       toast.error(isError(e) ? e.error : "Failed to create draft", {
@@ -525,8 +525,8 @@ export default function PackEditor({
     try {
       const { id } = await publishDraft(draftId);
       setPublishErrors([]);
-      queryClient.invalidateQueries({ queryKey: ["packs"] });
-      queryClient.invalidateQueries({ queryKey: ["drafts"] });
+      void queryClient.invalidateQueries({ queryKey: ["packs"] });
+      void queryClient.invalidateQueries({ queryKey: ["drafts"] });
       router.push(`/packs/${id}`);
     } catch (e) {
       if (isValidationErrors(e)) {
@@ -579,7 +579,7 @@ export default function PackEditor({
                 newPack.rounds[ri].categories[ci].questions[qi] = q;
                 setPack(newPack);
                 clearTimeout(autosaveTimer.current);
-                saveDraft(newPack);
+                void saveDraft(newPack);
               },
             });
           }

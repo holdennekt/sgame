@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -21,13 +20,8 @@ func TestGuestAuth(t *testing.T) {
 	app := newApp(t)
 
 	body, _ := json.Marshal(map[string]string{"name": "Tester"})
-	resp, err := app.Server.Client().Post(
-		app.Server.URL+"/api/guest",
-		"application/json",
-		bytes.NewReader(body),
-	)
-	require.NoError(t, err)
-	defer resp.Body.Close()
+	resp := app.PostJSON(t, "/api/guest", body)
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -50,7 +44,7 @@ func TestWebSocketConnectLobby(t *testing.T) {
 
 	client, err := testhelper.Dial(ctx, app.Server.URL, "/api/ws/lobby", session)
 	require.NoError(t, err)
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	// connection established — no immediate messages required, just verify no error
 }
@@ -58,13 +52,13 @@ func TestWebSocketConnectLobby(t *testing.T) {
 func TestWebSocketUnauthorized(t *testing.T) {
 	app := newApp(t)
 
-	req, err := http.NewRequest(http.MethodGet, app.Server.URL+"/api/ws/lobby", nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, app.Server.URL+"/api/ws/lobby", nil)
 	require.NoError(t, err)
 	// deliberately no cookie
 
 	resp, err := app.Server.Client().Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
@@ -75,13 +69,13 @@ func TestWebSocketConnectRoom(t *testing.T) {
 	hostSession := app.GuestSession(t, "Host")
 	packId := insertTestPack(t, containers.MongoURI)
 	roomId := app.CreateRoom(t, hostSession, "Test Room", packId, map[string]any{
-		"maxPlayers":              4,
-		"type":                    "public",
-		"readingSymbolsPerSecond": 50,
-		"questionThinkingTime":    1,
-		"answerThinkingTime":      1,
+		"maxPlayers":                4,
+		"type":                      "public",
+		"readingSymbolsPerSecond":   50,
+		"questionThinkingTime":      1,
+		"answerThinkingTime":        1,
 		"questionThinkingTimeFinal": 2,
-		"falseStartEnabled":       false,
+		"falseStartEnabled":         false,
 	})
 
 	app.JoinRoom(t, hostSession, roomId)
@@ -92,7 +86,7 @@ func TestWebSocketConnectRoom(t *testing.T) {
 	// host connects via WS
 	client, err := testhelper.Dial(ctx, app.Server.URL, "/api/ws/room/"+roomId, hostSession)
 	require.NoError(t, err)
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	// first message is always room_updated with room state
 	msg := client.Expect(t, "room_updated")

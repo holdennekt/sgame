@@ -102,7 +102,7 @@ export default function RevealingQuestionPanel({
         .catch(() => setAudioBlocked(true));
 
       cleanupFuncs.push(() => {
-        playPromise.then(() => {
+        void playPromise.then(() => {
           mediaRef.current?.pause();
           if (mediaRef.current) mediaRef.current.currentTime = 0;
         });

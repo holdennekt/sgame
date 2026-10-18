@@ -133,7 +133,7 @@ func ollamaChatTestServer(t *testing.T, responses map[string]ivalidator.Validato
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"message": map[string]string{"content": string(content)},
 		})
 	}))

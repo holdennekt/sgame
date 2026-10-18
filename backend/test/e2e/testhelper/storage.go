@@ -12,7 +12,7 @@ import (
 
 type NoopStorage struct{}
 
-func (s *NoopStorage) Upload(_ context.Context, _ storage.UploadInput) error { return nil }
+func (s *NoopStorage) Upload(_ context.Context, _ storage.UploadInput) error           { return nil }
 func (s *NoopStorage) UploadFromURL(_ context.Context, _ storage.URLUploadInput) error { return nil }
 func (s *NoopStorage) Delete(_ context.Context, _ string) error                        { return nil }
 func (s *NoopStorage) Move(_ context.Context, _, _ string) error                       { return nil }

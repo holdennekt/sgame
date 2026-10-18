@@ -11,7 +11,6 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { ToastContainer, toast } from "react-toastify";
 import { getDrafts, deleteDraft } from "@/app/api";
 import { isError } from "@/middleware";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SearchResponse } from "@/types/search";
 import { PackDraft, countIncompleteQuestions } from "@/types/pack_draft";
@@ -82,7 +81,6 @@ function DraftCard({
 }
 
 export default function DraftsList() {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState("");
   const [debouncedFilter, setDebouncedFilter] = useState("");
@@ -143,7 +141,7 @@ export default function DraftsList() {
       hasNextPage &&
       !isFetchingNextPage
     ) {
-      fetchNextPage();
+      void fetchNextPage();
     }
   }, [
     lastVirtualItem?.index,
