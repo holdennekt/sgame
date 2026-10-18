@@ -142,8 +142,7 @@ func TestFullGame(t *testing.T) {
 
 	// ── host marks correct → CorrectAnswerDemo → SelectingQuestion ───────────
 	require.NoError(t, host.ws.Send(ctx, domain.ValidateAnswer, map[string]bool{"isCorrect": true}))
-	broadcastExpect(t, domain.CorrectAnswerDemo, all...)
-	drainUntilBroadcastState(t, domain.SelectingQuestion, all...)
+	expectEventAndState(t, domain.CorrectAnswerDemo, domain.SelectingQuestion, all...)
 
 	// ── select CatInBag → Passing (after question demo) ──────────────────────
 	require.NoError(t, host.ws.Send(ctx, domain.SelectQuestion, map[string]any{
@@ -158,8 +157,7 @@ func TestFullGame(t *testing.T) {
 
 	// ── host marks correct → CorrectAnswerDemo → SelectingQuestion ───────────
 	require.NoError(t, host.ws.Send(ctx, domain.ValidateAnswer, map[string]bool{"isCorrect": true}))
-	broadcastExpect(t, domain.CorrectAnswerDemo, all...)
-	drainUntilBroadcastState(t, domain.SelectingQuestion, all...)
+	expectEventAndState(t, domain.CorrectAnswerDemo, domain.SelectingQuestion, all...)
 
 	// ── select Auction → Betting (after question demo) ────────────────────────
 	require.NoError(t, host.ws.Send(ctx, domain.SelectQuestion, map[string]any{
@@ -218,6 +216,23 @@ func roomStateFromMsg(t *testing.T, msg message.Message) domain.RoomState {
 // drainUntilBroadcastState drains room_updated messages on each actor until
 // the target state is seen. Each Expect call has an internal timeout
 // which covers demo durations and timer-driven transitions.
+// expectEventAndState waits for an event and a room_updated carrying the given state, in either order.
+func expectEventAndState(t *testing.T, event domain.Event, state domain.RoomState, actors ...roomActor) {
+	t.Helper()
+	for _, a := range actors {
+		var sawEvent, sawState bool
+		for !sawEvent || !sawState {
+			msg := a.ws.Next(t)
+			switch {
+			case msg.Event == event:
+				sawEvent = true
+			case msg.Event == domain.RoomUpdated && roomStateFromMsg(t, msg) == state:
+				sawState = true
+			}
+		}
+	}
+}
+
 func drainUntilBroadcastState(t *testing.T, want domain.RoomState, actors ...roomActor) {
 	t.Helper()
 	for _, a := range actors {
