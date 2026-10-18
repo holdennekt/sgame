@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: minio
-          image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+          image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
           args:
             - minio server /data/db --console-address :9001
           ports:

@@ -3,7 +3,7 @@ FROM golang:1.25-alpine
 WORKDIR /app
 
 RUN apk add --no-cache ffmpeg build-base git ca-certificates
-RUN --mount=type=cache,target=/root/go/pkg/mod go install github.com/air-verse/air@latest
+RUN --mount=type=cache,target=/root/go/pkg/mod go install github.com/air-verse/air@v1.67.1
 
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/root/go/pkg/mod go mod download
