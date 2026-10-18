@@ -110,6 +110,8 @@ func ErrorMiddleware(ctx *gin.Context) {
 		ctx.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
 	case custerr.ConflictErr:
 		ctx.JSON(http.StatusConflict, dto.ErrorResponse{Error: err.Error()})
+	case custerr.TooManyRequestsErr:
+		ctx.JSON(http.StatusTooManyRequests, dto.ErrorResponse{Error: err.Error()})
 	default:
 		ctx.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 	}

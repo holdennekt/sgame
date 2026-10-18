@@ -9,7 +9,14 @@ import {
 } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ToastContainer } from "react-toastify";
-import { getPacks, deletePack, createDraft, importDraft } from "@/app/api";
+import {
+  getPacks,
+  deletePack,
+  createDraft,
+  importDraft,
+  MAX_SIQ_SIZE,
+  MAX_SIQ_SIZE_LABEL,
+} from "@/app/api";
 import { isError } from "@/middleware";
 import { toast } from "react-toastify";
 import NewRoomModal from "@/components/NewRoomModal";
@@ -234,6 +241,12 @@ export default function PacksList() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    if (file.size > MAX_SIQ_SIZE) {
+      toast.error(`File is too large (max ${MAX_SIQ_SIZE_LABEL})`, {
+        containerId: "packs",
+      });
+      return;
+    }
     const formData = new FormData();
     formData.append("siq", file);
     setImporting(true);

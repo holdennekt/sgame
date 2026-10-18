@@ -42,7 +42,12 @@ var CacheSet = wire.NewSet(
 	wire.Bind(new(cache.Session), new(*redisCache.SessionCache)),
 	redisCache.NewRoomCache,
 	wire.Bind(new(cache.Room), new(*redisCache.RoomCache)),
+	provideImportLimiter,
 )
+
+func provideImportLimiter(client *redis.Client, cfg *config.Config) cache.ImportLimiter {
+	return redisCache.NewImportLimiter(client, cfg.ImportMaxConcurrentPerPod)
+}
 
 type PubSubChannelGetter struct {
 	realtime.ChannelGetter

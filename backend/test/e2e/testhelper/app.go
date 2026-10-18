@@ -48,6 +48,8 @@ func NewTestApp(t *testing.T, mongoURI, redisAddr string) *TestApp {
 		TimeToPass:           2,
 		QuestionDemoDuration: 1,
 		IdleRoomTTL:          1,
+
+		ImportMaxConcurrentPerPod: 2,
 	}
 
 	application := app.InitializeApp(mdb, rds, storage.Raw{Storage: &NoopStorage{}}, storage.Compressed{Storage: &NoopStorage{}}, cfg)
@@ -89,6 +91,30 @@ func (a *TestApp) Guest(t *testing.T, name string) (sessionCookie, userId string
 		}
 	}
 	t.Fatal("no sessionId cookie in /api/guest response")
+	return "", ""
+}
+
+// Register POSTs to /api/register and returns the session cookie and user ID of the new non-guest user.
+func (a *TestApp) Register(t *testing.T, login, password string) (sessionCookie, userId string) {
+	t.Helper()
+
+	body, _ := json.Marshal(map[string]string{"login": login, "password": password})
+	resp, err := a.Server.Client().Post(a.Server.URL+"/api/register", "application/json", bytes.NewReader(body))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode, "register")
+
+	var result struct {
+		UserId string `json:"userId"`
+	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+
+	for _, c := range resp.Cookies() {
+		if c.Name == SessionCookieName {
+			return c.Value, result.UserId
+		}
+	}
+	t.Fatal("no sessionId cookie in /api/register response")
 	return "", ""
 }
 

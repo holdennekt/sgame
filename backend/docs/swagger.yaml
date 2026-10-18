@@ -1949,8 +1949,10 @@ paths:
     post:
       consumes:
       - multipart/form-data
-      description: Accepts a multipart form upload with a "siq" field (max 500 MB)
-        and creates a new pack draft from the SIQ archive
+      description: Accepts a multipart form upload with a "siq" field (max 500 MiB,
+        at most 1 GiB unpacked, 100 MiB per media file) and creates a new pack draft
+        from the SIQ archive. Imports are limited to one at a time per user, plus
+        a cap on concurrent imports per server instance.
       parameters:
       - description: SIQ archive file
         in: formData
@@ -1965,11 +1967,20 @@ paths:
           schema:
             $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.CreatePackResponse'
         "400":
-          description: Missing or malformed SIQ file
+          description: Missing, malformed or oversized SIQ file
           schema:
             $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "401":
           description: 'Unauthorized: Session missing or expired'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "403":
+          description: 'Forbidden: Guests cannot import packs'
+          schema:
+            $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
+        "429":
+          description: 'Too many imports: the user already has one running, or the
+            server instance is at capacity'
           schema:
             $ref: '#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse'
         "500":

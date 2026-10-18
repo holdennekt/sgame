@@ -47,7 +47,8 @@ func InitializeApp(mdb *mongo.Database, rds *redis.Client, rawStorage storage.Ra
 	attachmentService := service.NewAttachmentService(packDraftRepository, packRepository, rawStorage, compressedStorage)
 	packService := service.NewPackService(packRepository, packDraftRepository, userRepository, rawStorage, compressedStorage, attachmentService)
 	packController := http.NewPackController(packService)
-	packDraftService := service.NewPackDraftService(packDraftRepository, packRepository, userRepository, rawStorage, compressedStorage, attachmentService, packService)
+	importLimiter := provideImportLimiter(rds, cfg)
+	packDraftService := service.NewPackDraftService(packDraftRepository, packRepository, userRepository, rawStorage, compressedStorage, attachmentService, packService, importLimiter)
 	manager := provideManager(rds)
 	pubSubChannelGetter := providePubSubChannelGetter(rds, manager)
 	packDraftController := providePackDraftController(packDraftService, pubSubChannelGetter)
@@ -70,7 +71,11 @@ func InitializeApp(mdb *mongo.Database, rds *redis.Client, rawStorage storage.Ra
 
 var RepoSet = wire.NewSet(mongo2.NewUserRepository, wire.Bind(new(repository.User), new(*mongo2.UserRepository)), mongo2.NewRoomRepository, wire.Bind(new(repository.Room), new(*mongo2.RoomRepository)), mongo2.NewPackRepository, wire.Bind(new(repository.Pack), new(*mongo2.PackRepository)), mongo2.NewPackDraftRepository, wire.Bind(new(repository.PackDraft), new(*mongo2.PackDraftRepository)))
 
-var CacheSet = wire.NewSet(redis2.NewSessionCache, wire.Bind(new(cache.Session), new(*redis2.SessionCache)), redis2.NewRoomCache, wire.Bind(new(cache.Room), new(*redis2.RoomCache)))
+var CacheSet = wire.NewSet(redis2.NewSessionCache, wire.Bind(new(cache.Session), new(*redis2.SessionCache)), redis2.NewRoomCache, wire.Bind(new(cache.Room), new(*redis2.RoomCache)), provideImportLimiter)
+
+func provideImportLimiter(client *redis.Client, cfg *config.Config) cache.ImportLimiter {
+	return redis2.NewImportLimiter(client, cfg.ImportMaxConcurrentPerPod)
+}
 
 type PubSubChannelGetter struct {
 	realtime.ChannelGetter

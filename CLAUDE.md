@@ -42,7 +42,7 @@ go test ./test/e2e/ -run TestRoom -v
 go generate ./internal/app/...
 
 # Regenerate Swagger docs (after changing handler annotations)
-swag init -g cmd/server/main.go -o docs
+swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal --requiredByDefault
 ```
 
 ### Frontend (`frontend/`)
@@ -72,7 +72,7 @@ internal/
   interface/      Go interfaces for repository, cache, realtime, storage, queue
   infrastructure/ Concrete implementations:
     database/mongo/      MongoDB repositories
-    cache/redis/         Redis session & room cache
+    cache/redis/         Redis session & room cache, SIQ import slot limiter
     realtime/pubsub/     Redis Pub/Sub multiplexer
     realtime/streams/    Redis Streams multiplexer
     realtime/ws/         WebSocket channel wrapper
@@ -88,7 +88,7 @@ internal/
   config/          Env-based config loaded at startup
   message/         Shared Message struct {Id, Event, Payload}
 pkg/
-  custerr/         Typed HTTP errors (400/401/403/404/500)
+  custerr/         Typed HTTP errors (400/401/403/404/409/429/500)
   custvalid/       Custom gin/validator tags
   envvar/          Env var helpers
   sets/            Generic set type
@@ -212,7 +212,15 @@ Moderator `skip_round` is a manual, synchronous bypass of the "round ends" auto-
 
 ### Config
 
-All configuration comes from environment variables. Required vars: `MONGO_*`, `REDIS_HOST/PORT`, `STORAGE_PROVIDER`, `RAW_BUCKET_NAME`, `PROCESSED_BUCKET_NAME`, `FRONTEND_URL`, `HOST`, `PORT`. When `STORAGE_PROVIDER=gcs`, also required: `GCP_PROJECT_ID`, `PUBSUB_SUBSCRIPTION_ID` (the pull subscription attachment-processor consumes raw-bucket upload notifications from). Optional: `TIME_TO_BET` (default 60s), `TIME_TO_PASS` (default 60s), `QUESTION_DEMO_DURATION` (default 5s), `IDLE_ROOM_TTL` (default 600s).
+All configuration comes from environment variables. Required vars: `MONGO_*`, `REDIS_HOST/PORT`, `STORAGE_PROVIDER`, `RAW_BUCKET_NAME`, `PROCESSED_BUCKET_NAME`, `FRONTEND_URL`, `HOST`, `PORT`. When `STORAGE_PROVIDER=gcs`, also required: `GCP_PROJECT_ID`, `PUBSUB_SUBSCRIPTION_ID` (the pull subscription attachment-processor consumes raw-bucket upload notifications from). Optional: `TIME_TO_BET` (default 60s), `TIME_TO_PASS` (default 60s), `QUESTION_DEMO_DURATION` (default 5s), `IDLE_ROOM_TTL` (default 600s), `IMPORT_MAX_CONCURRENT_PER_POD` (default 2).
+
+### SIQ import limits
+
+`POST /api/packs/drafts/import` is bounded at every layer (`pack_draft.go`, `pack_draft_siq.go`):
+
+- **Upload**: 500 MiB, enforced by nginx (`client_max_body_size`), `http.MaxBytesReader` in the controller, and a client-side check in `PacksList.tsx`.
+- **Unpacked content**: at most 1 GiB in total, 100 MiB per media file, 32 MiB for `content.xml`, and 10,000 zip entries. Limits are enforced on the bytes actually decompressed, not only on zip header values.
+- **Concurrency**: one import per user across all pods (a Redis lock per user, 15-minute lease) and `IMPORT_MAX_CONCURRENT_PER_POD` per pod (an in-process semaphore, since the cap protects pod memory). Both are taken before the body is read. Rejected imports get HTTP 429.
 
 ### Swagger
 

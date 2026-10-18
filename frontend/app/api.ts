@@ -247,6 +247,9 @@ export const publishDraft = async (id: string): Promise<{ id: string }> => {
   return resp.json();
 };
 
+export const MAX_SIQ_SIZE = 500 * 1024 * 1024;
+export const MAX_SIQ_SIZE_LABEL = "500 MB";
+
 export const importDraft = async (
   formData: FormData
 ): Promise<{ id: string }> => {
@@ -254,6 +257,8 @@ export const importDraft = async (
     method: "POST",
     body: formData,
   });
+  if (resp.status === 413)
+    throw { error: `File is too large (max ${MAX_SIQ_SIZE_LABEL})` };
   if (!resp.ok) throw await resp.json();
   return resp.json();
 };

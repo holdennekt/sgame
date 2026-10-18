@@ -21,7 +21,7 @@ import (
 const (
 	GET_URL_TTL                 = 3 * time.Hour
 	POST_URL_TTL                = 5 * time.Minute
-	MAX_FILE_SIZE               = 500 << 20 // 500 MB
+	MAX_FILE_SIZE               = 500 << 20 // 500 MiB
 	DEFAULT_ATTACHMENT_DURATION = 1
 )
 

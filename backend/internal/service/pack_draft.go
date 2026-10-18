@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"reflect"
@@ -11,6 +12,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/dto"
+	"github.com/holdennekt/sgame/backend/internal/interface/cache"
 	"github.com/holdennekt/sgame/backend/internal/interface/repository"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
@@ -26,10 +28,11 @@ type PackDraftService struct {
 	compressedStorage storage.Compressed
 	attachmentService *AttachmentService
 	packService       *PackService
+	importLimiter     cache.ImportLimiter
 	validator         *validator.Validate
 }
 
-func NewPackDraftService(packDraftRepo repository.PackDraft, packRepo repository.Pack, userRepository repository.User, rawStorage storage.Raw, compressedStorage storage.Compressed, attachmentService *AttachmentService, packService *PackService) *PackDraftService {
+func NewPackDraftService(packDraftRepo repository.PackDraft, packRepo repository.Pack, userRepository repository.User, rawStorage storage.Raw, compressedStorage storage.Compressed, attachmentService *AttachmentService, packService *PackService, importLimiter cache.ImportLimiter) *PackDraftService {
 	v := validator.New()
 	v.SetTagName("binding")
 	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
@@ -48,6 +51,7 @@ func NewPackDraftService(packDraftRepo repository.PackDraft, packRepo repository
 		compressedStorage: compressedStorage,
 		attachmentService: attachmentService,
 		packService:       packService,
+		importLimiter:     importLimiter,
 		validator:         v,
 	}
 }
@@ -579,6 +583,23 @@ func commentToDTO(c *domain.Comment) *dto.CreateCommentRequest {
 		return nil
 	}
 	return &dto.CreateCommentRequest{Text: c.Text, Attachment: attToDTO(c.Attachment)}
+}
+
+func (s *PackDraftService) AcquireImportSlot(ctx context.Context, user domain.User) (func(), error) {
+	if user.IsGuest {
+		return nil, custerr.NewForbiddenErr("guest users cannot import packs")
+	}
+
+	release, err := s.importLimiter.Acquire(ctx, user.Id, IMPORT_SLOT_LEASE)
+	switch {
+	case errors.Is(err, cache.ErrImportUserLimit):
+		return nil, custerr.NewTooManyRequestsErr("you already have an import in progress, wait for it to finish")
+	case errors.Is(err, cache.ErrImportPodLimit):
+		return nil, custerr.NewTooManyRequestsErr("the server is busy with other imports, try again in a few minutes")
+	case err != nil:
+		return nil, err
+	}
+	return release, nil
 }
 
 func (s *PackDraftService) Import(ctx context.Context, user domain.User, r io.ReaderAt, size int64) (string, error) {

@@ -5,16 +5,34 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/url"
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/interface/storage"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
+)
+
+const (
+	IMPORT_SLOT_LEASE = 15 * time.Minute
+
+	SIQ_MAX_ENTRIES          = 10_000
+	SIQ_MAX_CONTENT_XML_SIZE = 32 << 20
+	SIQ_MAX_MEDIA_FILE_SIZE  = 100 << 20
+	SIQ_MAX_UNPACKED_SIZE    = 1 << 30
+)
+
+var (
+	errSIQEntryTooLarge = errors.New("siq entry too large")
+	errSIQTotalTooLarge = errors.New("siq total size too large")
 )
 
 type siqPackage struct {
@@ -210,6 +228,64 @@ func appendSelectOptions(qText string, param *siqParam) string {
 	return strings.Join(lines, "\n")
 }
 
+// siqLimitReader enforces the entry limit and total budget on the bytes actually decompressed
+type siqLimitReader struct {
+	r      io.Reader
+	left   int64
+	budget *atomic.Int64
+}
+
+func (l *siqLimitReader) Read(p []byte) (int, error) {
+	n, err := l.r.Read(p)
+	l.left -= int64(n)
+	if l.left < 0 {
+		return 0, errSIQEntryTooLarge
+	}
+	if l.budget.Add(-int64(n)) < 0 {
+		return 0, errSIQTotalTooLarge
+	}
+	return n, err
+}
+
+// checkSIQEntry rejects entries whose declared uncompressed size already exceeds maxSize
+func checkSIQEntry(f *zip.File, maxSize int64) error {
+	if f.UncompressedSize64 > uint64(maxSize) {
+		return siqEntryTooLargeErr(f.Name, maxSize)
+	}
+	return nil
+}
+
+func siqEntryTooLargeErr(name string, maxSize int64) error {
+	return custerr.NewBadRequestErr(fmt.Sprintf("invalid siq file: %q exceeds the %d MiB per-file limit", name, maxSize>>20))
+}
+
+func siqTotalTooLargeErr() error {
+	return custerr.NewBadRequestErr(fmt.Sprintf("invalid siq file: unpacked content exceeds the %d MiB limit", SIQ_MAX_UNPACKED_SIZE>>20))
+}
+
+// readSIQEntry reads one zip entry within the limits; limit violations are custerr.BadRequestErr
+func readSIQEntry(f *zip.File, maxSize int64, budget *atomic.Int64) ([]byte, error) {
+	if err := checkSIQEntry(f, maxSize); err != nil {
+		return nil, err
+	}
+	rc, err := f.Open()
+	if err != nil {
+		return nil, fmt.Errorf("open %q: %w", f.Name, err)
+	}
+	defer func() { _ = rc.Close() }()
+
+	data, err := io.ReadAll(&siqLimitReader{r: rc, left: maxSize, budget: budget})
+	switch {
+	case errors.Is(err, errSIQEntryTooLarge):
+		return nil, siqEntryTooLargeErr(f.Name, maxSize)
+	case errors.Is(err, errSIQTotalTooLarge):
+		return nil, siqTotalTooLargeErr()
+	case err != nil:
+		return nil, fmt.Errorf("read %q: %w", f.Name, err)
+	}
+	return data, nil
+}
+
 // siqPendingUpload is a media file read from the zip but not yet uploaded
 type siqPendingUpload struct {
 	key  string
@@ -225,6 +301,10 @@ func (s *PackDraftService) parseSIQ(r io.ReaderAt, size int64) (*domain.PackDraf
 		return nil, nil, custerr.NewBadRequestErr("invalid siq file: not a valid zip archive")
 	}
 
+	if len(zr.File) > SIQ_MAX_ENTRIES {
+		return nil, nil, custerr.NewBadRequestErr(fmt.Sprintf("invalid siq file: more than %d entries", SIQ_MAX_ENTRIES))
+	}
+
 	zipIndex := make(map[string]*zip.File, len(zr.File))
 	for _, f := range zr.File {
 		name := f.Name
@@ -238,14 +318,15 @@ func (s *PackDraftService) parseSIQ(r io.ReaderAt, size int64) (*domain.PackDraf
 	if xmlZipFile == nil {
 		return nil, nil, custerr.NewBadRequestErr("invalid siq file: content.xml not found")
 	}
-	rc, err := xmlZipFile.Open()
-	if err != nil {
-		return nil, nil, custerr.NewInternalErr(err)
-	}
-	defer func() { _ = rc.Close() }()
+	var budget atomic.Int64
+	budget.Store(SIQ_MAX_UNPACKED_SIZE)
 
-	xmlBytes, err := io.ReadAll(rc)
+	xmlBytes, err := readSIQEntry(xmlZipFile, SIQ_MAX_CONTENT_XML_SIZE, &budget)
 	if err != nil {
+		var badRequest custerr.BadRequestErr
+		if errors.As(err, &badRequest) {
+			return nil, nil, err
+		}
 		return nil, nil, custerr.NewInternalErr(err)
 	}
 	xmlBytes = regexp.MustCompile(`\s+xmlns(?::\w+)?="[^"]*"`).ReplaceAll(xmlBytes, nil)
@@ -255,24 +336,21 @@ func (s *PackDraftService) parseSIQ(r io.ReaderAt, size int64) (*domain.PackDraf
 		return nil, nil, custerr.NewBadRequestErr("invalid siq file: cannot parse content.xml: " + err.Error())
 	}
 
-	// readMedia reads one zip entry and returns a pending *domain.Attachment
-	// plus its raw bytes for later upload
-	readMedia := func(zipPath string) (*domain.Attachment, []byte) {
+	// readMedia returns a pending attachment plus its bytes; missing or unreadable entries are skipped
+	readMedia := func(zipPath string) (*domain.Attachment, []byte, error) {
 		f := zipIndex[strings.ToLower(zipPath)]
 		if f == nil {
 			slog.Warn("siq import: media not found in zip", "path", zipPath)
-			return nil, nil
+			return nil, nil, nil
 		}
-		fr, err := f.Open()
+		data, err := readSIQEntry(f, SIQ_MAX_MEDIA_FILE_SIZE, &budget)
 		if err != nil {
-			slog.Error("siq import: cannot open media", "path", zipPath, "err", err)
-			return nil, nil
-		}
-		data, err := io.ReadAll(fr)
-		_ = fr.Close()
-		if err != nil {
+			var badRequest custerr.BadRequestErr
+			if errors.As(err, &badRequest) {
+				return nil, nil, err
+			}
 			slog.Error("siq import: cannot read media", "path", zipPath, "err", err)
-			return nil, nil
+			return nil, nil, nil
 		}
 
 		att := &domain.Attachment{
@@ -280,7 +358,7 @@ func (s *PackDraftService) parseSIQ(r io.ReaderAt, size int64) (*domain.PackDraf
 			Size:   int64(len(data)),
 			Status: domain.AttachmentPending,
 		}
-		return att, data
+		return att, data, nil
 	}
 
 	// Collect all unique media paths
@@ -300,20 +378,44 @@ func (s *PackDraftService) parseSIQ(r io.ReaderAt, size int64) (*domain.PackDraf
 		}
 	}
 
+	declaredTotal := int64(xmlZipFile.UncompressedSize64)
+	for zipPath := range mediaSet {
+		f := zipIndex[strings.ToLower(zipPath)]
+		if f == nil {
+			continue
+		}
+		if err := checkSIQEntry(f, SIQ_MAX_MEDIA_FILE_SIZE); err != nil {
+			return nil, nil, err
+		}
+		declaredTotal += int64(f.UncompressedSize64)
+	}
+	if declaredTotal > SIQ_MAX_UNPACKED_SIZE {
+		return nil, nil, siqTotalTooLargeErr()
+	}
+
 	// Read all media concurrently using a pool of up to 8 workers
 	type mediaResult struct {
 		path string
 		att  *domain.Attachment
 		data []byte
+		err  error
 	}
+	var failed atomic.Bool
 	jobs := make(chan string)
 	results := make(chan mediaResult)
 
 	for range min(len(mediaSet), 8) {
 		go func() {
 			for zipPath := range jobs {
-				att, data := readMedia(zipPath)
-				results <- mediaResult{zipPath, att, data}
+				if failed.Load() {
+					results <- mediaResult{path: zipPath}
+					continue
+				}
+				att, data, err := readMedia(zipPath)
+				if err != nil {
+					failed.Store(true)
+				}
+				results <- mediaResult{zipPath, att, data, err}
 			}
 		}()
 	}
@@ -327,12 +429,20 @@ func (s *PackDraftService) parseSIQ(r io.ReaderAt, size int64) (*domain.PackDraf
 
 	attMap := make(map[string]*domain.Attachment, len(mediaSet))
 	var uploads []siqPendingUpload
+	var readErr error
 	for i := 0; i < len(mediaSet); i++ {
 		r := <-results
+		if r.err != nil && readErr == nil {
+			readErr = r.err
+		}
 		attMap[r.path] = r.att
 		if r.att != nil {
 			uploads = append(uploads, siqPendingUpload{key: r.att.Key, data: r.data})
 		}
+	}
+
+	if readErr != nil {
+		return nil, nil, readErr
 	}
 
 	lookupMedia := func(zipPath string) *domain.Attachment {

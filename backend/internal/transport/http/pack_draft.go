@@ -14,7 +14,7 @@ import (
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
 )
 
-const MAX_SIQ_SIZE = 500 << 20 // 500 MB
+const MAX_SIQ_SIZE = 500 << 20 // 500 MiB
 
 const SSE_KEEPALIVE_INTERVAL = 30 * time.Second
 
@@ -193,19 +193,28 @@ func (c *PackDraftController) delete(ctx *gin.Context) {
 }
 
 // @Summary      Import SIQ file as a pack draft
-// @Description  Accepts a multipart form upload with a "siq" field (max 500 MB) and creates a new pack draft from the SIQ archive
+// @Description  Accepts a multipart form upload with a "siq" field (max 500 MiB, at most 1 GiB unpacked, 100 MiB per media file) and creates a new pack draft from the SIQ archive. Imports are limited to one at a time per user, plus a cap on concurrent imports per server instance.
 // @Tags         pack-drafts
 // @Accept       multipart/form-data
 // @Produce      json
 // @Param        siq  formData  file  true  "SIQ archive file"
 // @Success      201  {object}  dto.CreatePackResponse
-// @Failure      400  {object}  dto.ErrorResponse "Missing or malformed SIQ file"
+// @Failure      400  {object}  dto.ErrorResponse "Missing, malformed or oversized SIQ file"
 // @Failure      401  {object}  dto.ErrorResponse "Unauthorized: Session missing or expired"
+// @Failure      403  {object}  dto.ErrorResponse "Forbidden: Guests cannot import packs"
+// @Failure      429  {object}  dto.ErrorResponse "Too many imports: the user already has one running, or the server instance is at capacity"
 // @Failure      500  {object}  dto.ErrorResponse "Internal server error"
 // @Security     CookieAuth
 // @Router       /packs/drafts/import [post]
 func (c *PackDraftController) importSIQ(ctx *gin.Context) {
 	user := ctx.MustGet(USER_CONTEXT_KEY).(domain.User)
+
+	release, err := c.draftService.AcquireImportSlot(ctx, user)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	defer release()
 
 	ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, MAX_SIQ_SIZE)
 

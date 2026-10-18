@@ -44,6 +44,8 @@ type Config struct {
 	QuestionDemoDuration int // seconds; env: QUESTION_DEMO_DURATION, default 5
 	IdleRoomTTL          int // seconds; env: IDLE_ROOM_TTL, default 600
 
+	ImportMaxConcurrentPerPod int // env: IMPORT_MAX_CONCURRENT_PER_POD, default 2; SIQ imports running at once on one pod
+
 	ValidatorType       string // env: VALIDATOR_TYPE; "ollama" | "gemini" | "" (disabled)
 	OllamaURL           string // env: OLLAMA_URL
 	OllamaSystemPrompt  string // env: OLLAMA_SYSTEM_PROMPT
@@ -70,6 +72,11 @@ func Load() (*Config, error) {
 	idleRoomTTL, err := strconv.Atoi(os.Getenv("IDLE_ROOM_TTL"))
 	if err != nil {
 		idleRoomTTL = 600
+	}
+
+	importMaxConcurrentPerPod, err := strconv.Atoi(os.Getenv("IMPORT_MAX_CONCURRENT_PER_POD"))
+	if err != nil || importMaxConcurrentPerPod < 1 {
+		importMaxConcurrentPerPod = 2
 	}
 
 	aiValidationTimeout, err := strconv.Atoi(os.Getenv("AI_VALIDATION_TIMEOUT"))
@@ -113,6 +120,8 @@ func Load() (*Config, error) {
 		TimeToPass:           timeToPass,
 		QuestionDemoDuration: questionDemoDuration,
 		IdleRoomTTL:          idleRoomTTL,
+
+		ImportMaxConcurrentPerPod: importMaxConcurrentPerPod,
 
 		ValidatorType:       os.Getenv("VALIDATOR_TYPE"),
 		OllamaURL:           os.Getenv("OLLAMA_URL"),
