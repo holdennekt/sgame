@@ -35,6 +35,9 @@ type Config struct {
 	GCPLocation          string // env: GCP_LOCATION
 	PubSubSubscriptionID string // env: PUBSUB_SUBSCRIPTION_ID; pull subscription for raw-bucket upload notifications
 
+	AWSRegion   string // env: AWS_REGION
+	SQSQueueURL string // env: SQS_QUEUE_URL; queue for raw-bucket upload notifications
+
 	AppEnv string
 	Host   string
 	Port   string
@@ -46,10 +49,12 @@ type Config struct {
 
 	ImportMaxConcurrentPerPod int // env: IMPORT_MAX_CONCURRENT_PER_POD, default 2; SIQ imports running at once on one pod
 
-	ValidatorType       string // env: VALIDATOR_TYPE; "ollama" | "gemini" | "" (disabled)
+	ValidatorType       string // env: VALIDATOR_TYPE; "claude-vertex" | "claude-bedrock" | "gemini" | "ollama" | "" (disabled)
 	OllamaURL           string // env: OLLAMA_URL
 	OllamaSystemPrompt  string // env: OLLAMA_SYSTEM_PROMPT
 	GeminiSystemPrompt  string // env: GEMINI_SYSTEM_PROMPT
+	ClaudeModelID       string // env: CLAUDE_MODEL_ID; default Claude Haiku 5.5 for the platform
+	ClaudeSystemPrompt  string // env: CLAUDE_SYSTEM_PROMPT
 	AIValidationTimeout int    // env: AI_VALIDATION_TIMEOUT; seconds; default 10
 }
 
@@ -110,6 +115,9 @@ func Load() (*Config, error) {
 		GCPLocation:          os.Getenv("GCP_LOCATION"),
 		PubSubSubscriptionID: os.Getenv("PUBSUB_SUBSCRIPTION_ID"),
 
+		AWSRegion:   os.Getenv("AWS_REGION"),
+		SQSQueueURL: os.Getenv("SQS_QUEUE_URL"),
+
 		AppEnv:      os.Getenv("APP_ENV"),
 		Host:        os.Getenv("HOST"),
 		Port:        os.Getenv("PORT"),
@@ -127,6 +135,8 @@ func Load() (*Config, error) {
 		OllamaURL:           os.Getenv("OLLAMA_URL"),
 		OllamaSystemPrompt:  os.Getenv("OLLAMA_SYSTEM_PROMPT"),
 		GeminiSystemPrompt:  os.Getenv("GEMINI_SYSTEM_PROMPT"),
+		ClaudeModelID:       os.Getenv("CLAUDE_MODEL_ID"),
+		ClaudeSystemPrompt:  os.Getenv("CLAUDE_SYSTEM_PROMPT"),
 		AIValidationTimeout: aiValidationTimeout,
 	}
 
@@ -176,6 +186,18 @@ func (c *Config) validate() error {
 			"PUBSUB_SUBSCRIPTION_ID": c.PubSubSubscriptionID,
 		}
 		for key, val := range gcsRequired {
+			if val == "" {
+				missing = append(missing, key)
+			}
+		}
+	}
+
+	if c.StorageProvider == "s3" {
+		s3Required := map[string]string{
+			"AWS_REGION":    c.AWSRegion,
+			"SQS_QUEUE_URL": c.SQSQueueURL,
+		}
+		for key, val := range s3Required {
 			if val == "" {
 				missing = append(missing, key)
 			}

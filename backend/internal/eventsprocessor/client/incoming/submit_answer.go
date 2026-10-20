@@ -51,7 +51,7 @@ func HandleSubmitAnswerMessage(ctx context.Context, server realtime.Channel, int
 	}
 
 	go func() {
-		iQuestion := buildValidatorQuestion(question, cfg.CompressedBucketName)
+		iQuestion := buildValidatorQuestion(question)
 		isCorrect := resolveIsCorrect(validator, cfg, roomId, iQuestion, sap.Answer)
 
 		finalCtx, finalCancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -126,15 +126,15 @@ func resolveIsCorrect(validator ivalidator.AnswerValidator, cfg *config.Config, 
 	return result.IsCorrect
 }
 
-func buildValidatorQuestion(question domain.Question, bucketName string) ivalidator.Question {
-	return buildValidatorQuestionFrom(question.Answers, question.Text, question.Attachment, bucketName)
+func buildValidatorQuestion(question domain.Question) ivalidator.Question {
+	return buildValidatorQuestionFrom(question.Answers, question.Text, question.Attachment)
 }
 
-func buildFinalRoundValidatorQuestion(question domain.FinalRoundQuestion, bucketName string) ivalidator.Question {
-	return buildValidatorQuestionFrom(question.Answers, question.Text, question.Attachment, bucketName)
+func buildFinalRoundValidatorQuestion(question domain.FinalRoundQuestion) ivalidator.Question {
+	return buildValidatorQuestionFrom(question.Answers, question.Text, question.Attachment)
 }
 
-func buildValidatorQuestionFrom(answers []string, text *string, attachment *domain.Attachment, bucketName string) ivalidator.Question {
+func buildValidatorQuestionFrom(answers []string, text *string, attachment *domain.Attachment) ivalidator.Question {
 	q := ivalidator.Question{
 		CorrectAnswers: answers,
 	}
@@ -142,7 +142,7 @@ func buildValidatorQuestionFrom(answers []string, text *string, attachment *doma
 		q.Text = *text
 	}
 	if attachment != nil {
-		q.MediaURI = "gs://" + bucketName + "/" + attachment.Key
+		q.MediaKey = attachment.Key
 		q.MediaMIMEType = attachment.MimeType
 		switch attachment.Type {
 		case domain.Image:

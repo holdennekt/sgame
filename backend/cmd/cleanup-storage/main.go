@@ -9,6 +9,9 @@ import (
 	"strings"
 
 	gcsstorage "cloud.google.com/go/storage"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/holdennekt/sgame/backend/pkg/envvar"
 	"github.com/joho/godotenv"
 	"github.com/minio/minio-go/v7"
@@ -257,6 +260,42 @@ func main() {
 						log.Printf("Deleting %s/%s...", bucketName, attrs.Name)
 						if err := gcsClient.Bucket(bucketName).Object(attrs.Name).Delete(ctx); err != nil {
 							log.Printf("ERROR deleting %s/%s: %v", bucketName, attrs.Name, err)
+						}
+					}
+				}
+			}
+		}
+	} else if provider == "s3" {
+		awsCfg, err := awsconfig.LoadDefaultConfig(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		s3Client := awss3.NewFromConfig(awsCfg)
+
+		for _, bucketName := range buckets {
+			log.Printf("Listing objects in S3 bucket %q...", bucketName)
+
+			pages := awss3.NewListObjectsV2Paginator(s3Client, &awss3.ListObjectsV2Input{Bucket: aws.String(bucketName)})
+			for pages.HasMorePages() {
+				page, err := pages.NextPage(ctx)
+				if err != nil {
+					log.Fatal(err)
+				}
+				for _, obj := range page.Contents {
+					key, size := aws.ToString(obj.Key), aws.ToInt64(obj.Size)
+					totalObjects++
+					totalSize += size
+
+					if _, ok := referenced[key]; !ok {
+						orphaned++
+						orphanedSize += size
+						if *dryRun {
+							fmt.Printf("[dry-run] %s/%s (%s)\n", bucketName, key, formatBytes(size))
+						} else {
+							log.Printf("Deleting %s/%s...", bucketName, key)
+							if _, err := s3Client.DeleteObject(ctx, &awss3.DeleteObjectInput{Bucket: aws.String(bucketName), Key: obj.Key}); err != nil {
+								log.Printf("ERROR deleting %s/%s: %v", bucketName, key, err)
+							}
 						}
 					}
 				}

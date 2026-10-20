@@ -43,7 +43,7 @@ func HandleSubmitFinalRoundAnswerMessage(ctx context.Context, server realtime.Ch
 			for newRoom.State == domain.ValidatingFinalRoundAnswers {
 				playerId := *newRoom.CurrentPlayer
 				answer := newRoom.FinalRoundState.PlayersAnswers[playerId]
-				iQuestion := buildFinalRoundValidatorQuestion(*newRoom.FinalRoundState.Question, cfg.CompressedBucketName)
+				iQuestion := buildFinalRoundValidatorQuestion(*newRoom.FinalRoundState.Question)
 				isCorrect := resolveIsCorrect(validator, cfg, roomId, iQuestion, answer)
 
 				finalCtx, finalCancel := context.WithTimeout(context.Background(), 5*time.Second)

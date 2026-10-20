@@ -13,9 +13,10 @@ const geminiModel = "gemini-3.5-flash"
 type GeminiValidator struct {
 	client            *genai.Client
 	systemInstruction *genai.Content
+	mediaBucket       string
 }
 
-func NewGeminiValidator(ctx context.Context, projectID, location, systemInstruction string) (*GeminiValidator, error) {
+func NewGeminiValidator(ctx context.Context, projectID, location, systemInstruction, mediaBucket string) (*GeminiValidator, error) {
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{
 		Project:  projectID,
 		Location: location,
@@ -29,11 +30,12 @@ func NewGeminiValidator(ctx context.Context, projectID, location, systemInstruct
 		systemInstruction: &genai.Content{
 			Parts: []*genai.Part{{Text: systemInstruction}},
 		},
+		mediaBucket: mediaBucket,
 	}, nil
 }
 
 func (v *GeminiValidator) Validate(ctx context.Context, question ivalidator.Question, playerAnswer string) (ivalidator.ValidatorResponse, error) {
-	parts, err := buildPromptParts(question, playerAnswer)
+	parts, err := buildPromptParts(question, v.mediaBucket, playerAnswer)
 	if err != nil {
 		return ivalidator.ValidatorResponse{}, err
 	}
@@ -61,13 +63,13 @@ func (v *GeminiValidator) Validate(ctx context.Context, question ivalidator.Ques
 // buildPromptParts assembles the multimodal content parts for the model.
 // Video questions skip the media entirely — processing latency is too high for
 // a live game; the correct answers carry enough signal on their own.
-func buildPromptParts(question ivalidator.Question, playerAnswer string) ([]*genai.Part, error) {
+func buildPromptParts(question ivalidator.Question, mediaBucket, playerAnswer string) ([]*genai.Part, error) {
 	var parts []*genai.Part
 
-	if question.MediaURI != "" && question.MediaType != ivalidator.MediaTypeVideo {
+	if question.MediaKey != "" && question.MediaType != ivalidator.MediaTypeVideo {
 		parts = append(parts, &genai.Part{
 			FileData: &genai.FileData{
-				FileURI:  question.MediaURI,
+				FileURI:  "gs://" + mediaBucket + "/" + question.MediaKey,
 				MIMEType: question.MediaMIMEType,
 			},
 		})

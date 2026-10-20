@@ -56,7 +56,7 @@ func InitializeApp(mdb *mongo.Database, rds *redis.Client, rawStorage storage.Ra
 	streamsChannelGetter := provideStreamsChannelGetter(rds, manager)
 	streamsPersistentChannelGetter := provideStreamsPersistentChannelGetter(rds, manager)
 	roomInternalEventsProcessorGetter := provideRoomInternalEventsProcessorGetter(roomCache, roomRepository, packRepository, compressedStorage, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, cfg)
-	answerValidator := provideAnswerValidator(cfg)
+	answerValidator := provideAnswerValidator(cfg, compressedStorage)
 	roomService := provideRoomService(packRepository, roomRepository, roomCache, pubSubChannelGetter, streamsChannelGetter, streamsPersistentChannelGetter, roomInternalEventsProcessorGetter, cfg, answerValidator)
 	roomController := http.NewRoomController(packService, roomService)
 	lobbyEventsProcessorGetter := provideLobbyEventsProcessorGetter(roomCache, pubSubChannelGetter)
@@ -109,14 +109,26 @@ func provideLobbyEventsProcessorGetter(roomCache cache.Room, pubsubGetter PubSub
 	return eventsprocessor.NewLobbyEventsProcessorGetter(pubsubGetter.ChannelGetter, roomCache)
 }
 
-func provideAnswerValidator(cfg *config.Config) validator.AnswerValidator {
+func provideAnswerValidator(cfg *config.Config, compressedStorage storage.Compressed) validator.AnswerValidator {
 	switch cfg.ValidatorType {
 	case "ollama":
 		return validator2.NewLocalLLMValidator(cfg.OllamaURL, cfg.OllamaSystemPrompt)
 	case "gemini":
-		v, err := validator2.NewGeminiValidator(context.Background(), cfg.GCPProjectID, cfg.GCPLocation, cfg.GeminiSystemPrompt)
+		v, err := validator2.NewGeminiValidator(context.Background(), cfg.GCPProjectID, cfg.GCPLocation, cfg.GeminiSystemPrompt, cfg.CompressedBucketName)
 		if err != nil {
 			panic("failed to initialize Gemini validator: " + err.Error())
+		}
+		return v
+	case "claude-vertex":
+		v, err := validator2.NewVertexClaudeValidator(context.Background(), cfg.GCPProjectID, cfg.GCPLocation, cfg.ClaudeModelID, cfg.ClaudeSystemPrompt, compressedStorage.Storage)
+		if err != nil {
+			panic("failed to initialize Claude (Vertex) validator: " + err.Error())
+		}
+		return v
+	case "claude-bedrock":
+		v, err := validator2.NewBedrockClaudeValidator(context.Background(), cfg.AWSRegion, cfg.ClaudeModelID, cfg.ClaudeSystemPrompt, compressedStorage.Storage)
+		if err != nil {
+			panic("failed to initialize Claude (Bedrock) validator: " + err.Error())
 		}
 		return v
 	default:

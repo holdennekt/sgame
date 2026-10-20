@@ -30,7 +30,7 @@ func TestBuildPromptParts(t *testing.T) {
 			name: "image question prepends a file part",
 			question: ivalidator.Question{
 				CorrectAnswers: []string{"Eiffel Tower"},
-				MediaURI:       "gs://bucket/img.jpg",
+				MediaKey:       "img.jpg",
 				MediaType:      ivalidator.MediaTypeImage,
 			},
 			wantPartCount: 2,
@@ -40,7 +40,7 @@ func TestBuildPromptParts(t *testing.T) {
 			name: "audio question prepends a file part",
 			question: ivalidator.Question{
 				CorrectAnswers: []string{"Beethoven"},
-				MediaURI:       "gs://bucket/clip.mp3",
+				MediaKey:       "clip.mp3",
 				MediaType:      ivalidator.MediaTypeAudio,
 			},
 			wantPartCount: 2,
@@ -50,7 +50,7 @@ func TestBuildPromptParts(t *testing.T) {
 			name: "video question skips media due to latency",
 			question: ivalidator.Question{
 				CorrectAnswers: []string{"answer"},
-				MediaURI:       "gs://bucket/vid.mp4",
+				MediaKey:       "vid.mp4",
 				MediaType:      ivalidator.MediaTypeVideo,
 			},
 			wantPartCount: 1,
@@ -61,7 +61,7 @@ func TestBuildPromptParts(t *testing.T) {
 			question: ivalidator.Question{
 				Text:           "Name this landmark",
 				CorrectAnswers: []string{"Eiffel Tower", "Tour Eiffel"},
-				MediaURI:       "gs://bucket/tower.jpg",
+				MediaKey:       "tower.jpg",
 				MediaType:      ivalidator.MediaTypeImage,
 			},
 			wantPartCount: 2,
@@ -71,7 +71,7 @@ func TestBuildPromptParts(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parts, err := buildPromptParts(tt.question, "player answer")
+			parts, err := buildPromptParts(tt.question, "bucket", "player answer")
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -214,3 +214,21 @@ func (m *MockValidator) Validate(_ context.Context, _ ivalidator.Question, _ str
 }
 
 var _ ivalidator.AnswerValidator = (*MockValidator)(nil)
+
+func TestParseValidatorJSON(t *testing.T) {
+	for _, text := range []string{
+		`{"is_correct": true, "confidence": 0.9}`,
+		"```json\n{\"is_correct\": true, \"confidence\": 0.9}\n```",
+	} {
+		got, err := parseValidatorJSON(text)
+		if err != nil {
+			t.Fatalf("parseValidatorJSON(%q): %v", text, err)
+		}
+		if !got.IsCorrect || got.Confidence != 0.9 {
+			t.Errorf("parseValidatorJSON(%q) = %+v", text, got)
+		}
+	}
+	if _, err := parseValidatorJSON("no json here"); err == nil {
+		t.Error("expected error for text without JSON")
+	}
+}

@@ -76,8 +76,8 @@ internal/
     realtime/pubsub/     Redis Pub/Sub multiplexer
     realtime/streams/    Redis Streams multiplexer
     realtime/ws/         WebSocket channel wrapper
-    storage/             GCS and Minio adapters (+ factory/); two buckets: raw (staging) and compressed (serving)
-    queue/               Pull consumers for raw-bucket upload notifications (+ factory/): GCS Pub/Sub pull subscription, or a Redis-list-backed reliable queue fed by Minio's Redis notification target
+    storage/             GCS, S3 and Minio adapters (+ factory/); two buckets: raw (staging) and compressed (serving)
+    queue/               Pull consumers for raw-bucket upload notifications (+ factory/): GCS Pub/Sub pull subscription, S3→SQS queue, or a Redis-list-backed reliable queue fed by Minio's Redis notification target
   transport/
     http/          Gin HTTP controllers (auth, user, pack, pack_draft, room)
     ws/            WebSocket handlers (lobby, room)
@@ -212,7 +212,7 @@ Moderator `skip_round` is a manual, synchronous bypass of the "round ends" auto-
 
 ### Config
 
-All configuration comes from environment variables. Required vars: `MONGO_*`, `REDIS_HOST/PORT`, `STORAGE_PROVIDER`, `RAW_BUCKET_NAME`, `PROCESSED_BUCKET_NAME`, `FRONTEND_URL`, `HOST`, `PORT`. When `STORAGE_PROVIDER=gcs`, also required: `GCP_PROJECT_ID`, `PUBSUB_SUBSCRIPTION_ID` (the pull subscription attachment-processor consumes raw-bucket upload notifications from). Optional: `TIME_TO_BET` (default 60s), `TIME_TO_PASS` (default 60s), `QUESTION_DEMO_DURATION` (default 5s), `IDLE_ROOM_TTL` (default 600s), `IMPORT_MAX_CONCURRENT_PER_POD` (default 2).
+All configuration comes from environment variables. Required vars: `MONGO_*`, `REDIS_HOST/PORT`, `STORAGE_PROVIDER`, `RAW_BUCKET_NAME`, `PROCESSED_BUCKET_NAME`, `FRONTEND_URL`, `HOST`, `PORT`. When `STORAGE_PROVIDER=gcs`, also required: `GCP_PROJECT_ID`, `PUBSUB_SUBSCRIPTION_ID` (the pull subscription attachment-processor consumes raw-bucket upload notifications from). When `STORAGE_PROVIDER=s3`: `AWS_REGION`, `SQS_QUEUE_URL`. `VALIDATOR_TYPE` is `claude-vertex` or `claude-bedrock` (Claude via Vertex AI or Amazon Bedrock; `CLAUDE_MODEL_ID`, `CLAUDE_SYSTEM_PROMPT`), `gemini`, `ollama`, or empty. Optional: `TIME_TO_BET` (default 60s), `TIME_TO_PASS` (default 60s), `QUESTION_DEMO_DURATION` (default 5s), `IDLE_ROOM_TTL` (default 600s), `IMPORT_MAX_CONCURRENT_PER_POD` (default 2).
 
 ### SIQ import limits
 

@@ -81,14 +81,26 @@ func provideLobbyEventsProcessorGetter(roomCache cache.Room, pubsubGetter PubSub
 	return eventsprocessor.NewLobbyEventsProcessorGetter(pubsubGetter.ChannelGetter, roomCache)
 }
 
-func provideAnswerValidator(cfg *config.Config) ivalidator.AnswerValidator {
+func provideAnswerValidator(cfg *config.Config, compressedStorage storage.Compressed) ivalidator.AnswerValidator {
 	switch cfg.ValidatorType {
 	case "ollama":
 		return infravalidator.NewLocalLLMValidator(cfg.OllamaURL, cfg.OllamaSystemPrompt)
 	case "gemini":
-		v, err := infravalidator.NewGeminiValidator(context.Background(), cfg.GCPProjectID, cfg.GCPLocation, cfg.GeminiSystemPrompt)
+		v, err := infravalidator.NewGeminiValidator(context.Background(), cfg.GCPProjectID, cfg.GCPLocation, cfg.GeminiSystemPrompt, cfg.CompressedBucketName)
 		if err != nil {
 			panic("failed to initialize Gemini validator: " + err.Error())
+		}
+		return v
+	case "claude-vertex":
+		v, err := infravalidator.NewVertexClaudeValidator(context.Background(), cfg.GCPProjectID, cfg.GCPLocation, cfg.ClaudeModelID, cfg.ClaudeSystemPrompt, compressedStorage.Storage)
+		if err != nil {
+			panic("failed to initialize Claude (Vertex) validator: " + err.Error())
+		}
+		return v
+	case "claude-bedrock":
+		v, err := infravalidator.NewBedrockClaudeValidator(context.Background(), cfg.AWSRegion, cfg.ClaudeModelID, cfg.ClaudeSystemPrompt, compressedStorage.Storage)
+		if err != nil {
+			panic("failed to initialize Claude (Bedrock) validator: " + err.Error())
 		}
 		return v
 	default:

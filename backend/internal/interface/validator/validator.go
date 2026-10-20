@@ -13,7 +13,7 @@ const (
 type Question struct {
 	Text           string
 	CorrectAnswers []string
-	MediaURI       string // gs:// URI; empty for text-only questions
+	MediaKey       string // object key in the compressed bucket; empty for text-only questions
 	MediaType      MediaType
 	MediaMIMEType  string
 }
