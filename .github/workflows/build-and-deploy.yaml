@@ -7,6 +7,7 @@ on:
       - 'README.md'
       - '.github/workflows/**'
       - 'docs/**'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,14 +18,15 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  GAR_LOCATION: europe-central2
-  GAR_REPO:  sgame-images
-  PROJECT_ID: smart-altar-496311-p4
-  VM_NAME: instance-20260515-165938
-  VM_ZONE: europe-central2-c
+  GAR_LOCATION: ${{ vars.GCP_REGION }}
+  GAR_REPO: sgame-images
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  VM_NAME: ${{ vars.GCP_VM_NAME }}
+  VM_ZONE: ${{ vars.GCP_VM_ZONE }}
 
 jobs:
   ci:
+    if: vars.DEPLOY_TARGET != 'aws'
     uses: ./.github/workflows/ci.yml
 
   build-and-push:
@@ -95,5 +97,8 @@ jobs:
     - name: Deploy
       run: |
         gcloud compute ssh ${{ env.VM_NAME }} \
+          --project=${{ env.PROJECT_ID }} \
           --zone=${{ env.VM_ZONE }} \
-          --command="bash /opt/sgame/linux-service/stop-app.sh && bash /opt/sgame/linux-service/start-app.sh"
+          --tunnel-through-iap \
+          --quiet \
+          --command="sudo systemctl restart sgame"

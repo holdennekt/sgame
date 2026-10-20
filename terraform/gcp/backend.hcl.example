@@ -1,0 +1,2 @@
+bucket = "your-new-project-id-tfstate"
+prefix = "sgame"

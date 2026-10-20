@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# Runs as root on every boot (GCE startup-script). Every step is idempotent.
+set -euo pipefail
+exec > >(tee -a /var/log/sgame-startup.log) 2>&1
+echo "=== sgame startup $(date -u +%FT%TZ)"
+
+export DEBIAN_FRONTEND=noninteractive
+
+DOMAIN="${domain}"
+REPO_URL="${repo_url}"
+ENV_SECRET="${env_secret}"
+DESEC_SECRET="${desec_secret}"
+LE_EMAIL="${letsencrypt_email}"
+
+DATA_DEVICE="/dev/disk/by-id/google-sgame-data"
+DATA_MOUNT="/mnt/disks/sgame-data"
+APP_DIR="/opt/sgame"
+
+META="http://metadata.google.internal/computeMetadata/v1"
+meta() { curl -sf -H "Metadata-Flavor: Google" "$META/$1"; }
+
+# --- data disk: Docker data-root and TLS certs live here, so the VM is disposable ---
+if [ ! -b "$DATA_DEVICE" ]; then
+  echo "data disk $DATA_DEVICE not found" >&2
+  exit 1
+fi
+if ! blkid "$DATA_DEVICE" >/dev/null 2>&1; then
+  mkfs.ext4 -m 0 -F -E lazy_itable_init=0,lazy_journal_init=0,discard "$DATA_DEVICE"
+fi
+mkdir -p "$DATA_MOUNT"
+DATA_UUID="$(blkid -s UUID -o value "$DATA_DEVICE")"
+grep -q "$DATA_UUID" /etc/fstab || echo "UUID=$DATA_UUID $DATA_MOUNT ext4 discard,defaults,nofail 0 2" >> /etc/fstab
+mountpoint -q "$DATA_MOUNT" || mount "$DATA_MOUNT"
+mkdir -p "$DATA_MOUNT/docker" "$DATA_MOUNT/letsencrypt"
+
+if [ ! -e /etc/letsencrypt ]; then
+  ln -s "$DATA_MOUNT/letsencrypt" /etc/letsencrypt
+fi
+
+# --- Docker (data-root must be configured before the first start) ---
+mkdir -p /etc/docker
+cat > /etc/docker/daemon.json <<JSON
+{
+  "data-root": "$DATA_MOUNT/docker",
+  "log-driver": "json-file",
+  "log-opts": { "max-size": "20m", "max-file": "3" }
+}
+JSON
+
+if ! command -v docker >/dev/null 2>&1; then
+  apt-get update
+  apt-get install -y ca-certificates curl gnupg git python3-venv
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+  chmod a+r /etc/apt/keyrings/docker.asc
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
+  apt-get update
+  apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+fi
+systemctl enable --now docker
+
+# --- app user and code ---
+if ! id sgame >/dev/null 2>&1; then
+  useradd --create-home --home-dir "$APP_DIR" --shell /bin/bash sgame
+fi
+usermod -aG docker sgame
+
+if [ ! -d "$APP_DIR/.git" ]; then
+  sudo -u sgame git -C "$APP_DIR" init -q -b main
+  sudo -u sgame git -C "$APP_DIR" remote add origin "$REPO_URL"
+fi
+sudo -u sgame git -C "$APP_DIR" fetch --depth 1 origin main
+sudo -u sgame git -C "$APP_DIR" reset --hard origin/main
+
+# --- secrets from Secret Manager (VM service account) ---
+TOKEN="$(meta instance/service-accounts/default/token | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])')"
+PROJECT="$(meta project/project-id)"
+
+secret() {
+  curl -sf -H "Authorization: Bearer $TOKEN" \
+    "https://secretmanager.googleapis.com/v1/projects/$PROJECT/secrets/$1/versions/latest:access" |
+    python3 -c 'import sys,json,base64; sys.stdout.write(base64.b64decode(json.load(sys.stdin)["payload"]["data"]).decode())'
+}
+
+secret "$ENV_SECRET" > "$APP_DIR/.env.tmp"
+chown root:sgame "$APP_DIR/.env.tmp"
+chmod 0640 "$APP_DIR/.env.tmp"
+mv "$APP_DIR/.env.tmp" "$APP_DIR/.env"
+
+# --- TLS: Let's Encrypt via deSEC DNS-01 ---
+if ! DESEC_TOKEN="$(secret "$DESEC_SECRET")"; then
+  echo "Secret $DESEC_SECRET has no version yet. Add it, then re-run:"
+  echo "  sudo google_metadata_script_runner startup"
+  exit 0
+fi
+
+if [ ! -x /opt/certbot/bin/certbot ]; then
+  python3 -m venv /opt/certbot
+  /opt/certbot/bin/pip install --quiet certbot certbot-dns-desec
+fi
+
+install -d -m 0700 /etc/letsencrypt/secrets
+umask 077
+echo "dns_desec_token = $DESEC_TOKEN" > /etc/letsencrypt/secrets/desec.ini
+umask 022
+
+if [ ! -e "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+  EMAIL_ARGS=(--register-unsafely-without-email)
+  if [ -n "$LE_EMAIL" ]; then
+    EMAIL_ARGS=(--email "$LE_EMAIL")
+  fi
+  /opt/certbot/bin/certbot certonly --non-interactive --agree-tos "$${EMAIL_ARGS[@]}" \
+    --authenticator dns-desec \
+    --dns-desec-credentials /etc/letsencrypt/secrets/desec.ini \
+    -d "$DOMAIN"
+fi
+
+cat > /etc/systemd/system/certbot-renew.service <<UNIT
+[Unit]
+Description=Renew Let's Encrypt certificates
+
+[Service]
+Type=oneshot
+ExecStart=/opt/certbot/bin/certbot renew --quiet --deploy-hook "docker compose -f $APP_DIR/docker-compose.prod.yaml exec -T nginx nginx -s reload"
+UNIT
+
+cat > /etc/systemd/system/certbot-renew.timer <<UNIT
+[Unit]
+Description=Twice-daily certificate renewal check
+
+[Timer]
+OnCalendar=*-*-* 03,15:17:00
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+UNIT
+
+# --- app service ---
+cp "$APP_DIR/linux-service/sgame.service" /etc/systemd/system/sgame.service
+systemctl daemon-reload
+systemctl enable --now certbot-renew.timer
+systemctl enable sgame.service
+
+# Images only exist after the first CI deploy, so a failed start here is expected on a fresh project.
+systemctl start --no-block sgame.service || true
+echo "=== sgame startup done"
