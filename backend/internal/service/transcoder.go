@@ -22,8 +22,7 @@ const (
 // only downscales, never upscales; -2 keeps the height even for libx264
 var downscaleFilter = fmt.Sprintf("scale='min(%d,iw)':-2", maxImageSide)
 
-// ContentError marks deterministic decode failures: retrying identical bytes
-// fails identically.
+// ContentError marks deterministic decode failures: retrying the same bytes fails the same way.
 type ContentError struct {
 	Err error
 }
@@ -48,11 +47,7 @@ func runFFmpeg(ctx context.Context, args ...string) error {
 	return nil
 }
 
-// -loop 0 keeps animated sources (gif, animated webp, apng) animated.
-// Anything else is capped to its first frame: ffmpeg's demuxer can surface
-// multiple frames for formats that aren't really animations — e.g. a
-// phone's "motion photo" JPEG with a video clip appended after the still
-// image — which -loop 0 would otherwise mux into a garbled animated WebP.
+// -loop 0 keeps real animations animated; others get one frame, so e.g. motion-photo JPEGs don't become garbled WebPs.
 func transcodeImage(ctx context.Context, inPath, outPath string, animated bool) error {
 	args := []string{"-i", inPath, "-vf", downscaleFilter}
 	if !animated {

@@ -9,8 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// ---- helpers ----
-
 func ptr[T any](v T) *T { return &v }
 
 func noopAttachmentUrl(key string) (string, error) { return "http://cdn/" + key, nil }
@@ -149,8 +147,6 @@ func withPaused(state RoomState) func(*Room) {
 	}
 }
 
-// ---- 1. StartAnswer ----
-
 func TestSubmitAnswer_WrongState_ReturnsError(t *testing.T) {
 	r := buildRoom(func(r *Room) { r.State = Betting })
 	err := r.StartAnswer("p1")
@@ -261,8 +257,6 @@ func TestSubmitAnswer_NilTextAndAttachment_DoesNotPanic(t *testing.T) {
 	assert.NotPanics(t, func() { _ = r.StartAnswer("p1") })
 }
 
-// ---- 2. ValidateAnswer ----
-
 func TestValidateAnswer_WrongState(t *testing.T) {
 	r := buildRoom()
 	err := r.ValidateAnswer("host1", true)
@@ -319,8 +313,6 @@ func TestValidateAnswer_SystemCanValidate(t *testing.T) {
 	err := r.ValidateAnswer(SYSTEM, true)
 	assert.NoError(t, err)
 }
-
-// ---- 3. SelectQuestion ----
 
 func TestSelectQuestion_Guards(t *testing.T) {
 	pack := buildPack()
@@ -461,8 +453,6 @@ func TestSelectQuestion_CatInBag_NoEligibleRecipient_AssignsToSelf(t *testing.T)
 	assert.Equal(t, "p1", r.AnsweringPlayer.Id)
 }
 
-// ---- 4. Pause ----
-
 func TestPause_Guards(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -537,8 +527,6 @@ func TestPause_ShowingQuestion_CapturesTimerProgress(t *testing.T) {
 	assert.NoError(t, err)
 	assert.InDelta(t, 0.5, r.CurrentQuestion.TimerLastProgress, 0.1)
 }
-
-// ---- 5. Unpause ----
 
 func TestUnpause_Guards(t *testing.T) {
 	tests := []struct {
@@ -659,8 +647,6 @@ func TestUnpause_ClearsPausedState(t *testing.T) {
 	assert.Nil(t, r.PausedState.PausedAt)
 }
 
-// ---- 6. UnpauseSystem ----
-
 func TestUnpauseSystem_StaleTimestamp_ReturnsError(t *testing.T) {
 	pausedAt := time.Now().Add(-100 * time.Millisecond)
 	r := buildRoom(func(r *Room) {
@@ -686,8 +672,6 @@ func TestUnpauseSystem_MatchingTimestamp_Unpauses(t *testing.T) {
 	assert.False(t, r.PausedState.Paused)
 	assert.True(t, r.CurrentQuestion.TimerEndsAt.After(orig))
 }
-
-// ---- 7. PlaceBet ----
 
 func TestPlaceBet_Guards(t *testing.T) {
 	tests := []struct {
@@ -789,20 +773,12 @@ func TestPlaceBet_OnlyOnePlayerEligible_SingleBetTriggers(t *testing.T) {
 	assert.Equal(t, "p1", r.AnsweringPlayer.Id)
 }
 
-// ---- 8. PlaceBetsAuto (bug proof) ----
-
-// TestPlaceBetsAuto_SetsZeroBetOnRoomPlayers proves the bug fix.
-// Setup: p1 has a positive bet already placed, p2 has nil bet (needs auto-zero).
-// After PlaceBetsAuto, p1 wins (highest bet), state = Answering.
-// EndQuestion is NOT called, so p2's BetAmount is still visible.
-// Bug: old code wrote canBet[i].BetAmount (a copy), leaving r.Players[1].BetAmount nil.
-// Fix: write directly to r.Players[i].BetAmount.
+// Regression: PlaceBetsAuto must zero nil bets on r.Players, not on a copy.
 func TestPlaceBetsAuto_SetsZeroBetOnRoomPlayers(t *testing.T) {
 	r := buildRoom(func(r *Room) {
 		r.State = Betting
 		r.CurrentQuestion = &CurrentQuestion{}
 		r.Players[0].BetAmount = ptr(300) // p1 already bet positively
-		// p2 BetAmount is nil → should be auto-zeroed on r.Players, not a local copy
 	})
 	r.PlaceBetsAuto()
 	assert.Equal(t, Answering, r.State) // p1 wins, EndQuestion not called
@@ -815,7 +791,6 @@ func TestPlaceBetsAuto_PlayerWithPositiveBet_GetsQuestion(t *testing.T) {
 		r.State = Betting
 		r.CurrentQuestion = &CurrentQuestion{}
 		r.Players[0].BetAmount = ptr(300)
-		// p2 gets auto-zero
 	})
 	r.PlaceBetsAuto()
 	assert.Equal(t, Answering, r.State)
@@ -832,8 +807,6 @@ func TestPlaceBetsAuto_AllZeroBets_EndsQuestion(t *testing.T) {
 	r.PlaceBetsAuto()
 	assert.Equal(t, SelectingQuestion, r.State)
 }
-
-// ---- 9. PlaceFinalRoundBet ----
 
 func withFinalRoundBetting() func(*Room) {
 	bettingEndsAt := time.Now().Add(60 * time.Second)
@@ -924,8 +897,6 @@ func TestPlaceFinalRoundBet_PartialBets_DoesNotAdvanceState(t *testing.T) {
 	assert.Equal(t, FinalRoundBetting, r.State)
 }
 
-// ---- 10. StartNextRegularRound ----
-
 func TestStartNextRegularRound_FirstRound_FromWaiting(t *testing.T) {
 	pack := buildPack()
 	r := buildRoom(func(r *Room) { r.State = WaitingForStart })
@@ -968,8 +939,6 @@ func TestStartNextRegularRound_PopulatesCurrentRoundQuestions(t *testing.T) {
 	assert.Len(t, r.CurrentRoundQuestions, len(pack.Rounds[0].Categories))
 }
 
-// ---- 11. AnyAvailableQuestions ----
-
 func TestAnyAvailableQuestions_AllPlayed_ReturnsFalse(t *testing.T) {
 	r := buildRoom(func(r *Room) {
 		r.CurrentRoundQuestions = CurrentRoundQuestions{
@@ -995,8 +964,6 @@ func TestAnyAvailableQuestions_EmptyBoard_ReturnsFalse(t *testing.T) {
 	r := buildRoom(func(r *Room) { r.CurrentRoundQuestions = CurrentRoundQuestions{} })
 	assert.False(t, r.AnyAvailableQuestions())
 }
-
-// ---- 12. PassQuestion ----
 
 func withPassingState() func(*Room) {
 	return func(r *Room) {
@@ -1078,8 +1045,6 @@ func TestPassQuestion_HostCanPass(t *testing.T) {
 	assert.Equal(t, Answering, r.State)
 }
 
-// ---- 13. PassQuestionAuto ----
-
 func TestPassQuestionAuto_ConnectedOtherPlayers_PicksOne(t *testing.T) {
 	r := buildRoom(func(r *Room) {
 		r.State = Passing
@@ -1102,8 +1067,6 @@ func TestPassQuestionAuto_NoOtherConnected_KeepsCurrent(t *testing.T) {
 	r.PassQuestionAuto()
 	assert.Equal(t, "p1", r.AnsweringPlayer.Id)
 }
-
-// ---- 14. SkipQuestion ----
 
 func TestSkipQuestion_WrongState(t *testing.T) {
 	r := buildRoom()
@@ -1140,8 +1103,6 @@ func TestSkipQuestion_ValidStates_EndsQuestion(t *testing.T) {
 	}
 }
 
-// ---- 15. ChangeScore ----
-
 func TestChangeScore_NotHost(t *testing.T) {
 	r := buildRoom()
 	err := r.ChangeScore("p1", "p2", 500)
@@ -1163,8 +1124,6 @@ func TestChangeScore_ValidChange(t *testing.T) {
 	assert.Equal(t, 9999, r.Players[0].Score)
 }
 
-// ---- 16. EndQuestion ----
-
 func TestEndQuestion_ClearsAllFields(t *testing.T) {
 	r := buildRoom(func(r *Room) {
 		r.State = ShowingQuestion
@@ -1182,8 +1141,6 @@ func TestEndQuestion_ClearsAllFields(t *testing.T) {
 	assert.Nil(t, r.Players[0].BetAmount)
 	assert.Nil(t, r.Players[1].BetAmount)
 }
-
-// ---- 17. StartFinalRound ----
 
 func TestStartFinalRound_NoPositiveScorePlayers_ReturnsFalse(t *testing.T) {
 	pack := buildPack()
@@ -1220,8 +1177,6 @@ func TestStartFinalRound_SingleCategory_SkipsToFinalRoundBetting(t *testing.T) {
 	assert.Equal(t, FinalRoundBetting, r.State)
 	assert.NotNil(t, r.FinalRoundState.BettingEndsAt)
 }
-
-// ---- 18. SubmitFinalRoundAnswer ----
 
 func withShowingFinalRound() func(*Room) {
 	timerEndsAt := time.Now().Add(60 * time.Second)
@@ -1269,8 +1224,6 @@ func TestSubmitFinalRoundAnswer_LastAnswer_EndsQuestion(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, ValidatingFinalRoundAnswers, r.State)
 }
-
-// ---- 19. ValidateFinalRoundAnswer ----
 
 func withValidatingFinalRound() func(*Room) {
 	return func(r *Room) {
@@ -1333,8 +1286,6 @@ func TestValidateFinalRoundAnswer_LastPlayer_EndsGame(t *testing.T) {
 	assert.Equal(t, GameOver, r.State)
 }
 
-// ---- 20. EndGame ----
-
 func TestEndGame_SetsGameOverAndClearsTimers(t *testing.T) {
 	timerEndsAt := time.Now().Add(30 * time.Second)
 	r := buildRoom(func(r *Room) {
@@ -1351,8 +1302,6 @@ func TestEndGame_SetsGameOverAndClearsTimers(t *testing.T) {
 		assert.Equal(t, 0, *p.BetAmount)
 	}
 }
-
-// ---- 21. Role helpers ----
 
 func TestIsUserModerator(t *testing.T) {
 	r := buildRoom()
@@ -1385,8 +1334,6 @@ func TestIsUserBanned(t *testing.T) {
 	assert.False(t, r.IsUserBanned("p1"))
 	assert.False(t, r.IsUserBanned("nobody"))
 }
-
-// ---- 22. continueRegularQuestion (via ValidateAnswer) ----
 
 func TestContinueRegularQuestion_DuringReveal_ReturnsToRevealingQuestion(t *testing.T) {
 	origTimerStartsAt := time.Now().Add(5 * time.Second)
@@ -1460,8 +1407,6 @@ func TestContinueRegularQuestion_DuringReveal_WithAttachment_ShiftsAttachmentTim
 	assert.True(t, r.CurrentQuestion.TimerStartsAt.After(origTimerStart))
 }
 
-// ---- 23. StartRegularQuestion ----
-
 func TestStartRegularQuestion_NoAttachment_SetsShowingState(t *testing.T) {
 	timerStartsAt := time.Now().Add(1 * time.Second)
 	r := buildRoom(func(r *Room) {
@@ -1492,8 +1437,6 @@ func TestStartRegularQuestion_WithAttachment_SetsAttachmentProgress(t *testing.T
 	assert.Equal(t, ShowingQuestion, r.State)
 }
 
-// ---- 24. StartGame ----
-
 func TestStartGame_SetsCurrentPlayerAndStartsRound(t *testing.T) {
 	pack := buildPack()
 	r := buildRoom(func(r *Room) { r.State = WaitingForStart })
@@ -1504,8 +1447,6 @@ func TestStartGame_SetsCurrentPlayerAndStartsRound(t *testing.T) {
 	assert.NotNil(t, r.CurrentRoundName)
 	assert.Equal(t, "Round 1", *r.CurrentRoundName)
 }
-
-// ---- 25. GetProjection ----
 
 func TestGetProjection_Moderator_ReturnsRoomModerator(t *testing.T) {
 	r := buildRoom()
@@ -1521,8 +1462,7 @@ func TestGetProjection_Player_ReturnsRoomPlayer(t *testing.T) {
 
 func TestGetProjection_Outsider_ReturnsRoomPlayer(t *testing.T) {
 	r := buildRoom()
-	// Non-members (spectators) receive the same live player view as players —
-	// board, scores, timers — never the lobby card or host view.
+	// Spectators get the same live player view as players, never the lobby card or host view.
 	_, ok := r.GetProjection("nobody", 0).(RoomPlayer)
 	assert.True(t, ok)
 }
@@ -1533,8 +1473,6 @@ func TestNewRoomLobby_ReturnsLobbyCard(t *testing.T) {
 	assert.Equal(t, r.Id, lobby.Id)
 	assert.Equal(t, r.Name, lobby.Name)
 }
-
-// ---- 26. GetAvailableFinalRoundCategories ----
 
 func TestGetAvailableFinalRoundCategories_ReturnsOnlyAvailable(t *testing.T) {
 	r := buildRoom(func(r *Room) {
@@ -1561,8 +1499,6 @@ func TestGetAvailableFinalRoundCategories_AllRemoved_ReturnsEmpty(t *testing.T) 
 	})
 	assert.Empty(t, r.GetAvailableFinalRoundCategories())
 }
-
-// ---- 27. RemoveFinalRoundCategory ----
 
 func withSelectingFinalRoundCategory() func(*Room) {
 	return func(r *Room) {
@@ -1687,8 +1623,6 @@ func TestRemoveFinalRoundCategory_OneCategoryLeft_AdvancesToBetting(t *testing.T
 	assert.NotNil(t, r.FinalRoundState.Question)
 }
 
-// ---- 28. PlaceFinalRoundBetsAuto ----
-
 func TestPlaceFinalRoundBetsAuto_AllNilBets_AutoZerosAndEndsGame(t *testing.T) {
 	r := buildRoom(func(r *Room) {
 		r.State = FinalRoundBetting
@@ -1714,8 +1648,6 @@ func TestPlaceFinalRoundBetsAuto_OnePositiveBet_StartsFinalQuestion(t *testing.T
 	assert.NotNil(t, r.FinalRoundState.TimerEndsAt)
 	assert.Equal(t, 0, *r.Players[1].BetAmount)
 }
-
-// ---- 29. Pause — remaining allowed states ----
 
 func TestPause_AllowedStates_SetsPausedFlag(t *testing.T) {
 	states := []struct {

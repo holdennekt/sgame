@@ -1,5 +1,4 @@
-// The attachment-processor runs the raw->compressed pipeline as its own
-// service, keeping CPU-heavy transcoding away from live game rooms.
+// The attachment-processor runs the raw->compressed pipeline as its own service, away from live game rooms.
 package main
 
 import (
@@ -89,9 +88,7 @@ func main() {
 		redisCache.NewAttemptCounter(rds),
 	)
 
-	// Its own client/pool: a blocking queue consumer can hold connections
-	// checked out for a long time, which would starve the attempt-counter
-	// calls above if they shared one pool.
+	// Own pool: blocking queue reads would otherwise starve the attempt-counter calls above.
 	queueRds := redis.NewClient(&redis.Options{
 		Addr:     cfg.RedisHost + ":" + cfg.RedisPort,
 		Username: cfg.RedisUser,

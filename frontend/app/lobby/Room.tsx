@@ -45,7 +45,6 @@ export default function RoomLobbyCard({
 
   return (
     <div className="p-3 flex flex-col gap-2.5 border-b border-border hover:bg-surface-raised transition-colors duration-150">
-      {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <p
@@ -75,7 +74,6 @@ export default function RoomLobbyCard({
         </span>
       </div>
 
-      {/* Pack */}
       <p className="text-xs text-on-surface-muted">
         <Link
           className="text-on-surface hover:text-primary transition-colors duration-150"
@@ -86,7 +84,6 @@ export default function RoomLobbyCard({
         </Link>
       </p>
 
-      {/* Avatars */}
       <div className="flex items-center gap-1 overflow-x-auto">
         {room.options.aiHost ? (
           <div className="w-7 h-7 rounded border-2 border-primary shrink-0 flex items-center justify-center bg-primary/10 text-primary">
@@ -108,7 +105,6 @@ export default function RoomLobbyCard({
         ))}
       </div>
 
-      {/* Footer */}
       <div className="flex items-center justify-between">
         <span
           className={`text-xs font-medium ${

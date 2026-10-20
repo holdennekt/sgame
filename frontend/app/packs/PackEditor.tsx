@@ -647,7 +647,6 @@ export default function PackEditor({
     <>
       <div className="min-h-0 h-full flex flex-col gap-3">
         <div className="flex flex-col gap-1.5 shrink-0">
-          {/* Back navigation + save status */}
           {backHref && (
             <div className="flex items-center justify-between">
               <Link
@@ -673,7 +672,6 @@ export default function PackEditor({
             </div>
           )}
 
-          {/* Title + Actions */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <input
               ref={nameInputRef}
@@ -746,15 +744,12 @@ export default function PackEditor({
 
         <div className="h-px bg-border shrink-0" />
 
-        {/* ── Body ─────────────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col md:flex-row gap-3 min-h-0">
-          {/* ── Sidebar ────────────────────────────────────────────── */}
           <div
             ref={sidebarRef}
             className="w-full md:w-52 shrink-0 flex flex-col gap-3 min-h-0 max-h-48 md:max-h-none overflow-y-auto"
           >
             <div className="flex flex-col gap-1">
-              {/* Rounds header */}
               <div className="flex items-center justify-between px-1">
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-on-surface-muted">
                   Rounds
@@ -771,7 +766,6 @@ export default function PackEditor({
                 )}
               </div>
 
-              {/* Round list */}
               <div className="flex flex-col gap-0.5">
                 <DndContext
                   sensors={sensors}
@@ -892,7 +886,6 @@ export default function PackEditor({
 
             <div className="h-px bg-border shrink-0" />
 
-            {/* Final round section */}
             <div>
               <button
                 type="button"
@@ -996,7 +989,6 @@ export default function PackEditor({
 
           <div className="h-px md:h-auto md:w-px self-stretch bg-border" />
 
-          {/* ── Main panel ─────────────────────────────────────────── */}
           <div className="flex-1 min-w-0 min-h-0 overflow-y-auto">
             {!selectedCategory ? (
               <div className="h-full flex flex-col items-center justify-center gap-2 text-on-surface-muted select-none">

@@ -204,10 +204,7 @@ func (s *MinioStorage) SetContentType(ctx context.Context, key, contentType stri
 	return nil
 }
 
-// URL returns a path relative to our own domain rather than an absolute URL —
-// nginx proxies /storage/ on the same host:port the app is served on, so a
-// relative URL resolves correctly regardless of which address (localhost,
-// LAN IP, a tunnel, ...) the browser used to reach the app.
+// URL is relative to our domain: nginx proxies /storage/, so it works whatever address the browser used.
 func (s *MinioStorage) URL(ctx context.Context, key string, ttl time.Duration) (string, error) {
 	if s.publicRead && strings.HasPrefix(key, "public/") {
 		return fmt.Sprintf("/storage/%s/%s", s.bucketName, key), nil

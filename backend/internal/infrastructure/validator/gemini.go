@@ -60,9 +60,7 @@ func (v *GeminiValidator) Validate(ctx context.Context, question ivalidator.Ques
 	return result, nil
 }
 
-// buildPromptParts assembles the multimodal content parts for the model.
-// Video questions skip the media entirely — processing latency is too high for
-// a live game; the correct answers carry enough signal on their own.
+// Video media is skipped: too slow for a live game, and the correct answers carry enough signal.
 func buildPromptParts(question ivalidator.Question, mediaBucket, playerAnswer string) ([]*genai.Part, error) {
 	var parts []*genai.Part
 

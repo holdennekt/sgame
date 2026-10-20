@@ -251,7 +251,6 @@ export default function RoomPage({
           </div>
         </div>
 
-        {/* Main game panel */}
         <div
           className={`min-w-0 min-h-0 gap-2 md:flex md:flex-[3_0_0%] md:flex-col md:order-first${
             mobileTab === "game" ? " flex flex-1 flex-col" : " hidden"

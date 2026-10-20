@@ -218,7 +218,6 @@ export default function SortableQuestion({
           {question.value}
         </span>
         <div className="flex-1 min-w-0 flex flex-col gap-1">
-          {/* Primary content */}
           <div className="flex items-center gap-2 min-w-0">
             {question.text ? (
               <p className="text-sm text-on-surface truncate min-w-0">
@@ -232,7 +231,6 @@ export default function SortableQuestion({
             {attType && <AttachmentLabel type={attType} />}
           </div>
 
-          {/* Meta row */}
           <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-on-surface-muted">
             <span className="px-1.5 py-0.5 rounded-full bg-surface-raised font-medium border border-border">
               {typeLabel[question.type] ?? question.type}

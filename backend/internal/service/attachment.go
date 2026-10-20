@@ -144,9 +144,7 @@ func (s *AttachmentService) upsertDomain(ctx context.Context, oldAttachment *dom
 	return attachment, nil, nil
 }
 
-// classifyProbe derives both the coarse FileType and a concrete MIME type from
-// ffprobe's analysis of the actual file content — more reliable than guessing
-// from a filename extension, and works for misnamed or extensionless files.
+// classifyProbe derives FileType and MIME type from ffprobe's view of the content, not the file extension.
 func classifyProbe(data *ffprobe.ProbeData) (domain.FileType, string) {
 	imageMIMETypes := map[string]string{
 		"png": "image/png", "mjpeg": "image/jpeg", "jpeg": "image/jpeg",
@@ -179,10 +177,7 @@ func classifyProbe(data *ffprobe.ProbeData) (domain.FileType, string) {
 	}
 }
 
-// isAnimatedSource reports whether the probed content is a format that can
-// itself carry multiple frames (gif, animated webp, apng). Everything else
-// gets capped to its first frame during transcoding, even if ffmpeg's
-// demuxer finds more than one — see transcodeImage.
+// isAnimatedSource reports whether the format can carry multiple frames (gif, webp, apng); others get capped to one.
 func isAnimatedSource(data *ffprobe.ProbeData) bool {
 	for _, stream := range data.Streams {
 		if stream.CodecType != "video" {
@@ -196,9 +191,7 @@ func isAnimatedSource(data *ffprobe.ProbeData) bool {
 	return false
 }
 
-// containerMIMEType maps ffprobe's (often comma-separated, ambiguous) container
-// format name to a concrete MIME type, using fileType to disambiguate formats
-// ffmpeg can't tell apart from the container alone (e.g. mp4 video vs m4a audio).
+// containerMIMEType maps ffprobe's container name to a MIME type, using fileType to split e.g. mp4 video from m4a audio.
 func containerMIMEType(formatName string, fileType domain.FileType) string {
 	for name := range strings.SplitSeq(formatName, ",") {
 		switch name {

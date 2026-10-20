@@ -85,8 +85,7 @@ export const joinRoom = async (
   return resp.json();
 };
 
-// Verifies a spectator password before navigating to the room, so a wrong
-// password fails inline in the modal instead of after already navigating.
+// Checks a spectator password before navigating, so a wrong one fails inline in the modal.
 export const checkRoomPassword = async (
   id: string,
   password: string | undefined

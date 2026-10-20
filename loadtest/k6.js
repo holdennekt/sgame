@@ -1,29 +1,10 @@
-/**
- * sgame load test
- *
- * Usage:
- *   k6 run -e BASE_URL=http://localhost:8080 -e PACK_ID=<id> -e USERS=100 loadtest/k6.js
- *
- * USERS controls the number of players (not counting the host/moderator). Rooms hold
- * up to 10 players, so USERS=100 creates 10 rooms, USERS=500 → 50 rooms, etc. Each
- * room gets one extra VU for the host on top of its players.
- *
- * Each group of 11 VUs maps to one room:
- *   - VU 1, 12, 23 … → host (uses pre-created session from setup)
- *   - VU 2-11, 13-22 … → players (guest accounts)
- *
- * The host starts the game and skips every question so the rooms cycle quickly
- * and keep the pub/sub + WS infrastructure under load the whole duration.
- */
+// Load test, 11 VUs per room (1 host + 10 players): k6 run -e BASE_URL=http://localhost:8080 -e PACK_ID=<id> -e USERS=100 loadtest/k6.js
 
 import ws from "k6/ws";
 import http from "k6/http";
 import { check, sleep } from "k6";
 import { Trend, Counter, Gauge } from "k6/metrics";
 
-// ---------------------------------------------------------------------------
-// Config
-// ---------------------------------------------------------------------------
 const BASE_URL = (__ENV.BASE_URL || "http://localhost:8080").replace(/\/$/, "");
 const WS_BASE = BASE_URL.replace(/^http/, "ws");
 const PACK_ID = __ENV.PACK_ID; // required — must be a valid pack ID in the DB
@@ -33,25 +14,17 @@ const ROOMS_COUNT = Math.ceil(TOTAL_USERS / PLAYERS_PER_ROOM);
 // +1 per room for the host/moderator VU, which doesn't occupy a player slot.
 const VUS_PER_ROOM = PLAYERS_PER_ROOM + 1;
 const TOTAL_VUS = ROOMS_COUNT * VUS_PER_ROOM;
-// Safety cap for the whole run, in case a room's game hangs and never reaches
-// game_over — VUs otherwise stay connected until their game finishes naturally.
+// Safety cap in case a game hangs before game_over; VUs otherwise stay until their game ends.
 const MAX_DURATION = __ENV.MAX_DURATION || "5m";
 
 if (!PACK_ID) {
   throw new Error("PACK_ID env var is required. Set it to a valid pack ID.");
 }
 
-// ---------------------------------------------------------------------------
-// Custom metrics
-// ---------------------------------------------------------------------------
 const wsConnectTime = new Trend("ws_connect_time_ms", true);
 const wsEventsReceived = new Counter("ws_events_received");
 const activeRooms = new Gauge("active_rooms");
-// Gap between consecutive room_updated broadcasts on a socket. Since the game
-// mostly serializes state changes (one actor advances state, everyone reacts to
-// the resulting room_updated before the next action is sent), this approximates
-// end-to-end event processing latency without needing to correlate a specific
-// send to a specific broadcast.
+// Gap between room_updated broadcasts on a socket; approximates event latency since state changes are serialized.
 const wsRoomUpdatedGap = new Trend("ws_room_updated_gap_ms", true);
 
 const ROOM_UPDATED_TRANSITIONS = [
@@ -59,13 +32,10 @@ const ROOM_UPDATED_TRANSITIONS = [
   "selecting_question->passing", // CatInBag, 2+ eligible players
   "selecting_question->answering", // CatInBag, exactly 1 eligible player
   "selecting_question->betting", // Auction, 1+ eligible bettor
-  // Round boundary: EndQuestion() (sync, inside ValidateAnswer) lands on
-  // selecting_question, then StartNextRegularRound (async, via the QuestionEnded
-  // internal event) advances to the next round and re-enters the same state
+  // Round boundary: EndQuestion lands here, then StartNextRegularRound re-enters it for the next round
   "selecting_question->selecting_question",
   "selecting_question->selecting_final_round_category", // round exhausted, final round has 2+ categories
-  // StartFinalRound sets SelectingFinalRoundCategory then, in the same transaction,
-  // immediately calls chooseFinalRoundCategory if only one category exists
+  // StartFinalRound skips category selection when only one category exists
   "selecting_question->final_round_betting", // round exhausted, final round has exactly 1 category
   "selecting_question->game_over", // round exhausted, nobody eligible for final round
   "revealing_question->showing_question", // reveal timer elapses, nobody answered early
@@ -85,8 +55,7 @@ const ROOM_UPDATED_TRANSITIONS = [
   "validating_final_round_answers->game_over", // last player validated
 ];
 
-// No real bar (p95<999999 always passes) — these exist purely to make k6
-// print a per-transition breakdown of ws_room_updated_gap_ms in the summary.
+// No real threshold: only makes k6 print a per-transition breakdown of ws_room_updated_gap_ms.
 function roomUpdatedTransitionThresholds() {
   return Object.fromEntries(
     ROOM_UPDATED_TRANSITIONS.map((t) => [
@@ -96,9 +65,6 @@ function roomUpdatedTransitionThresholds() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// k6 options
-// ---------------------------------------------------------------------------
 export const options = {
   scenarios: {
     game_session: {
@@ -116,9 +82,6 @@ export const options = {
   },
 };
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 function jsonHeaders(cookie) {
   const h = { "Content-Type": "application/json" };
   if (cookie) h["Cookie"] = `sessionId=${cookie}`;
@@ -134,9 +97,7 @@ function sendWS(socket, event, payload) {
   socket.send(JSON.stringify({ event, payload: payload || {} }));
 }
 
-// ---------------------------------------------------------------------------
-// setup() — runs once; creates host accounts + rooms
-// ---------------------------------------------------------------------------
+// setup() runs once: creates host accounts and rooms.
 export function setup() {
   if (!PACK_ID) throw new Error("PACK_ID is required");
 
@@ -159,7 +120,6 @@ export function setup() {
     }
     const hostUserId = regRes.json("userId");
 
-    // Create room
     const createRes = http.post(
       `${BASE_URL}/api/rooms/`,
       JSON.stringify({
@@ -205,9 +165,6 @@ export function setup() {
   return rooms;
 }
 
-// ---------------------------------------------------------------------------
-// VU function
-// ---------------------------------------------------------------------------
 export default function (rooms) {
   if (!rooms || rooms.length === 0) {
     console.error("no rooms from setup, aborting VU");
@@ -227,9 +184,6 @@ export default function (rooms) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Host behaviour
-// ---------------------------------------------------------------------------
 function runAsHost(cookie, roomId) {
   // Wait briefly so player VUs have time to join before the game starts
   sleep(4);
@@ -276,8 +230,7 @@ function runAsHost(cookie, roomId) {
             break;
 
           case "passing": {
-            // Cat in the bag — instantly pass to a random connected player
-            // other than the one who selected it, so the game keeps moving.
+            // Cat in the bag: pass to a random other connected player so the game keeps moving
             const candidates = (room.players || []).filter(
               (p) => p.isConnected && p.id !== room.currentPlayer,
             );
@@ -341,11 +294,7 @@ function runAsHost(cookie, roomId) {
   check(res, { "host ws connected": (r) => r && r.status === 101 });
 }
 
-// ---------------------------------------------------------------------------
-// Player behaviour
-// ---------------------------------------------------------------------------
 function runAsPlayer(roomId, playerIndex) {
-  // Create guest session
   const guestRes = http.post(
     `${BASE_URL}/api/guest`,
     JSON.stringify({ name: `LT_P${__VU}_${__ITER}` }),
@@ -357,7 +306,6 @@ function runAsPlayer(roomId, playerIndex) {
 
   const userId = guestRes.json("userId");
 
-  // Join the room
   const joinRes = http.patch(`${BASE_URL}/api/rooms/${roomId}/join`, null, {
     headers: jsonHeaders(cookie),
   });
@@ -454,9 +402,7 @@ function runAsPlayer(roomId, playerIndex) {
   check(res, { "player ws connected": (r) => r && r.status === 101 });
 }
 
-// ---------------------------------------------------------------------------
-// hostSelectQuestion — picks the first unplayed question and selects it
-// ---------------------------------------------------------------------------
+// Selects the first unplayed question of the current round.
 function hostSelectQuestion(socket, room) {
   const questions = room.currentRoundQuestions;
   if (!questions) return;
@@ -471,9 +417,7 @@ function hostSelectQuestion(socket, room) {
   // All questions in this round played — server will auto-advance to next round or final
 }
 
-// ---------------------------------------------------------------------------
-// teardown — deletes host accounts (guest players expire via idle TTL)
-// ---------------------------------------------------------------------------
+// Deletes host accounts; guest players expire via idle TTL.
 export function teardown(rooms) {
   if (!rooms || rooms.length === 0) return;
 

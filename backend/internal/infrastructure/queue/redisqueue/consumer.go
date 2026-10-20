@@ -42,8 +42,7 @@ func (c *Consumer) Consume(ctx context.Context, handler func(ctx context.Context
 	return nil
 }
 
-// reclaim requeues anything left in processingKey by a prior ungraceful
-// shutdown, oldest-first, ahead of whatever arrived while it was down.
+// reclaim requeues what an ungraceful shutdown left in processingKey, ahead of newer messages.
 func (c *Consumer) reclaim(ctx context.Context) error {
 	for {
 		err := c.rds.RPopLPush(ctx, processingKey, queueKey).Err()

@@ -153,7 +153,6 @@ export default function CategoryEditor({
 
   return (
     <div className="h-full flex flex-col gap-3">
-      {/* Category name + comment */}
       <div className="shrink-0 flex flex-col gap-1.5">
         <div className="flex items-center gap-1.5">
           <input
@@ -250,7 +249,6 @@ export default function CategoryEditor({
         />
       </div>
 
-      {/* Questions */}
       {questions.length === 0 && readOnly ? (
         <div className="flex-1 flex items-center justify-center text-on-surface-muted">
           <p className="text-sm">No questions</p>

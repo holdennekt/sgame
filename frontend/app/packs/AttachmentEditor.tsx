@@ -140,7 +140,6 @@ export default function AttachmentEditor({
     <div className="flex flex-col gap-1.5">
       <span className={labelCls}>Attachment</span>
 
-      {/* Tab switcher */}
       <div className="flex rounded-lg border border-border overflow-hidden">
         {tabs.map((t) => {
           const active = attachment.kind === t;
@@ -167,7 +166,6 @@ export default function AttachmentEditor({
         })}
       </div>
 
-      {/* Tab content */}
       {attachment.kind === "existing" && (
         <AttachmentPreview attachment={attachment} />
       )}

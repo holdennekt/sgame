@@ -49,9 +49,7 @@ func deleteAttachmentObjects(ctx context.Context, raw storage.Raw, compressed st
 	}
 }
 
-// resolveCreator returns the current User for id, falling back to a "Deleted
-// user" placeholder if the account no longer exists.
-// Cache collapses repeat lookups for the same creator across a page of results.
+// resolveCreator returns the User for id or a "Deleted user" placeholder; cache dedupes lookups across a page.
 func resolveCreator(ctx context.Context, userRepository repository.User, cache map[string]domain.User, id string) domain.User {
 	if cached, ok := cache[id]; ok {
 		return cached

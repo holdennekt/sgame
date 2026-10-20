@@ -100,8 +100,7 @@ func isExactMatch(correctAnswers []string, playerAnswer string) bool {
 	return false
 }
 
-// resolveIsCorrect judges playerAnswer against iQuestion, checking for an
-// exact match before falling back to the AI validator
+// resolveIsCorrect checks for an exact match before falling back to the AI validator.
 func resolveIsCorrect(validator ivalidator.AnswerValidator, cfg *config.Config, roomId string, iQuestion ivalidator.Question, playerAnswer string) bool {
 	if isExactMatch(iQuestion.CorrectAnswers, playerAnswer) {
 		return true

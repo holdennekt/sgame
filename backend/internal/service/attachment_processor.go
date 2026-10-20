@@ -34,8 +34,7 @@ func DraftAttachmentsChannel(draftId string) string {
 	return fmt.Sprintf("draft:%s:attachments", draftId)
 }
 
-// AttachmentProcessorService handles raw-bucket upload notifications, which
-// are delivered at least once — every step must stay idempotent.
+// AttachmentProcessorService handles at-least-once upload notifications, so every step must stay idempotent.
 type AttachmentProcessorService struct {
 	packDraftRepo     repository.PackDraft
 	packRepo          repository.Pack
@@ -56,8 +55,7 @@ func NewAttachmentProcessorService(
 	return &AttachmentProcessorService{packDraftRepo, packRepo, rawStorage, compressedStorage, channels, attempts}
 }
 
-// A nil return settles the notification; an error asks for redelivery,
-// reported to Prometheus as outcome "retry" regardless of which step failed.
+// A nil return settles the notification; an error asks for redelivery (outcome "retry" in Prometheus).
 func (s *AttachmentProcessorService) Process(ctx context.Context, key string) (err error) {
 	start := time.Now()
 	slog.Info("processing attachment", "key", key)
@@ -175,9 +173,7 @@ type processedMedia struct {
 	duration float64
 }
 
-// processMedia runs the pipeline: download raw, probe, transcode, upload the
-// compressed copy. contentErr reports deterministic media failures (terminal,
-// no retry); err reports transient failures (redeliver).
+// processMedia downloads, probes, transcodes and uploads; contentErr is terminal, err is transient.
 func (s *AttachmentProcessorService) processMedia(ctx context.Context, src storage.Storage, key string) (result processedMedia, contentErr error, err error) {
 	inPath, err := s.download(ctx, src, key)
 	if err != nil {
@@ -306,9 +302,7 @@ func (s *AttachmentProcessorService) save(ctx context.Context, doc attachmentDoc
 	for attempt := 0; ; attempt++ {
 		target := draft.GetAttachment(key)
 		if target == nil {
-			// a concurrent edit (a real user, not just this tool) removed
-			// or replaced this attachment since we located it — nothing
-			// left here to save.
+			// a concurrent edit removed or replaced this attachment since we located it
 			slog.Warn("attachment key no longer present on draft, skipping save", "key", key)
 			return nil
 		}

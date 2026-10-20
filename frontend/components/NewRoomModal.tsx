@@ -177,7 +177,6 @@ export default function NewRoomModal({
       </h3>
       <form method="dialog" action="" onSubmit={onSubmit} noValidate>
         <div className="flex flex-col sm:flex-row gap-4">
-          {/* Left column */}
           <div className="flex flex-col gap-3 w-52">
             <div className="flex flex-col gap-1.5">
               <span className={labelCls}>Room name</span>
@@ -260,7 +259,6 @@ export default function NewRoomModal({
 
           <div className="hidden sm:block w-px bg-border" />
 
-          {/* Right column */}
           <div className="flex flex-col gap-3 w-52">
             {(
               [

@@ -77,7 +77,6 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
       </div>
 
       <main className="flex flex-col sm:flex-row flex-1 min-w-0 min-h-0 sm:gap-2 sm:p-2">
-        {/* Rooms panel */}
         <div
           className={`flex-col min-w-0 min-h-0 bg-surface sm:flex sm:flex-[1_0_0%] sm:rounded-md sm:border sm:border-border ${
             mobileTab === "rooms" ? "flex flex-1" : "hidden"
@@ -114,7 +113,6 @@ export default function Lobby({ initialRooms }: { initialRooms: RoomLobby[] }) {
           />
         </div>
 
-        {/* Chat panel */}
         <div
           className={`min-w-0 min-h-0 sm:flex sm:flex-[2_0_0%] ${
             mobileTab === "chat" ? "flex flex-1" : "hidden"

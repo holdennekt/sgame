@@ -102,11 +102,7 @@ func HandleAnswerStartedMessage(ctx context.Context, server realtime.Channel, in
 
 var ErrDeferredFunctionCancelled error = errors.New("deferred function is cancelled")
 
-// isIgnorableDeferredError reports whether err is an expected outcome for a
-// deferred time.AfterFunc callback that fires after the room has moved on —
-// either the guarded state no longer matches (ErrDeferredFunctionCancelled),
-// or the room was deleted entirely (idle cleanup, game already over) before
-// the timer fired. Neither is a bug worth logging as an error.
+// isIgnorableDeferredError reports errors expected when a deferred timer fires after the room moved on or was deleted.
 func isIgnorableDeferredError(err error) bool {
 	if err == ErrDeferredFunctionCancelled {
 		return true

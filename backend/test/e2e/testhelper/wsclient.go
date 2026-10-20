@@ -66,7 +66,6 @@ func (c *WSClient) readLoop(ctx context.Context) {
 	}
 }
 
-// Send sends a message to the server.
 func (c *WSClient) Send(ctx context.Context, event domain.Event, payload any) error {
 	raw, err := json.Marshal(payload)
 	if err != nil {

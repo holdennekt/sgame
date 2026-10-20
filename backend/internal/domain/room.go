@@ -852,8 +852,7 @@ func (r *Room) BanPlayer(callerUserId, targetUserId string) error {
 	return nil
 }
 
-// captureTimerProgress saves current animation/timer progress before pausing,
-// so the client can resume reveals and countdowns from where they left off.
+// captureTimerProgress saves timer and animation progress before pausing so clients can resume where they left off.
 func (r *Room) captureTimerProgress(now time.Time) {
 	switch r.State {
 	case RevealingQuestion:
@@ -874,8 +873,7 @@ func (r *Room) captureTimerProgress(now time.Time) {
 	}
 }
 
-// shiftTimers moves all active timer deadlines forward by the elapsed pause
-// duration, so remaining time is preserved across a pause.
+// shiftTimers moves active deadlines forward by the pause duration, preserving the remaining time.
 func (r *Room) shiftTimers(elapsed time.Duration) {
 	switch r.State {
 	case RevealingQuestion:
@@ -956,7 +954,6 @@ func (r *Room) UnpauseSystem(pausedAt time.Time) error {
 }
 
 func (r *Room) EndGame() {
-	// TODO: maybe some cleanup
 	r.CurrentPlayer = nil
 	if r.FinalRoundState != nil && r.FinalRoundState.TimerEndsAt != nil {
 		r.FinalRoundState.TimerEndsAt = nil

@@ -58,8 +58,7 @@ func NewApp(cfg *config.Config, roomCache cache.Room, authController *myHttp.Aut
 	return &app{cfg, roomCache, authController, userController, packController, packDraftController, roomController, lobbyHandler, roomHandler, roomInternalEventsProcessorGetter}
 }
 
-// Start sets up background goroutines and returns the HTTP handler.
-// The caller is responsible for canceling ctx to stop background work.
+// Start launches background goroutines (stopped by cancelling ctx) and returns the HTTP handler.
 func (a *app) Start(ctx context.Context) http.Handler {
 	rooms, _ := a.roomCache.Get(ctx)
 	for _, room := range rooms {

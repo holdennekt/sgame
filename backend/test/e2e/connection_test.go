@@ -83,7 +83,6 @@ func TestWebSocketConnectRoom(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	// host connects via WS
 	client, err := testhelper.Dial(ctx, app.Server.URL, "/api/ws/room/"+roomId, hostSession)
 	require.NoError(t, err)
 	defer func() { _ = client.Close() }()

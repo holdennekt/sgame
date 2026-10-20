@@ -59,7 +59,6 @@ export default function ProfilePage({
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-5 sm:py-8 flex flex-col gap-5 sm:gap-6">
-      {/* Profile header */}
       {editing ? (
         <div className="border border-border rounded-lg p-5 bg-surface">
           <EditForm user={user} onDone={() => setEditing(false)} />
@@ -119,7 +118,6 @@ export default function ProfilePage({
         </div>
       )}
 
-      {/* Tabs */}
       {tabs.length > 0 && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-1 border-b border-border">

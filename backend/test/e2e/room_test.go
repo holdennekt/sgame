@@ -30,8 +30,7 @@ type roomActor struct {
 	ws      *testhelper.WSClient
 }
 
-// setupRoom creates a room with 3 guests, joins them, connects via WebSocket, and drains
-// the initial room_updated broadcast.
+// setupRoom creates a room with 3 guests connected over WebSocket and drains the initial room_updated.
 func setupRoom(t *testing.T) (app *testhelper.TestApp, host, p1, p2 roomActor, roomId string) {
 	t.Helper()
 	app = newApp(t)
@@ -62,7 +61,6 @@ func setupRoom(t *testing.T) (app *testhelper.TestApp, host, p1, p2 roomActor, r
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = p2WS.Close() })
 
-	// drain initial room_updated on each connection
 	hostWS.Expect(t, domain.RoomUpdated)
 	p1WS.Expect(t, domain.RoomUpdated)
 	p2WS.Expect(t, domain.RoomUpdated)
@@ -84,8 +82,6 @@ func broadcastExpect(t *testing.T, event domain.Event, actors ...roomActor) {
 	}
 }
 
-// ── TestRoomEventBroadcast ────────────────────────────────────────────────────
-
 func TestRoomEventBroadcast(t *testing.T) {
 	_, host, p1, p2, _ := setupRoom(t)
 	ctx := context.Background()
@@ -95,103 +91,91 @@ func TestRoomEventBroadcast(t *testing.T) {
 	broadcastExpect(t, domain.RoundDemo, host, p1, p2)
 }
 
-// ── TestFullGame ──────────────────────────────────────────────────────────────
-//
-// Drives every RoomState in the happy path + one wrong-answer detour:
-//
-//	WaitingForStart → SelectingQuestion
-//	→ RevealingQuestion → ShowingQuestion
-//	→ Answering (P1 wrong) → ShowingQuestion → Answering (P2 correct)
-//	→ SelectingQuestion → Passing → Answering (P1 correct)
-//	→ SelectingQuestion → Betting → Answering
-//	→ SelectingFinalRoundCategory → FinalRoundBetting
-//	→ ShowingFinalRoundQuestion → ValidatingFinalRoundAnswers → GameOver
+// TestFullGame drives every RoomState in the happy path plus one wrong-answer detour.
 func TestFullGame(t *testing.T) {
 	_, host, p1, p2, _ := setupRoom(t)
 	ctx := context.Background()
 
 	all := []roomActor{host, p1, p2}
 
-	// ── start_game → SelectingQuestion + RoundDemo ───────────────────────────
+	// start_game → SelectingQuestion + RoundDemo
 	require.NoError(t, host.ws.Send(ctx, domain.StartGame, struct{}{}))
 	drainUntilBroadcastState(t, domain.SelectingQuestion, all...)
 	broadcastExpect(t, domain.RoundDemo, all...)
 
-	// ── select Regular question → RevealingQuestion (after 5s question demo) ─
+	// select Regular question → RevealingQuestion (after 5s question demo)
 	require.NoError(t, host.ws.Send(ctx, domain.SelectQuestion, map[string]any{
 		"category": "General", "index": 0,
 	}))
 	broadcastExpect(t, domain.QuestionDemo, all...)
 	drainUntilBroadcastState(t, domain.RevealingQuestion, all...)
 
-	// ── reveal timer fires → ShowingQuestion [auto] ───────────────────────────
-	// "What is the answer?" = 20 chars @ 50 sym/s → ~400ms reveal
+	// reveal timer fires (20 chars @ 50 sym/s ≈ 400ms) → ShowingQuestion [auto]
 	drainUntilBroadcastState(t, domain.ShowingQuestion, all...)
 
-	// ── P1 submits → Answering ────────────────────────────────────────────────
+	// P1 submits → Answering
 	require.NoError(t, p1.ws.Send(ctx, domain.StartAnswer, struct{}{}))
 	drainUntilBroadcastState(t, domain.Answering, all...)
 
-	// ── host marks wrong → ShowingQuestion ───────────────────────────────────
+	// host marks wrong → ShowingQuestion
 	require.NoError(t, host.ws.Send(ctx, domain.ValidateAnswer, map[string]bool{"isCorrect": false}))
 	drainUntilBroadcastState(t, domain.ShowingQuestion, all...)
 
-	// ── P2 submits → Answering ────────────────────────────────────────────────
+	// P2 submits → Answering
 	require.NoError(t, p2.ws.Send(ctx, domain.StartAnswer, struct{}{}))
 	drainUntilBroadcastState(t, domain.Answering, all...)
 
-	// ── host marks correct → CorrectAnswerDemo → SelectingQuestion ───────────
+	// host marks correct → CorrectAnswerDemo → SelectingQuestion
 	require.NoError(t, host.ws.Send(ctx, domain.ValidateAnswer, map[string]bool{"isCorrect": true}))
 	expectEventAndState(t, domain.CorrectAnswerDemo, domain.SelectingQuestion, all...)
 
-	// ── select CatInBag → Passing (after question demo) ──────────────────────
+	// select CatInBag → Passing (after question demo)
 	require.NoError(t, host.ws.Send(ctx, domain.SelectQuestion, map[string]any{
 		"category": "General", "index": 1,
 	}))
 	broadcastExpect(t, domain.QuestionDemo, all...)
 	drainUntilBroadcastState(t, domain.Passing, all...)
 
-	// ── host passes to P1 → Answering ────────────────────────────────────────
+	// host passes to P1 → Answering
 	require.NoError(t, host.ws.Send(ctx, domain.PassQuestion, map[string]string{"passTo": p1.userId}))
 	drainUntilBroadcastState(t, domain.Answering, all...)
 
-	// ── host marks correct → CorrectAnswerDemo → SelectingQuestion ───────────
+	// host marks correct → CorrectAnswerDemo → SelectingQuestion
 	require.NoError(t, host.ws.Send(ctx, domain.ValidateAnswer, map[string]bool{"isCorrect": true}))
 	expectEventAndState(t, domain.CorrectAnswerDemo, domain.SelectingQuestion, all...)
 
-	// ── select Auction → Betting (after question demo) ────────────────────────
+	// select Auction → Betting (after question demo)
 	require.NoError(t, host.ws.Send(ctx, domain.SelectQuestion, map[string]any{
 		"category": "General", "index": 2,
 	}))
 	broadcastExpect(t, domain.QuestionDemo, all...)
 	drainUntilBroadcastState(t, domain.Betting, all...)
 
-	// ── both players bet → Answering ─────────────────────────────────────────
+	// both players bet → Answering
 	require.NoError(t, p1.ws.Send(ctx, domain.PlaceBet, map[string]int{"amount": 100}))
 	require.NoError(t, p2.ws.Send(ctx, domain.PlaceBet, map[string]int{"amount": 100}))
 	drainUntilBroadcastState(t, domain.Answering, all...)
 
-	// ── host marks correct → CorrectAnswerDemo → SelectingFinalRoundCategory ─
-	// (no more questions in round; server auto-starts final round)
+	// host marks correct → round exhausted, final round auto-starts → SelectingFinalRoundCategory
 	require.NoError(t, host.ws.Send(ctx, domain.ValidateAnswer, map[string]bool{"isCorrect": true}))
 	broadcastExpect(t, domain.CorrectAnswerDemo, all...)
 	drainUntilBroadcastState(t, domain.SelectingFinalRoundCategory, all...)
 
-	// ── remove one of two categories → 1 left → auto FinalRoundBetting ───────
+	// remove one of two categories → 1 left → auto FinalRoundBetting
 	require.NoError(t, host.ws.Send(ctx, domain.RemoveFinalRoundCategory, map[string]string{"category": "Final A"}))
 	drainUntilBroadcastState(t, domain.FinalRoundBetting, all...)
 
-	// ── both players place final round bets → ShowingFinalRoundQuestion ───────
+	// both players place final round bets → ShowingFinalRoundQuestion
 	require.NoError(t, p1.ws.Send(ctx, domain.PlaceFinalRoundBet, map[string]int{"amount": 100}))
 	require.NoError(t, p2.ws.Send(ctx, domain.PlaceFinalRoundBet, map[string]int{"amount": 100}))
 	drainUntilBroadcastState(t, domain.ShowingFinalRoundQuestion, all...)
 
-	// ── both submit final answer → timer expires → ValidatingFinalRoundAnswers ─
+	// both submit final answer → timer expires → ValidatingFinalRoundAnswers
 	require.NoError(t, p1.ws.Send(ctx, domain.SubmitFinalRoundAnswer, map[string]string{"answer": "anything"}))
 	require.NoError(t, p2.ws.Send(ctx, domain.SubmitFinalRoundAnswer, map[string]string{"answer": "anything"}))
 	drainUntilBroadcastState(t, domain.ValidatingFinalRoundAnswers, all...)
 
-	// ── host validates both → GameOver ────────────────────────────────────────
+	// host validates both → GameOver
 	require.NoError(t, host.ws.Send(ctx, domain.ValidateFinalRoundAnswer, map[string]bool{"isCorrect": true}))
 	require.NoError(t, host.ws.Send(ctx, domain.ValidateFinalRoundAnswer, map[string]bool{"isCorrect": true}))
 	drainUntilBroadcastState(t, domain.GameOver, all...)
@@ -199,8 +183,6 @@ func TestFullGame(t *testing.T) {
 
 	t.Log("TestFullGame: all 12 RoomStates exercised")
 }
-
-// ── helpers ──────────────────────────────────────────────────────────────────
 
 type playerRoomView struct {
 	State domain.RoomState `json:"state"`
@@ -213,9 +195,6 @@ func roomStateFromMsg(t *testing.T, msg message.Message) domain.RoomState {
 	return view.State
 }
 
-// drainUntilBroadcastState drains room_updated messages on each actor until
-// the target state is seen. Each Expect call has an internal timeout
-// which covers demo durations and timer-driven transitions.
 // expectEventAndState waits for an event and a room_updated carrying the given state, in either order.
 func expectEventAndState(t *testing.T, event domain.Event, state domain.RoomState, actors ...roomActor) {
 	t.Helper()

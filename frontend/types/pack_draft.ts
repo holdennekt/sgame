@@ -73,9 +73,7 @@ export function countIncompleteQuestions(draft: PackDraft): number {
   return count;
 }
 
-// Convert a PackDraft to the PackFormData shape used by PackEditor.
-// The draft structure mirrors Pack closely — the main difference is that
-// answers can be empty, which the editor handles fine.
+// Converts a PackDraft to PackFormData; drafts mirror Pack except that answers may be empty.
 export function convertDraftToFormData(draft: PackDraft): PackFormData {
   return convertPackToFormData({
     name: draft.name,

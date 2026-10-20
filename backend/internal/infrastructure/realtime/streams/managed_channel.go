@@ -22,17 +22,12 @@ type ManagedChannelGetter struct {
 	persistent bool
 }
 
-// NewManagedChannelGetter returns a getter for non-persistent stream channels.
-// Each subscriber always replays from "0-0" and the cursor is never written to
-// Redis — suitable for broadcast channels with many concurrent subscribers.
+// NewManagedChannelGetter is for broadcast channels: every subscriber replays from "0-0" and no cursor is stored.
 func NewManagedChannelGetter(client *redis.Client, manager *pubsub.Manager) *ManagedChannelGetter {
 	return &ManagedChannelGetter{client: client, manager: manager, persistent: false}
 }
 
-// NewPersistentManagedChannelGetter returns a getter for persistent stream channels.
-// The subscriber resumes from the Redis-stored cursor and writes it back on close
-// — suitable for single-subscriber channels (e.g. the internal events processor)
-// that must survive server restarts without replaying already-processed events.
+// NewPersistentManagedChannelGetter is for single-subscriber channels that resume from a Redis-stored cursor across restarts.
 func NewPersistentManagedChannelGetter(client *redis.Client, manager *pubsub.Manager) *ManagedChannelGetter {
 	return &ManagedChannelGetter{client: client, manager: manager, persistent: true}
 }
@@ -138,9 +133,7 @@ func (c *managedChannel) receiveLive(ctx context.Context) <-chan message.Message
 	return out
 }
 
-// receivePersistent replays from the stored messages via XRange, then
-// continues with live Pub/Sub messages. lastId is written to Redis after
-// every processed message
+// receivePersistent replays stored messages via XRange, then live ones, saving lastId after each.
 func (c *managedChannel) receivePersistent(ctx context.Context) <-chan message.Message {
 	out := make(chan message.Message, 64)
 	ctx, c.cancel = context.WithCancel(ctx)
@@ -232,8 +225,7 @@ func (c *managedChannel) Delete(ctx context.Context) error {
 	return nil
 }
 
-// streamIDLE reports whether stream ID a is less than or equal to b.
-// Stream IDs have the format "milliseconds-sequence".
+// streamIDLE reports whether stream ID a <= b (IDs are "milliseconds-sequence").
 func streamIDLE(a, b string) bool {
 	parse := func(id string) (uint64, uint64) {
 		ms, seq, _ := strings.Cut(id, "-")

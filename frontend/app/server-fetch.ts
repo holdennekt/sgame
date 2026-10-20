@@ -56,9 +56,7 @@ export const getDraft = async (id: string): Promise<PackDraft> => {
   return resp.json();
 };
 
-// Used for both members (already joined via the lobby) and spectators.
-// GET /rooms/:id returns the appropriate projection based on membership.
-// For private room spectators, password must be provided.
+// GET /rooms/:id returns the right projection for members and spectators; private-room spectators need the password.
 export const getRoom = async (
   id: string,
   password?: string

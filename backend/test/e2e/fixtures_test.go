@@ -12,12 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// insertTestPack inserts a minimal pack into the test Mongo database and returns its ID.
-// The pack has:
-//   - 1 round with 3 questions: Regular, CatInBag, Auction
-//   - 1 final round with 2 categories
-//
-// This covers every RoomState in TestFullGame.
+// insertTestPack inserts a pack covering every RoomState in TestFullGame (Regular, CatInBag, Auction + 2 final categories).
 func insertTestPack(t *testing.T, mongoURI string) string {
 	t.Helper()
 

@@ -292,9 +292,7 @@ type siqPendingUpload struct {
 	data []byte
 }
 
-// parseSIQ unzips r, parses content.xml, and returns a PackDraft with
-// fully-populated Attachment structs (status pending) plus the still-unsent
-// media bytes for the caller to upload once the draft has been persisted.
+// parseSIQ unzips r into a PackDraft with pending attachments, plus media bytes to upload once the draft is saved.
 func (s *PackDraftService) parseSIQ(r io.ReaderAt, size int64) (*domain.PackDraft, []siqPendingUpload, error) {
 	zr, err := zip.NewReader(r, size)
 	if err != nil {
@@ -361,7 +359,6 @@ func (s *PackDraftService) parseSIQ(r io.ReaderAt, size int64) (*domain.PackDraf
 		return att, data, nil
 	}
 
-	// Collect all unique media paths
 	mediaSet := make(map[string]struct{})
 	for _, r := range pkg.Rounds.Rounds {
 		for _, theme := range r.Themes.Themes {
@@ -393,7 +390,6 @@ func (s *PackDraftService) parseSIQ(r io.ReaderAt, size int64) (*domain.PackDraf
 		return nil, nil, siqTotalTooLargeErr()
 	}
 
-	// Read all media concurrently using a pool of up to 8 workers
 	type mediaResult struct {
 		path string
 		att  *domain.Attachment
