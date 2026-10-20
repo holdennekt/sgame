@@ -73,6 +73,7 @@ export default function SortableRound({
           className="flex-1 min-w-0 bg-transparent text-sm font-medium text-on-surface py-1.5 outline-none placeholder:text-on-surface-muted"
           value={round.name}
           placeholder="Round name"
+          maxLength={100}
           onChange={(e) => onRename(e.target.value)}
           readOnly={readOnly}
         />

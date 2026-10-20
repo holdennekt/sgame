@@ -158,6 +158,7 @@ export default function CategoryEditor({
           <input
             className="flex-1 min-w-0 h-9 px-2.5 bg-background border border-border text-on-background rounded-lg text-sm font-semibold outline-none focus-ring placeholder:text-on-surface-muted transition-[border-color] duration-150"
             placeholder="Category name"
+            maxLength={50}
             value={category.name}
             onChange={(e) => renameCategory(e.target.value)}
             readOnly={readOnly}
@@ -243,6 +244,7 @@ export default function CategoryEditor({
           className="w-full px-2.5 py-1.5 bg-background border border-border text-on-background rounded-lg text-sm outline-none focus-ring placeholder:text-on-surface-muted transition-[border-color] duration-150 resize-none"
           placeholder="Category comment (optional)"
           rows={2}
+          maxLength={250}
           value={category.comment}
           onChange={(e) => updateComment(e.target.value)}
           readOnly={readOnly}

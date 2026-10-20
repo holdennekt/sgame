@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Modal from "@/components/Modal";
-import { FinalRoundCategoryFormData } from "@/types/pack";
+import { FinalRoundCategoryFormData, hasAttachment } from "@/types/pack";
 import AttachmentEditor from "./AttachmentEditor";
 import { IoIosClose } from "react-icons/io";
 
@@ -59,8 +59,10 @@ export default function FinalRoundCategoryModal({
   const onSave = () => {
     if (!name || name.length > 25)
       return setError("Name must be between 1 and 25 characters long");
-    if (!text || text.length > 200)
-      return setError("Text must be between 1 and 200 characters long");
+    if (!text && !hasAttachment(attachment))
+      return setError("Text or attachment is required");
+    if (text.length > 1000)
+      return setError("Text must be under 1000 characters long");
     if (
       attachment.kind === "url" &&
       attachment.url &&
@@ -68,10 +70,11 @@ export default function FinalRoundCategoryModal({
     )
       return setError("Attachment URL is too long");
     if (!answers.length) return setError("At least 1 answer is required");
-    if (answers.some((a) => a.length > 200))
-      return setError("Answer must be under 200 characters long");
-    if (comment.text.length > 400)
-      return setError("Comment text must be under 400 characters long");
+    if (answers.length > 10) return setError("Maximum 10 answers");
+    if (answers.some((a) => a.length > 500))
+      return setError("Answer must be under 500 characters long");
+    if (comment.text.length > 1000)
+      return setError("Comment text must be under 1000 characters long");
     if (
       comment.attachment.kind === "url" &&
       comment.attachment.url &&
@@ -85,6 +88,7 @@ export default function FinalRoundCategoryModal({
 
   const addAnswer = () => {
     if (!answerInput.trim()) return;
+    if (answers.length >= 10) return;
     setAnswers((answers) => [...answers, answerInput.trim()]);
     setAnswerInput("");
   };
@@ -105,6 +109,7 @@ export default function FinalRoundCategoryModal({
               placeholder="Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              maxLength={25}
               required
               readOnly={readOnly}
             />
@@ -118,8 +123,7 @@ export default function FinalRoundCategoryModal({
               placeholder="Enter question text..."
               value={text}
               onChange={(e) => setText(e.target.value)}
-              maxLength={200}
-              required
+              maxLength={1000}
               readOnly={readOnly}
             />
           </div>
@@ -167,6 +171,7 @@ export default function FinalRoundCategoryModal({
                   placeholder="Add answer..."
                   value={answerInput}
                   onChange={(e) => setAnswerInput(e.target.value)}
+                  maxLength={500}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -199,7 +204,7 @@ export default function FinalRoundCategoryModal({
                     onChange={(e) =>
                       setComment((prev) => ({ ...prev, text: e.target.value }))
                     }
-                    maxLength={400}
+                    maxLength={1000}
                     readOnly={readOnly}
                   />
                 </div>

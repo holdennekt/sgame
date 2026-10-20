@@ -69,7 +69,7 @@ export default function QuestionModal({
       return setError("Value must be between 0 and 10000");
     if (text.length > 1000)
       return setError("Text must be under 1000 characters");
-    if (answers.length > 50) return setError("Maximum 50 answers");
+    if (answers.length > 10) return setError("Maximum 10 answers");
     if (answers.some((a) => a.length === 0))
       return setError("Answers cannot be empty");
     if (answers.some((a) => a.length > 500))
@@ -147,7 +147,7 @@ export default function QuestionModal({
               placeholder="Enter question text..."
               value={text}
               onChange={(e) => setText(e.target.value)}
-              maxLength={500}
+              maxLength={1000}
               readOnly={readOnly}
             />
           </div>
@@ -195,7 +195,7 @@ export default function QuestionModal({
                   placeholder="Add answer..."
                   value={answerInput}
                   onChange={(e) => setAnswerInput(e.target.value)}
-                  maxLength={100}
+                  maxLength={500}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -228,7 +228,7 @@ export default function QuestionModal({
                     onChange={(e) =>
                       setComment((prev) => ({ ...prev, text: e.target.value }))
                     }
-                    maxLength={500}
+                    maxLength={1000}
                     readOnly={readOnly}
                   />
                 </div>

@@ -423,6 +423,17 @@ export function* packAttachments(
   }
 }
 
+export function hasAttachment(a: AttachmentFormData): boolean {
+  switch (a.kind) {
+    case "existing":
+      return true;
+    case "file":
+      return !!a.file;
+    case "url":
+      return !!a.url;
+  }
+}
+
 function isPending(a: AttachmentFormData): boolean {
   return a.kind === "existing" && a.status === "pending";
 }

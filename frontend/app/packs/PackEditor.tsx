@@ -682,6 +682,7 @@ export default function PackEditor({
               }`}
               type="text"
               placeholder="Pack name"
+              maxLength={50}
               value={pack.name}
               onChange={(e) => setPack({ ...pack, name: e.target.value })}
               readOnly={readOnly}
