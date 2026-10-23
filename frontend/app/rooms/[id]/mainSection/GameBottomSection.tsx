@@ -91,18 +91,42 @@ export default function GameBottomSection() {
     case "validating_final_round_answers":
       return null;
 
-    default:
+    default: {
+      const questionOpen =
+        room.state === "revealing_question" ||
+        room.state === "showing_question";
+      const canAnswer =
+        questionOpen && allowedToAnswer && !room.pausedState.paused;
+      const label = canAnswer
+        ? "Answer"
+        : room.pausedState.paused
+          ? "Game paused"
+          : questionOpen
+            ? "You can't answer this question"
+            : "Waiting for a question";
+
       return (
         <div
-          className={`w-full h-12 rounded-md bg-primary text-on-primary focus:outline-none transition-colors duration-150 ${
-            room.pausedState.paused
-              ? "opacity-50 cursor-default"
-              : "hover:bg-primary-hover cursor-pointer"
+          role="button"
+          aria-disabled={!canAnswer}
+          aria-label={canAnswer ? "Answer (Space)" : label}
+          className={`w-full h-12 flex items-center justify-center gap-2 rounded-md text-sm font-medium focus:outline-none transition-[background-color,transform,filter] duration-150 ${
+            canAnswer
+              ? "bg-primary text-on-primary hover:bg-primary-hover focus:brightness-75 focus:scale-[0.99] cursor-pointer"
+              : "bg-surface-raised text-on-surface-muted cursor-default"
           }`}
           tabIndex={-1}
           ref={answerButton}
           onClick={startAnswer}
-        />
+        >
+          {label}
+          {canAnswer && (
+            <kbd className="px-1.5 py-0.5 rounded border border-on-primary/40 text-xs font-normal">
+              Space
+            </kbd>
+          )}
+        </div>
       );
+    }
   }
 }

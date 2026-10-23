@@ -31,6 +31,19 @@ export const config = {
   ],
 };
 
+const fetchUser = (request: NextRequest) =>
+  fetch(`http://${process.env.BACKEND_HOST}/api/user`, {
+    headers: { cookie: request.cookies.toString() },
+  });
+
+const rewriteWithUser = (request: NextRequest, userJson: string) => {
+  const clonedRequest = request.clone();
+  clonedRequest.headers.set(USER_HEADER_NAME, encodeURIComponent(userJson));
+  return NextResponse.rewrite(request.url.toString(), {
+    request: clonedRequest,
+  });
+};
+
 export async function middleware(request: NextRequest) {
   const sessionId = request.cookies.get(SESSION_ID_COOKIE_NAME)?.value;
 
@@ -42,14 +55,16 @@ export async function middleware(request: NextRequest) {
       (path.startsWith("/login") || path.startsWith("/register"))
     )
       return Response.redirect(new URL("/lobby", request.url));
+    if (sessionId) {
+      const resp = await fetchUser(request);
+      if (resp.ok) return rewriteWithUser(request, await resp.text());
+    }
     return NextResponse.next();
   }
 
   if (!sessionId) return Response.redirect(new URL("/login", request.url));
 
-  const resp = await fetch(`http://${process.env.BACKEND_HOST}/api/user`, {
-    headers: { cookie: request.cookies.toString() },
-  });
+  const resp = await fetchUser(request);
 
   if (!resp.ok) {
     const response = NextResponse.redirect(new URL("/login", request.url));
@@ -57,12 +72,5 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  const clonedRequest = request.clone();
-  clonedRequest.headers.set(
-    USER_HEADER_NAME,
-    encodeURIComponent(await resp.text())
-  );
-  return NextResponse.rewrite(request.url.toString(), {
-    request: clonedRequest,
-  });
+  return rewriteWithUser(request, await resp.text());
 }

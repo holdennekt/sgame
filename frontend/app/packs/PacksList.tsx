@@ -49,22 +49,13 @@ function PackCard({
       <div className="flex-1 min-w-0 flex flex-col gap-2">
         <div>
           <div className="flex items-center gap-1.5">
-            {isOwn ? (
-              <Link
-                className="text-base font-semibold text-on-surface hover:text-primary transition-colors duration-150 truncate"
-                href={`/packs/${pack.id}`}
-                title={pack.name}
-              >
-                {pack.name}
-              </Link>
-            ) : (
-              <span
-                className="text-base font-semibold text-on-surface truncate"
-                title={pack.name}
-              >
-                {pack.name}
-              </span>
-            )}
+            <Link
+              className="text-base font-semibold text-on-surface hover:text-primary transition-colors duration-150 truncate"
+              href={`/packs/${pack.id}`}
+              title={pack.name}
+            >
+              {pack.name}
+            </Link>
             <span className="shrink-0 text-on-surface-muted">
               {pack.type === "public" ? (
                 <FaGlobe size={11} />

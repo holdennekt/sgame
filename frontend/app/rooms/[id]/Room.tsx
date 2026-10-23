@@ -104,6 +104,31 @@ export default function RoomPage({
     startAnswer();
   };
 
+  const startAnswerRef = useRef(handleStartAnswer);
+  startAnswerRef.current = handleStartAnswer;
+
+  useEffect(() => {
+    const isTyping = (target: EventTarget | null) =>
+      target instanceof HTMLElement &&
+      target.closest("input, textarea, select, [contenteditable='true']") !==
+        null;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || isTyping(e.target)) return;
+      e.preventDefault();
+      answerButton.current?.focus();
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || isTyping(e.target)) return;
+      startAnswerRef.current();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
+
   return (
     <RoomProvider
       value={{
@@ -122,14 +147,6 @@ export default function RoomPage({
         className="flex flex-col md:flex-row gap-2 flex-1 min-w-0 min-h-0 p-2 focus:outline-none"
         tabIndex={-1}
         ref={mainContainer}
-        onKeyDown={(e) => {
-          if (e.code !== "Space") return;
-          answerButton.current?.focus();
-        }}
-        onKeyUp={(e) => {
-          if (e.code !== "Space") return;
-          handleStartAnswer();
-        }}
       >
         {/* Sidebar: room info + tabs (mobile) + chat */}
         <div

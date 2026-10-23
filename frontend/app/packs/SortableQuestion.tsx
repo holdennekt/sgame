@@ -56,12 +56,7 @@ function extType(path: string): "image" | "audio" | "video" | "other" {
 }
 
 type AttachmentTypeLabel =
-  | "image"
-  | "audio"
-  | "video"
-  | "other"
-  | "processing"
-  | "failed";
+  "image" | "audio" | "video" | "other" | "processing" | "failed";
 
 function attachmentType(att: AttachmentFormData): AttachmentTypeLabel | null {
   if (att.kind === "existing") {
@@ -163,9 +158,13 @@ export default function SortableQuestion({
   const metaItems: React.ReactNode[] = [];
   if (question.answers.length > 0)
     metaItems.push(
-      `${question.answers.length} ${
-        question.answers.length === 1 ? "answer" : "answers"
-      }`
+      <span
+        className="truncate max-w-[16rem] text-on-surface"
+        title={question.answers.join(" / ")}
+      >
+        {question.answers[0]}
+        {question.answers.length > 1 && ` +${question.answers.length - 1}`}
+      </span>
     );
   if (hasCommentText)
     metaItems.push(
@@ -199,6 +198,7 @@ export default function SortableQuestion({
         <button
           type="button"
           className={`${iconBtnCls} can-hover:opacity-0 group-hover:opacity-100 shrink-0 cursor-grab active:cursor-grabbing touch-none`}
+          aria-label="Reorder question"
           {...attributes}
           {...listeners}
           onClick={(e) => e.stopPropagation()}
@@ -208,7 +208,15 @@ export default function SortableQuestion({
       )}
       <div
         className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
+        role="button"
+        tabIndex={0}
         onClick={onOpen}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onOpen();
+          }
+        }}
       >
         <span
           className={`font-black text-primary w-12 shrink-0 leading-none tabular-nums text-center ${
@@ -250,6 +258,7 @@ export default function SortableQuestion({
             type="button"
             className={iconBtnCls}
             title="Duplicate question"
+            aria-label="Duplicate question"
             onClick={(e) => {
               e.stopPropagation();
               onDuplicate();
@@ -260,6 +269,8 @@ export default function SortableQuestion({
           <button
             type="button"
             className={dangerIconBtnCls}
+            title="Delete question"
+            aria-label="Delete question"
             onClick={(e) => {
               e.stopPropagation();
               onDelete();

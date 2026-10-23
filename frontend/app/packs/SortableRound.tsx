@@ -60,6 +60,7 @@ export default function SortableRound({
         <button
           type="button"
           className="p-0.5 text-on-surface-muted shrink-0"
+          aria-label="Toggle round"
           onClick={onToggleExpand}
         >
           <ChevronDown
@@ -90,6 +91,7 @@ export default function SortableRound({
             <button
               type="button"
               title="Duplicate round"
+              aria-label="Duplicate round"
               className={iconBtnCls}
               onClick={onDuplicate}
             >
@@ -98,6 +100,7 @@ export default function SortableRound({
             <button
               type="button"
               className={`${iconBtnCls} cursor-grab active:cursor-grabbing touch-none`}
+              aria-label="Reorder round"
               {...attributes}
               {...listeners}
               onClick={(e) => e.stopPropagation()}
@@ -107,6 +110,8 @@ export default function SortableRound({
             <button
               type="button"
               className={dangerIconBtnCls}
+              title="Delete round"
+              aria-label="Delete round"
               onClick={onDelete}
             >
               <FaTrashCan size={10} />

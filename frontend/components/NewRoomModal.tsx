@@ -184,6 +184,7 @@ export default function NewRoomModal({
                 className={inputCls}
                 type="text"
                 placeholder="Name"
+                aria-label="Room name"
                 name="name"
               />
             </div>
@@ -194,6 +195,7 @@ export default function NewRoomModal({
                 className={inputCls}
                 type="text"
                 placeholder="Search packs..."
+                aria-label="Pack"
                 value={pack.name}
                 onChange={(e) => onPackInputChange(e.target.value)}
                 onKeyDown={onPackKeyDown}
@@ -229,6 +231,7 @@ export default function NewRoomModal({
               <span className={labelCls}>Privacy</span>
               <div className="relative">
                 <select
+                  aria-label="Privacy"
                   className={selectCls}
                   value={privacyType}
                   onChange={(e) =>
@@ -251,6 +254,7 @@ export default function NewRoomModal({
                   className={inputCls}
                   type="text"
                   placeholder="Password"
+                  aria-label="Room password"
                   name="password"
                 />
               </div>
@@ -314,6 +318,7 @@ export default function NewRoomModal({
                 </div>
                 <input
                   type="range"
+                  aria-label={label}
                   min={min}
                   max={max}
                   value={value}
@@ -328,6 +333,7 @@ export default function NewRoomModal({
                 <span className={labelCls}>False Start</span>
                 <input
                   type="checkbox"
+                  aria-label="False Start"
                   checked={falseStartEnabled}
                   onChange={(e) => setFalseStartEnabled(e.target.checked)}
                   className="w-4 h-4 cursor-pointer accent-[var(--primary)]"
@@ -345,6 +351,7 @@ export default function NewRoomModal({
                 <span className={labelCls}>AI Host</span>
                 <input
                   type="checkbox"
+                  aria-label="AI Host"
                   checked={aiHost}
                   onChange={(e) => setAiHost(e.target.checked)}
                   className="w-4 h-4 cursor-pointer accent-[var(--primary)]"

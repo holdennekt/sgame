@@ -76,6 +76,7 @@ export default function SortableCategory({
           <button
             type="button"
             title="Duplicate category"
+            aria-label="Duplicate category"
             className={iconBtnCls}
             onClick={(e) => {
               e.stopPropagation();
@@ -87,12 +88,19 @@ export default function SortableCategory({
           <button
             type="button"
             className={`${iconBtnCls} cursor-grab active:cursor-grabbing touch-none`}
+            aria-label="Reorder category"
             {...attributes}
             {...listeners}
           >
             <RiDraggable size={11} />
           </button>
-          <button type="button" className={dangerIconBtnCls} onClick={onDelete}>
+          <button
+            type="button"
+            className={dangerIconBtnCls}
+            title="Delete category"
+            aria-label="Delete category"
+            onClick={onDelete}
+          >
             <FaTrashCan size={10} />
           </button>
         </div>

@@ -5,7 +5,6 @@ import { PackPreview } from "@/types/pack";
 import { useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import { FiEdit2, FiLogOut, FiTrash2 } from "react-icons/fi";
-import { useRouter } from "next/navigation";
 import { logout, deleteUser } from "@/app/api";
 import { isError } from "@/middleware";
 import { EditForm } from "./EditForm";
@@ -22,13 +21,12 @@ export default function ProfilePage({
   user: User;
   isOwn: boolean;
 }) {
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<Tab>("packs");
 
   const handleLogout = async () => {
     await logout();
-    router.push("/login");
+    window.location.assign("/login");
   };
 
   const handleDeleteAccount = async () => {
@@ -41,7 +39,7 @@ export default function ProfilePage({
       });
       return;
     }
-    router.push("/login");
+    window.location.assign("/login");
   };
   const [newRoomModal, setNewRoomModal] = useState<{
     isOpen: boolean;
@@ -54,8 +52,8 @@ export default function ProfilePage({
     isOwn && !user.isGuest
       ? ["packs", "history"]
       : user.isGuest
-      ? []
-      : ["packs"];
+        ? []
+        : ["packs"];
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-5 sm:py-8 flex flex-col gap-5 sm:gap-6">

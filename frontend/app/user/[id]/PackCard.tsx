@@ -20,18 +20,12 @@ export function PackCard({
     <div className="flex items-center gap-3 px-4 py-3 border border-border rounded-lg hover:border-primary/60 hover:bg-surface-raised/40 transition-colors duration-150">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
-          {isOwn ? (
-            <Link
-              href={`/packs/${pack.id}`}
-              className="font-medium text-on-surface hover:text-primary transition-colors truncate"
-            >
-              {pack.name}
-            </Link>
-          ) : (
-            <span className="font-medium text-on-surface truncate">
-              {pack.name}
-            </span>
-          )}
+          <Link
+            href={`/packs/${pack.id}`}
+            className="font-medium text-on-surface hover:text-primary transition-colors truncate"
+          >
+            {pack.name}
+          </Link>
           <span className="text-on-surface-muted shrink-0">
             {pack.type === "public" ? (
               <FaGlobe size={10} />
