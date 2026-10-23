@@ -173,3 +173,16 @@ func (a *TestApp) JoinRoom(t *testing.T, sessionCookie, roomId string) {
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode, "join room")
 }
+
+// GetJSON GETs an /api path as the given session; the caller closes the response body.
+func (a *TestApp) GetJSON(t *testing.T, sessionCookie, path string) *http.Response {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, a.Server.URL+path, nil)
+	require.NoError(t, err)
+	req.AddCookie(&http.Cookie{Name: SessionCookieName, Value: sessionCookie})
+
+	resp, err := a.Server.Client().Do(req)
+	require.NoError(t, err)
+	return resp
+}

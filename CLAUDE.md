@@ -118,6 +118,10 @@ Special question types alter the normal flow: **CatInBag** goes to `Passing`; **
 
 Timer-driven transitions (reveal timer, betting timer, pass timer) are triggered by `RoomInternalEventsProcessor`, which runs per room as a goroutine. On server restart, `app.Start()` recovers ownership of existing rooms from the cache and re-spawns these goroutines.
 
+### Game event log
+
+Domain methods in `room.go` call `r.emit(...)` (see `domain/game_event.go`); events buffer on the `Room` (unexported, not serialized) and `RoomCache.SafeUpdate` drains them into the Redis stream `room:{id}:log` (entry id `<seq>-0`) in the same `MULTI` as the state write, so rolled-back updates log nothing. `Room.EventSeq` is the sequence counter, stored in the room state. When a game ends, or a started game goes idle, `server.FlushEventLog` copies the stream to the Mongo `game_events` collection (one doc per event, unique `(roomId, seq)`, idempotent). Participants read it via `GET /api/rooms/history/:id/events`; the frontend renders it at `/games/[id]`. The log is capped at `domain.MaxGameEvents`. When adding a new state-changing domain method, emit an event from it.
+
 ### State Transition Diagram
 
 This diagram (and the precondition table below it) is verified directly against every `r.State =` assignment in `internal/domain/room.go` — not simplified. A few edges are easy to miss from reading the domain code casually: `RevealingQuestion → Answering` only exists when `Options.FalseStartAllowed` is true; a wrong answer can return to _either_ `RevealingQuestion` or `ShowingQuestion` depending on timing, not just `ShowingQuestion`; `SelectingFinalRoundCategory` is skipped entirely (straight to `FinalRoundBetting`) when the final round has exactly one category; and `FinalRoundBetting → GameOver` is reachable directly if nobody places a positive bet.

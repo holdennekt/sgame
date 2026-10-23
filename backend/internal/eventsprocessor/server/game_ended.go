@@ -18,10 +18,13 @@ func NewGameEndedMessage() message.Message {
 	return message.Message{Event: domain.GameEnded}
 }
 
-func HandleGameEndedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, lobbyServer realtime.Channel, roomCache cache.Room, roomRepository repository.Room, roomId string, idleRoomTTL time.Duration) error {
+func HandleGameEndedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, lobbyServer realtime.Channel, roomCache cache.Room, roomRepository repository.Room, eventRepository repository.GameEvent, roomId string, idleRoomTTL time.Duration) error {
 	room, err := roomCache.GetById(ctx, roomId)
 	if err != nil {
 		return err
+	}
+	if err := FlushEventLog(ctx, roomCache, eventRepository, roomId); err != nil {
+		slog.Error("error flushing game log", "err", err, "room_id", roomId)
 	}
 	now := time.Now()
 	room.FinishedAt = &now

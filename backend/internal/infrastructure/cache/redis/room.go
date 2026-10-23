@@ -12,8 +12,12 @@ import (
 	"github.com/holdennekt/sgame/backend/internal/domain"
 	"github.com/holdennekt/sgame/backend/internal/transport/http"
 	"github.com/holdennekt/sgame/backend/pkg/custerr"
+	"github.com/holdennekt/sgame/backend/pkg/metrics"
 	"github.com/redis/go-redis/v9"
+	"go.mongodb.org/mongo-driver/bson"
 )
+
+const eventLogField = "e"
 
 func getKey(id string) string {
 	return domain.ROOM_PREFIX + id + domain.STATE_POSTFIX
@@ -21,6 +25,10 @@ func getKey(id string) string {
 
 func getLockKey(id string) string {
 	return domain.ROOM_PREFIX + id + domain.STATE_POSTFIX + domain.LOCK_POSTFIX
+}
+
+func getEventLogKey(id string) string {
+	return domain.ROOM_PREFIX + id + domain.LOG_POSTFIX
 }
 
 func getSpectatorsKey(id string) string {
@@ -101,14 +109,53 @@ func (c *RoomCache) SafeUpdate(ctx context.Context, roomId string, updateFunc fu
 		return nil, err
 	}
 
-	if err := c.client.JSONSet(ctx, getKey(room.Id), "$", room).Err(); err != nil {
+	events := room.DrainEvents()
+	_, err = c.client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.JSONSet(ctx, getKey(room.Id), "$", room)
+		for _, event := range events {
+			encoded, err := bson.MarshalExtJSON(event, false, false)
+			if err != nil {
+				return err
+			}
+			pipe.XAdd(ctx, &redis.XAddArgs{
+				Stream: getEventLogKey(room.Id),
+				ID:     fmt.Sprintf("%d-0", event.Seq),
+				Values: map[string]any{eventLogField: string(encoded)},
+			})
+		}
+		return nil
+	})
+	if err != nil {
 		return nil, custerr.NewInternalErr(err)
+	}
+	for _, event := range events {
+		metrics.GameEventsLogged.WithLabelValues(string(event.Type)).Inc()
 	}
 	return room, nil
 }
 
+func (c *RoomCache) GetEvents(ctx context.Context, roomId string) ([]domain.GameEvent, error) {
+	entries, err := c.client.XRange(ctx, getEventLogKey(roomId), "-", "+").Result()
+	if err != nil {
+		return nil, custerr.NewInternalErr(err)
+	}
+	events := make([]domain.GameEvent, 0, len(entries))
+	for _, entry := range entries {
+		encoded, ok := entry.Values[eventLogField].(string)
+		if !ok {
+			return nil, custerr.NewInternalErr(fmt.Errorf("event log entry %s has no payload", entry.ID))
+		}
+		var event domain.GameEvent
+		if err := bson.UnmarshalExtJSON([]byte(encoded), false, &event); err != nil {
+			return nil, custerr.NewInternalErr(fmt.Errorf("decoding event log entry %s: %w", entry.ID, err))
+		}
+		events = append(events, event)
+	}
+	return events, nil
+}
+
 func (c *RoomCache) Delete(ctx context.Context, roomId string) error {
-	if err := c.client.Del(ctx, getKey(roomId), getLockKey(roomId), getSpectatorsKey(roomId), getOwnerKey(roomId)).Err(); err != nil {
+	if err := c.client.Del(ctx, getKey(roomId), getLockKey(roomId), getSpectatorsKey(roomId), getOwnerKey(roomId), getEventLogKey(roomId)).Err(); err != nil {
 		return custerr.NewInternalErr(err)
 	}
 	return nil
@@ -133,14 +180,24 @@ func (c *RoomCache) GetSpectatorCount(ctx context.Context, roomId string) (int, 
 }
 
 func (c *RoomCache) Expire(ctx context.Context, roomId string, duration time.Duration) error {
-	if err := c.client.Expire(ctx, getKey(roomId), duration).Err(); err != nil {
+	_, err := c.client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.Expire(ctx, getKey(roomId), duration)
+		pipe.Expire(ctx, getEventLogKey(roomId), duration)
+		return nil
+	})
+	if err != nil {
 		return custerr.NewInternalErr(err)
 	}
 	return nil
 }
 
 func (c *RoomCache) Persist(ctx context.Context, roomId string) error {
-	if err := c.client.Persist(ctx, getKey(roomId)).Err(); err != nil {
+	_, err := c.client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.Persist(ctx, getKey(roomId))
+		pipe.Persist(ctx, getEventLogKey(roomId))
+		return nil
+	})
+	if err != nil {
 		return custerr.NewInternalErr(err)
 	}
 	return nil

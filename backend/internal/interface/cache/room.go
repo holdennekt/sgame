@@ -12,6 +12,7 @@ type Room interface {
 	Get(ctx context.Context) ([]domain.RoomLobby, error)
 	Set(ctx context.Context, room *domain.Room) error
 	SafeUpdate(ctx context.Context, roomId string, updateFunc func(room *domain.Room) error) (*domain.Room, error)
+	GetEvents(ctx context.Context, roomId string) ([]domain.GameEvent, error)
 	Delete(ctx context.Context, roomId string) error
 	Expire(ctx context.Context, roomId string, duration time.Duration) error
 	Persist(ctx context.Context, roomId string) error

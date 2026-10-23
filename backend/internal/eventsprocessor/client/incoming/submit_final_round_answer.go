@@ -44,7 +44,7 @@ func HandleSubmitFinalRoundAnswerMessage(ctx context.Context, server realtime.Ch
 				playerId := *newRoom.CurrentPlayer
 				answer := newRoom.FinalRoundState.PlayersAnswers[playerId]
 				iQuestion := buildFinalRoundValidatorQuestion(*newRoom.FinalRoundState.Question)
-				isCorrect := resolveIsCorrect(validator, cfg, roomId, iQuestion, answer)
+				isCorrect, verdict := resolveIsCorrect(validator, cfg, roomId, iQuestion, answer)
 
 				finalCtx, finalCancel := context.WithTimeout(context.Background(), 5*time.Second)
 				newerRoom, err := roomCache.SafeUpdate(finalCtx, roomId, func(r *domain.Room) error {
@@ -52,7 +52,7 @@ func HandleSubmitFinalRoundAnswerMessage(ctx context.Context, server realtime.Ch
 					if validatingEnded {
 						return serverevent.ErrDeferredFunctionCancelled
 					}
-					return r.ValidateFinalRoundAnswer(domain.SYSTEM, isCorrect)
+					return r.ValidateFinalRoundAnswerSystem(isCorrect, verdict)
 				})
 				finalCancel()
 				if err != nil {

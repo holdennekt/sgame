@@ -37,6 +37,22 @@ var (
 		Help: "Total game events processed",
 	}, []string{"event", "direction"})
 
+	GameEventsLogged = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sgame_game_events_logged_total",
+		Help: "Game log events appended to the room log by type",
+	}, []string{"type"})
+
+	GameLogFlushDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "sgame_game_log_flush_duration_seconds",
+		Help:    "Time spent persisting a room's game log to the database",
+		Buckets: prometheus.DefBuckets,
+	})
+
+	GameLogFlushErrorsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "sgame_game_log_flush_errors_total",
+		Help: "Failed attempts to persist a room's game log",
+	})
+
 	AttachmentsProcessedTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "sgame_attachments_processed_total",
 		Help: "Total attachment notifications processed by outcome (ready, failed, skipped, dropped, retry)",

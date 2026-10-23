@@ -1455,6 +1455,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/rooms/history/{id}/events": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Returns the ordered event log of a finished game; only participants can view it",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rooms"
+                ],
+                "summary": "Get a finished game's event log",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Room ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.GameEventsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Not a participant of the game",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Game not found or has no log",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/rooms/{id}": {
             "get": {
                 "security": [
@@ -2309,6 +2367,97 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_holdennekt_sgame_backend_internal_domain.GameEvent": {
+            "type": "object",
+            "required": [
+                "at",
+                "seq",
+                "type"
+            ],
+            "properties": {
+                "actor": {
+                    "type": "string"
+                },
+                "at": {
+                    "type": "string"
+                },
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "seq": {
+                    "type": "integer"
+                },
+                "type": {
+                    "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.GameEventType"
+                }
+            }
+        },
+        "github_com_holdennekt_sgame_backend_internal_domain.GameEventType": {
+            "type": "string",
+            "enum": [
+                "player_joined",
+                "player_left",
+                "player_disconnected",
+                "player_reconnected",
+                "game_started",
+                "round_started",
+                "round_skipped",
+                "question_selected",
+                "passed",
+                "bet_placed",
+                "auction_won",
+                "buzzed",
+                "false_start",
+                "answer_submitted",
+                "answer_validated",
+                "question_ended",
+                "final_round_started",
+                "final_category_removed",
+                "final_category_chosen",
+                "final_bet_placed",
+                "final_question_started",
+                "final_answer_submitted",
+                "final_answer_validated",
+                "score_changed",
+                "player_banned",
+                "paused",
+                "unpaused",
+                "game_ended",
+                "log_truncated"
+            ],
+            "x-enum-varnames": [
+                "EventPlayerJoined",
+                "EventPlayerLeft",
+                "EventPlayerDisconnected",
+                "EventPlayerReconnected",
+                "EventGameStarted",
+                "EventRoundStarted",
+                "EventRoundSkipped",
+                "EventQuestionSelected",
+                "EventPassed",
+                "EventBetPlaced",
+                "EventAuctionWon",
+                "EventBuzzed",
+                "EventFalseStart",
+                "EventAnswerSubmitted",
+                "EventAnswerValidated",
+                "EventQuestionEnded",
+                "EventFinalRoundStarted",
+                "EventFinalCategoryRemoved",
+                "EventFinalCategoryChosen",
+                "EventFinalBetPlaced",
+                "EventFinalQuestionStarted",
+                "EventFinalAnswerSubmitted",
+                "EventFinalAnswerValidated",
+                "EventScoreChanged",
+                "EventPlayerBanned",
+                "EventPaused",
+                "EventUnpaused",
+                "EventGameEnded",
+                "EventLogTruncated"
+            ]
+        },
         "github_com_holdennekt_sgame_backend_internal_domain.HiddenCurrentQuestion": {
             "type": "object",
             "required": [
@@ -2688,6 +2837,7 @@ const docTemplate = `{
                 "currentQuestion",
                 "currentRoundName",
                 "currentRoundQuestions",
+                "eventSeq",
                 "finalRoundState",
                 "finishedAt",
                 "id",
@@ -2732,6 +2882,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.CategoryQuestions"
                     }
+                },
+                "eventSeq": {
+                    "type": "integer"
                 },
                 "finalRoundState": {
                     "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.FinalRoundState"
@@ -3450,6 +3603,20 @@ const docTemplate = `{
                 "error": {
                     "type": "string",
                     "example": "invalid password"
+                }
+            }
+        },
+        "github_com_holdennekt_sgame_backend_internal_dto.GameEventsResponse": {
+            "type": "object",
+            "required": [
+                "events"
+            ],
+            "properties": {
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_holdennekt_sgame_backend_internal_domain.GameEvent"
+                    }
                 }
             }
         },

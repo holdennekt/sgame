@@ -18,6 +18,7 @@ const (
 	OWNER_POSTFIX      = ":owner"
 	INTERNAL_POSTFIX   = ":internal"
 	SPECTATORS_POSTFIX = ":spectators"
+	LOG_POSTFIX        = ":log"
 
 	ExtraQuestionThinkingTime = time.Second
 	MaxPauseDuration          = time.Hour
@@ -42,6 +43,9 @@ type Room struct {
 	FinalRoundState       *FinalRoundState      `json:"finalRoundState" bson:"finalRoundState"`
 	PausedState           PausedState           `json:"pausedState" bson:"pausedState"`
 	FinishedAt            *time.Time            `json:"finishedAt" bson:"finishedAt"`
+	EventSeq              int                   `json:"eventSeq" bson:"eventSeq"`
+
+	pendingEvents []GameEvent
 }
 
 type RoomOptions struct {
@@ -165,6 +169,16 @@ func (r *Room) GetProjection(userId string, spectatorCount int) any {
 }
 
 func (r *Room) StartGame(pack *Pack) {
+	playerIds := make([]string, len(r.Players))
+	for i, p := range r.Players {
+		playerIds[i] = p.Id
+	}
+	r.emit(EventGameStarted, r.Moderator.Id, map[string]any{
+		"pack":       r.PackPreview.Name,
+		"players":    playerIds,
+		"aiHost":     r.Options.AIHost,
+		"falseStart": r.Options.FalseStartEnabled,
+	})
 	r.StartNextRegularRound(pack)
 	r.CurrentPlayer = &r.Players[rand.Intn(len(r.Players))].Id
 }
@@ -184,6 +198,7 @@ func (r *Room) StartNextRegularRound(pack *Pack) bool {
 		r.CurrentRoundName = &nextRound.Name
 		r.CurrentRoundQuestions = nextRound.getCurrentRoundQuestions()
 		r.State = SelectingQuestion
+		r.emit(EventRoundStarted, SYSTEM, map[string]any{"round": nextRound.Name, "index": nextRoundIndex})
 		return true
 	}
 	return false
@@ -219,6 +234,14 @@ func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index 
 
 	r.CurrentQuestion = &CurrentQuestion{Question: *question}
 	catQuestions.Questions[index].HasBeenPlayed = true
+	r.emit(EventQuestionSelected, userId, map[string]any{
+		"round":          question.Round,
+		"category":       question.Category,
+		"value":          question.Value,
+		"type":           string(question.Type),
+		"text":           question.Text,
+		"attachmentType": attachmentTypeOf(question.Attachment),
+	})
 
 	switch question.Type {
 	case Regular:
@@ -235,9 +258,9 @@ func (r *Room) SelectQuestion(userId string, pack *Pack, category string, index 
 			}
 		}
 		if len(canPassTo) == 0 {
-			r.startNonRegularQuestion(userId)
+			r.passTo(userId, *r.CurrentPlayer, userId, true)
 		} else if len(canPassTo) == 1 {
-			r.startNonRegularQuestion(canPassTo[0].Id)
+			r.passTo(userId, *r.CurrentPlayer, canPassTo[0].Id, true)
 		} else {
 			r.State = Passing
 			r.CurrentQuestion.PassingEndsAt = time.Now().Add(time.Duration(r.Options.TimeToPass) * time.Second)
@@ -286,6 +309,11 @@ func (r *Room) StartRegularQuestion() {
 	r.State = ShowingQuestion
 }
 
+func (r *Room) passTo(actor, from, to string, auto bool) {
+	r.emit(EventPassed, actor, map[string]any{"from": from, "to": to, "auto": auto})
+	r.startNonRegularQuestion(to)
+}
+
 func (r *Room) startNonRegularQuestion(allowedToAnswer string) {
 	r.CurrentPlayer = &allowedToAnswer
 	now := time.Now()
@@ -316,11 +344,22 @@ func (r *Room) StartAnswer(userId string) error {
 		r.AllowedToAnswer = slices.DeleteFunc(r.AllowedToAnswer, func(playerId string) bool {
 			return userId == playerId
 		})
+		r.emit(EventFalseStart, userId, map[string]any{"player": userId})
 		if len(r.AllowedToAnswer) == 0 {
-			r.EndQuestion()
+			r.EndQuestion(QuestionNobodyAnswered, SYSTEM)
 		}
 		return nil
 	}
+
+	phase := "showing"
+	if r.State == RevealingQuestion {
+		phase = "revealing"
+	}
+	r.emit(EventBuzzed, userId, map[string]any{
+		"player":           userId,
+		"phase":            phase,
+		"msFromTimerStart": now.Sub(r.CurrentQuestion.TimerStartsAt).Milliseconds(),
+	})
 
 	switch r.State {
 	case RevealingQuestion:
@@ -369,10 +408,20 @@ func (r *Room) SubmitAnswer(userId, answer string) error {
 	}
 	r.AnsweringPlayer.Answer = answer
 	r.AnsweringPlayer.TimerEndsAt = time.Now()
+	r.emit(EventAnswerSubmitted, userId, map[string]any{"player": userId, "answer": answer})
 	return nil
 }
 
 func (r *Room) ValidateAnswer(userId string, isCorrect bool) error {
+	return r.validateAnswer(userId, isCorrect, nil)
+}
+
+// ValidateAnswerSystem applies an AI host verdict.
+func (r *Room) ValidateAnswerSystem(isCorrect bool, verdict Verdict) error {
+	return r.validateAnswer(SYSTEM, isCorrect, &verdict)
+}
+
+func (r *Room) validateAnswer(userId string, isCorrect bool, verdict *Verdict) error {
 	if r.PausedState.Paused {
 		return custerr.NewConflictErr("game is paused")
 	}
@@ -393,14 +442,24 @@ func (r *Room) ValidateAnswer(userId string, isCorrect bool) error {
 	if betAmount := r.Players[playerIndex].BetAmount; betAmount != nil {
 		questionValue = *betAmount
 	}
-	if isCorrect {
-		r.Players[playerIndex].Score += questionValue
-	} else {
-		r.Players[playerIndex].Score -= questionValue
+	delta := questionValue
+	if !isCorrect {
+		delta = -questionValue
 	}
+	r.Players[playerIndex].Score += delta
 
-	if isCorrect || len(r.AllowedToAnswer) == 0 {
-		r.EndQuestion()
+	validated := validationSource(userId, verdict, r.AnsweringPlayer.Answer)
+	validated["player"] = r.AnsweringPlayer.Id
+	validated["answer"] = r.AnsweringPlayer.Answer
+	validated["correct"] = isCorrect
+	validated["delta"] = delta
+	validated["score"] = r.Players[playerIndex].Score
+	r.emit(EventAnswerValidated, userId, validated)
+
+	if isCorrect {
+		r.EndQuestion(QuestionAnswered, SYSTEM)
+	} else if len(r.AllowedToAnswer) == 0 {
+		r.EndQuestion(QuestionNobodyAnswered, SYSTEM)
 	} else {
 		r.continueRegularQuestion()
 	}
@@ -446,7 +505,7 @@ func (r *Room) PassQuestion(fromUserId string, toUserId string) error {
 		return custerr.NewConflictErr("can not pass question to disconnected player")
 	}
 
-	r.startNonRegularQuestion(toUserId)
+	r.passTo(fromUserId, *r.CurrentPlayer, toUserId, false)
 	return nil
 }
 
@@ -463,7 +522,7 @@ func (r *Room) PassQuestionAuto() {
 	} else {
 		passTo = canPassTo[rand.Intn(len(canPassTo))].Id
 	}
-	r.startNonRegularQuestion(passTo)
+	r.passTo(SYSTEM, *r.CurrentPlayer, passTo, true)
 }
 
 func (r *Room) PlaceBet(userId string, amount int) error {
@@ -486,6 +545,7 @@ func (r *Room) PlaceBet(userId string, amount int) error {
 	}
 
 	r.Players[playerIndex].BetAmount = &amount
+	r.emit(EventBetPlaced, userId, map[string]any{"player": userId, "amount": amount, "auto": false})
 
 	canBet := make([]Player, 0)
 	for _, p := range r.Players {
@@ -503,11 +563,7 @@ func (r *Room) PlaceBet(userId string, amount int) error {
 				playerMaxBet = p
 			}
 		}
-		if *playerMaxBet.BetAmount > 0 {
-			r.startNonRegularQuestion(playerMaxBet.Id)
-		} else {
-			r.EndQuestion()
-		}
+		r.finishBetting(playerMaxBet)
 	}
 	return nil
 }
@@ -523,6 +579,7 @@ func (r *Room) PlaceBetsAuto() {
 		if player.BetAmount == nil {
 			zero := 0
 			canBet[i].BetAmount = &zero
+			r.emit(EventBetPlaced, SYSTEM, map[string]any{"player": player.Id, "amount": 0, "auto": true})
 		}
 	}
 	playerMaxBet := canBet[0]
@@ -531,14 +588,27 @@ func (r *Room) PlaceBetsAuto() {
 			playerMaxBet = p
 		}
 	}
-	if *playerMaxBet.BetAmount > 0 {
-		r.startNonRegularQuestion(playerMaxBet.Id)
+	r.finishBetting(*playerMaxBet)
+}
+
+func (r *Room) finishBetting(highest Player) {
+	if *highest.BetAmount > 0 {
+		r.emit(EventAuctionWon, SYSTEM, map[string]any{"player": highest.Id, "amount": *highest.BetAmount})
+		r.startNonRegularQuestion(highest.Id)
 	} else {
-		r.EndQuestion()
+		r.EndQuestion(QuestionNoBets, SYSTEM)
 	}
 }
 
-func (r *Room) EndQuestion() {
+func (r *Room) EndQuestion(reason QuestionEndReason, actor string) {
+	ended := map[string]any{"reason": string(reason)}
+	if r.CurrentQuestion != nil {
+		ended["answers"] = r.CurrentQuestion.Answers
+	}
+	if reason == QuestionAnswered && r.AnsweringPlayer != nil {
+		ended["winner"] = r.AnsweringPlayer.Id
+	}
+	r.emit(EventQuestionEnded, actor, ended)
 	r.CurrentQuestion = nil
 	r.AnsweringPlayer = nil
 	r.AllowedToAnswer = make([]string, 0)
@@ -584,6 +654,7 @@ func (r *Room) StartFinalRound(pack *Pack, getAttachmentUrl func(key string) (st
 	}
 	r.CurrentPlayer = &r.FinalRoundState.Players[rand.Intn(len(r.FinalRoundState.Players))]
 	r.State = SelectingFinalRoundCategory
+	r.emit(EventFinalRoundStarted, SYSTEM, map[string]any{"players": finalRoundPlayers})
 
 	availableFinalCategories := r.GetAvailableFinalRoundCategories()
 	if len(availableFinalCategories) == 1 {
@@ -624,6 +695,7 @@ func (r *Room) RemoveFinalRoundCategory(pack *Pack, userId string, category stri
 	}
 
 	r.FinalRoundState.AvailableCategories[category] = false
+	r.emit(EventFinalCategoryRemoved, userId, map[string]any{"category": category})
 	playerIndex := slices.IndexFunc(r.FinalRoundState.Players, func(p string) bool {
 		return p == userId
 	})
@@ -654,6 +726,12 @@ func (r *Room) chooseFinalRoundCategory(pack *Pack, category string, getAttachme
 		}
 		r.FinalRoundState.Question.Attachment.URL = u
 	}
+	r.emit(EventFinalCategoryChosen, SYSTEM, map[string]any{
+		"category":       category,
+		"text":           r.FinalRoundState.Question.Text,
+		"attachmentType": attachmentTypeOf(r.FinalRoundState.Question.Attachment),
+		"answers":        r.FinalRoundState.Question.Answers,
+	})
 	r.CurrentPlayer = nil
 	r.State = FinalRoundBetting
 	bettingEndsAt := time.Now().Add(time.Duration(r.Options.TimeToBet) * time.Second)
@@ -685,6 +763,7 @@ func (r *Room) PlaceFinalRoundBet(userId string, amount int) error {
 	}
 
 	r.Players[playerIndex].BetAmount = &amount
+	r.emit(EventFinalBetPlaced, userId, map[string]any{"player": userId, "amount": amount, "auto": false})
 
 	allBet := !slices.ContainsFunc(r.Players, func(p Player) bool {
 		return slices.Contains(r.FinalRoundState.Players, p.Id) && p.BetAmount == nil
@@ -700,6 +779,9 @@ func (r *Room) PlaceFinalRoundBetsAuto() {
 		if r.Players[i].BetAmount == nil {
 			zero := 0
 			r.Players[i].BetAmount = &zero
+			if slices.Contains(r.FinalRoundState.Players, r.Players[i].Id) {
+				r.emit(EventFinalBetPlaced, SYSTEM, map[string]any{"player": r.Players[i].Id, "amount": 0, "auto": true})
+			}
 		}
 	}
 	r.startFinalRoundQuestion()
@@ -720,6 +802,7 @@ func (r *Room) startFinalRoundQuestion() {
 
 	r.FinalRoundState.Players = finalRoundPlayers
 	r.AllowedToAnswer = finalRoundPlayers
+	r.emit(EventFinalQuestionStarted, SYSTEM, map[string]any{"players": finalRoundPlayers})
 	r.FinalRoundState.PlayersAnswers = make(map[string]string)
 
 	duration := time.Duration(r.Options.QuestionThinkingTimeFinal) * time.Second
@@ -740,6 +823,7 @@ func (r *Room) SubmitFinalRoundAnswer(userId string, answer string) error {
 	}
 
 	r.FinalRoundState.PlayersAnswers[userId] = answer
+	r.emit(EventFinalAnswerSubmitted, userId, map[string]any{"player": userId, "answer": answer})
 	r.AllowedToAnswer = slices.DeleteFunc(r.AllowedToAnswer, func(playerId string) bool {
 		return userId == playerId
 	})
@@ -757,6 +841,15 @@ func (r *Room) EndFinalRoundQuestion() {
 }
 
 func (r *Room) ValidateFinalRoundAnswer(userId string, isCorrect bool) error {
+	return r.validateFinalRoundAnswer(userId, isCorrect, nil)
+}
+
+// ValidateFinalRoundAnswerSystem applies an AI host verdict.
+func (r *Room) ValidateFinalRoundAnswerSystem(isCorrect bool, verdict Verdict) error {
+	return r.validateFinalRoundAnswer(SYSTEM, isCorrect, &verdict)
+}
+
+func (r *Room) validateFinalRoundAnswer(userId string, isCorrect bool, verdict *Verdict) error {
 	if r.PausedState.Paused {
 		return custerr.NewConflictErr("game is paused")
 	}
@@ -773,12 +866,20 @@ func (r *Room) ValidateFinalRoundAnswer(userId string, isCorrect bool) error {
 	playerIndex := slices.IndexFunc(r.Players, func(p Player) bool {
 		return p.Id == *r.CurrentPlayer
 	})
-	betAmount := *r.Players[playerIndex].BetAmount
-	if isCorrect {
-		r.Players[playerIndex].Score += betAmount
-	} else {
-		r.Players[playerIndex].Score -= betAmount
+	delta := *r.Players[playerIndex].BetAmount
+	if !isCorrect {
+		delta = -delta
 	}
+	r.Players[playerIndex].Score += delta
+
+	answer := r.FinalRoundState.PlayersAnswers[*r.CurrentPlayer]
+	validated := validationSource(userId, verdict, answer)
+	validated["player"] = *r.CurrentPlayer
+	validated["answer"] = answer
+	validated["correct"] = isCorrect
+	validated["delta"] = delta
+	validated["score"] = r.Players[playerIndex].Score
+	r.emit(EventFinalAnswerValidated, userId, validated)
 
 	playerIndex = slices.IndexFunc(r.FinalRoundState.Players, func(p string) bool {
 		return p == *r.CurrentPlayer
@@ -804,7 +905,7 @@ func (r *Room) SkipQuestion(userId string) error {
 	if !r.IsUserModerator(userId) {
 		return custerr.NewForbiddenErr("not allowed to skip question")
 	}
-	r.EndQuestion()
+	r.EndQuestion(QuestionSkipped, userId)
 	return nil
 }
 
@@ -818,6 +919,7 @@ func (r *Room) SkipRound(userId string) error {
 	if r.State != SelectingQuestion {
 		return custerr.NewConflictErr("can not skip round now")
 	}
+	r.emit(EventRoundSkipped, userId, map[string]any{"round": r.CurrentRoundName})
 	return nil
 }
 
@@ -831,6 +933,7 @@ func (r *Room) ChangeScore(userId string, playerId string, score int) error {
 	if playerIndex == -1 {
 		return custerr.NewNotFoundErr(fmt.Sprintf("no player with id \"%s\" in room", playerId))
 	}
+	r.emit(EventScoreChanged, userId, map[string]any{"player": playerId, "from": r.Players[playerIndex].Score, "to": score})
 	r.Players[playerIndex].Score = score
 	return nil
 }
@@ -845,6 +948,7 @@ func (r *Room) BanPlayer(callerUserId, targetUserId string) error {
 	if r.IsUserBanned(targetUserId) {
 		return custerr.NewConflictErr("player is already banned")
 	}
+	r.emit(EventPlayerBanned, callerUserId, map[string]any{"player": targetUserId, "name": r.playerName(targetUserId)})
 	r.BanList = append(r.BanList, targetUserId)
 	r.Players = slices.DeleteFunc(r.Players, func(p Player) bool {
 		return p.Id == targetUserId
@@ -923,6 +1027,7 @@ func (r *Room) Pause(userId string) error {
 
 	r.PausedState.Paused = true
 	r.PausedState.PausedAt = &now
+	r.emit(EventPaused, userId, nil)
 	return nil
 }
 
@@ -938,6 +1043,7 @@ func (r *Room) Unpause(userId string) error {
 	r.PausedState.PausedAt = nil
 
 	r.shiftTimers(elapsed)
+	r.emit(EventUnpaused, userId, map[string]any{"auto": false})
 	return nil
 }
 
@@ -950,6 +1056,7 @@ func (r *Room) UnpauseSystem(pausedAt time.Time) error {
 	r.PausedState.PausedAt = nil
 
 	r.shiftTimers(elapsed)
+	r.emit(EventUnpaused, SYSTEM, map[string]any{"auto": true})
 	return nil
 }
 
@@ -963,4 +1070,5 @@ func (r *Room) EndGame() {
 		r.Players[pi].BetAmount = &newBetAmount
 	}
 	r.State = GameOver
+	r.emit(EventGameEnded, SYSTEM, map[string]any{"standings": r.standings()})
 }

@@ -1133,7 +1133,7 @@ func TestEndQuestion_ClearsAllFields(t *testing.T) {
 		r.Players[0].BetAmount = ptr(300)
 		r.Players[1].BetAmount = ptr(200)
 	})
-	r.EndQuestion()
+	r.EndQuestion(QuestionSkipped, "host1")
 	assert.Equal(t, SelectingQuestion, r.State)
 	assert.Nil(t, r.CurrentQuestion)
 	assert.Nil(t, r.AnsweringPlayer)

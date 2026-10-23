@@ -28,7 +28,7 @@ func NewUserDisconnectedMessage(userId string) message.Message {
 	return message.Message{Event: domain.UserDisconnected, Payload: payload}
 }
 
-func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, lobbyServer realtime.Channel, roomCache cache.Room, roomRepository repository.Room, roomId string, msg message.Message, idleRoomTTL time.Duration) error {
+func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel, internalServer realtime.Channel, lobbyServer realtime.Channel, roomCache cache.Room, roomRepository repository.Room, eventRepository repository.GameEvent, roomId string, msg message.Message, idleRoomTTL time.Duration) error {
 	var udp userDisconnectedPayload
 	if err := json.Unmarshal(msg.Payload, &udp); err != nil {
 		return err
@@ -43,6 +43,11 @@ func HandleUserDisconnectedMessage(ctx context.Context, server realtime.Channel,
 		return p.IsConnected
 	})
 	if !isModeratorConnected && connectedPlayerIndex == -1 {
+		if room.State != domain.WaitingForStart && room.State != domain.GameOver {
+			if err := FlushEventLog(ctx, roomCache, eventRepository, roomId); err != nil {
+				slog.Error("error flushing game log", "err", err, "room_id", roomId)
+			}
+		}
 		if err := roomCache.Expire(ctx, roomId, idleRoomTTL); err != nil {
 			return err
 		}

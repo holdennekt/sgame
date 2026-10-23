@@ -11,3 +11,7 @@ type CreateRoomRequest struct {
 type CreateRoomResponse struct {
 	Id string `json:"id" example:"507f1f77bcf86cd799439011"`
 }
+
+type GameEventsResponse struct {
+	Events []domain.GameEvent `json:"events"`
+}

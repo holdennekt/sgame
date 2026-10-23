@@ -23,6 +23,7 @@ const UPDATE_ROOM_RETRIES = 3
 type RoomService struct {
 	packRepository                    repository.Pack
 	roomRepository                    repository.Room
+	eventRepository                   repository.GameEvent
 	roomCache                         cache.Room
 	lobbyChannelGetter                realtime.ChannelGetter
 	roomChannelGetter                 realtime.ChannelGetter
@@ -32,8 +33,8 @@ type RoomService struct {
 	answerValidator                   ivalidator.AnswerValidator
 }
 
-func NewRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter, cfg *config.Config, answerValidator ivalidator.AnswerValidator) *RoomService {
-	return &RoomService{packRepository, roomRepository, roomCache, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomInternalEventsProcessorGetter, cfg, answerValidator}
+func NewRoomService(packRepository repository.Pack, roomRepository repository.Room, eventRepository repository.GameEvent, roomCache cache.Room, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter, cfg *config.Config, answerValidator ivalidator.AnswerValidator) *RoomService {
+	return &RoomService{packRepository, roomRepository, eventRepository, roomCache, lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter, roomInternalEventsProcessorGetter, cfg, answerValidator}
 }
 
 func (s *RoomService) Create(ctx context.Context, userId string, crr dto.CreateRoomRequest) (string, error) {
@@ -127,6 +128,24 @@ func (s *RoomService) GetHistory(ctx context.Context, userId string, search dto.
 	return s.roomRepository.GetByParticipant(ctx, userId, search)
 }
 
+func (s *RoomService) GetGameEvents(ctx context.Context, userId, roomId string) ([]domain.GameEvent, error) {
+	room, err := s.roomRepository.GetById(ctx, roomId)
+	if err != nil {
+		return nil, err
+	}
+	if !room.IsUserIn(userId) {
+		return nil, custerr.NewForbiddenErr("not allowed to view this game's log")
+	}
+	events, err := s.eventRepository.GetByRoom(ctx, roomId)
+	if err != nil {
+		return nil, err
+	}
+	if len(events) == 0 {
+		return nil, custerr.NewNotFoundErr("no log recorded for this game")
+	}
+	return events, nil
+}
+
 func (s *RoomService) Join(ctx context.Context, user domain.User, id, password string) (any, error) {
 	room, err := s.roomCache.GetById(ctx, id)
 	if err != nil {
@@ -159,8 +178,10 @@ func (s *RoomService) Join(ctx context.Context, user domain.User, id, password s
 				// In AI mode the moderator also plays, so they occupy a player slot.
 				room.Players = append(room.Players, domain.Player{User: user})
 			}
+			room.RecordJoined(user, "moderator")
 		} else {
 			room.Players = append(room.Players, domain.Player{User: user})
+			room.RecordJoined(user, "player")
 		}
 		return nil
 	})
@@ -190,6 +211,7 @@ func (s *RoomService) Leave(ctx context.Context, userId, id string) error {
 			return custerr.NewConflictErr("cannot leave ongoing game")
 		}
 
+		room.RecordLeft(userId)
 		if room.IsUserModerator(userId) {
 			if room.Options.AIHost {
 				room.Players = slices.DeleteFunc(room.Players, func(p domain.Player) bool {
@@ -240,13 +262,7 @@ func (s *RoomService) Connect(ctx context.Context, userId, roomId string) (*doma
 	}
 
 	return s.roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
-		if room.IsUserModerator(userId) {
-			room.Moderator.IsConnected = true
-		}
-		playerIndex := room.UsersPlayerIndex(userId)
-		if playerIndex != -1 {
-			room.Players[playerIndex].IsConnected = true
-		}
+		room.SetConnected(userId, true)
 		return nil
 	})
 }
@@ -266,13 +282,7 @@ func (s *RoomService) Disconnect(ctx context.Context, userId, roomId string) (*d
 	}
 
 	return s.roomCache.SafeUpdate(ctx, roomId, func(room *domain.Room) error {
-		if room.IsUserModerator(userId) {
-			room.Moderator.IsConnected = false
-		}
-		playerIndex := room.UsersPlayerIndex(userId)
-		if playerIndex != -1 {
-			room.Players[playerIndex].IsConnected = false
-		}
+		room.SetConnected(userId, false)
 		return nil
 	})
 }

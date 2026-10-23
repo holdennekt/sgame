@@ -52,7 +52,7 @@ func HandleSubmitAnswerMessage(ctx context.Context, server realtime.Channel, int
 
 	go func() {
 		iQuestion := buildValidatorQuestion(question)
-		isCorrect := resolveIsCorrect(validator, cfg, roomId, iQuestion, sap.Answer)
+		isCorrect, verdict := resolveIsCorrect(validator, cfg, roomId, iQuestion, sap.Answer)
 
 		finalCtx, finalCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		newRoom, err := roomCache.SafeUpdate(finalCtx, roomId, func(room *domain.Room) error {
@@ -66,7 +66,7 @@ func HandleSubmitAnswerMessage(ctx context.Context, server realtime.Channel, int
 			if room.CurrentQuestion != nil {
 				question = room.CurrentQuestion.Question
 			}
-			return room.ValidateAnswer(domain.SYSTEM, isCorrect)
+			return room.ValidateAnswerSystem(isCorrect, verdict)
 		})
 		finalCancel()
 
@@ -101,9 +101,9 @@ func isExactMatch(correctAnswers []string, playerAnswer string) bool {
 }
 
 // resolveIsCorrect checks for an exact match before falling back to the AI validator.
-func resolveIsCorrect(validator ivalidator.AnswerValidator, cfg *config.Config, roomId string, iQuestion ivalidator.Question, playerAnswer string) bool {
+func resolveIsCorrect(validator ivalidator.AnswerValidator, cfg *config.Config, roomId string, iQuestion ivalidator.Question, playerAnswer string) (bool, domain.Verdict) {
 	if isExactMatch(iQuestion.CorrectAnswers, playerAnswer) {
-		return true
+		return true, domain.Verdict{Method: domain.VerdictExact, Confidence: 1}
 	}
 
 	timeout := time.Duration(cfg.AIValidationTimeout) * time.Second
@@ -113,7 +113,7 @@ func resolveIsCorrect(validator ivalidator.AnswerValidator, cfg *config.Config, 
 	result, err := validator.Validate(aiCtx, iQuestion, playerAnswer)
 	if err != nil {
 		slog.Error("AI validation failed, defaulting to wrong answer", "err", err, "room_id", roomId)
-		return false
+		return false, domain.Verdict{Method: domain.VerdictError}
 	}
 	slog.Info("AI validation result",
 		"room_id", roomId,
@@ -122,7 +122,7 @@ func resolveIsCorrect(validator ivalidator.AnswerValidator, cfg *config.Config, 
 		"is_correct", result.IsCorrect,
 		"confidence", result.Confidence,
 	)
-	return result.IsCorrect
+	return result.IsCorrect, domain.Verdict{Method: domain.VerdictAI, Confidence: result.Confidence}
 }
 
 func buildValidatorQuestion(question domain.Question) ivalidator.Question {

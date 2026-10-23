@@ -221,6 +221,7 @@ type RoomInternalEventsProcessor struct {
 	roomInternalServer realtime.Channel
 	roomCache          cache.Room
 	roomRepository     repository.Room
+	eventRepository    repository.GameEvent
 	storage            storage.Storage
 	id                 string
 	pack               *domain.Pack
@@ -229,7 +230,7 @@ type RoomInternalEventsProcessor struct {
 
 type RoomInternalEventsProcessorGetter func(id string) (*RoomInternalEventsProcessor, error)
 
-func NewRoomInternalEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ChannelGetter, roomCache cache.Room, roomRepository repository.Room, packRepository repository.Pack, storage storage.Storage, cfg *config.Config) RoomInternalEventsProcessorGetter {
+func NewRoomInternalEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter, roomInternalChannelGetter realtime.ChannelGetter, roomCache cache.Room, roomRepository repository.Room, eventRepository repository.GameEvent, packRepository repository.Pack, storage storage.Storage, cfg *config.Config) RoomInternalEventsProcessorGetter {
 	return func(id string) (*RoomInternalEventsProcessor, error) {
 		room, err := roomCache.GetById(context.Background(), id)
 		if err != nil {
@@ -245,6 +246,7 @@ func NewRoomInternalEventsProcessorGetter(lobbyChannelGetter, roomChannelGetter,
 			roomInternalServer: roomInternalChannelGetter.Get(domain.ROOM_PREFIX + id + domain.INTERNAL_POSTFIX),
 			roomCache:          roomCache,
 			roomRepository:     roomRepository,
+			eventRepository:    eventRepository,
 			storage:            storage,
 			id:                 id,
 			pack:               pack,
@@ -319,9 +321,9 @@ func (p *RoomInternalEventsProcessor) handleMessage(ctx context.Context, msg mes
 	case domain.FinalRoundQuestionStarted:
 		return server.HandleFinalRoundQuestionStartedMessage(ctx, p.roomServer, p.roomCache, p.id)
 	case domain.GameEnded:
-		return server.HandleGameEndedMessage(ctx, p.roomServer, p.roomInternalServer, p.lobbyServer, p.roomCache, p.roomRepository, p.id, time.Duration(p.cfg.IdleRoomTTL)*time.Second)
+		return server.HandleGameEndedMessage(ctx, p.roomServer, p.roomInternalServer, p.lobbyServer, p.roomCache, p.roomRepository, p.eventRepository, p.id, time.Duration(p.cfg.IdleRoomTTL)*time.Second)
 	case domain.UserDisconnected:
-		return server.HandleUserDisconnectedMessage(ctx, p.roomServer, p.roomInternalServer, p.lobbyServer, p.roomCache, p.roomRepository, p.id, msg, time.Duration(p.cfg.IdleRoomTTL)*time.Second)
+		return server.HandleUserDisconnectedMessage(ctx, p.roomServer, p.roomInternalServer, p.lobbyServer, p.roomCache, p.roomRepository, p.eventRepository, p.id, msg, time.Duration(p.cfg.IdleRoomTTL)*time.Second)
 	case domain.RoomDeleted:
 		slog.Info("internal room server got room_deleted event")
 		_ = p.lobbyServer.Close()

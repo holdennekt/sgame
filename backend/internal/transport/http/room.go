@@ -25,6 +25,7 @@ func (c *RoomController) RegisterRoutes(r *gin.RouterGroup) {
 	rooms.POST("/", c.create)
 	rooms.GET("/", c.get)
 	rooms.GET("/history", c.getHistory)
+	rooms.GET("/history/:id/events", c.getGameEvents)
 	rooms.GET("/:id", c.getProjection)
 	rooms.PATCH("/:id/join", c.join)
 	rooms.PATCH("/:id/leave", c.leave)
@@ -198,4 +199,28 @@ func (c *RoomController) getHistory(ctx *gin.Context) {
 		PageSize: query.Limit,
 		HasNext:  query.Page*query.Limit < total,
 	})
+}
+
+// @Summary      Get a finished game's event log
+// @Description  Returns the ordered event log of a finished game; only participants can view it
+// @Tags         rooms
+// @Produce      json
+// @Param        id   path      string  true  "Room ID"
+// @Success      200  {object}  dto.GameEventsResponse
+// @Failure      401  {object}  dto.ErrorResponse "Unauthorized"
+// @Failure      403  {object}  dto.ErrorResponse "Not a participant of the game"
+// @Failure      404  {object}  dto.ErrorResponse "Game not found or has no log"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Security     CookieAuth
+// @Router       /rooms/history/{id}/events [get]
+func (c *RoomController) getGameEvents(ctx *gin.Context) {
+	userId := ctx.MustGet(USER_CONTEXT_KEY).(domain.User).Id
+
+	events, err := c.roomService.GetGameEvents(ctx, userId, ctx.Param("id"))
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.GameEventsResponse{Events: events})
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { FiList } from "react-icons/fi";
 import { GameHistoryEntry } from "@/types/room";
 
 function formatDate(iso: string) {
@@ -68,6 +69,13 @@ export function HistoryCard({ entry }: { entry: GameHistoryEntry }) {
           </div>
         ))}
       </div>
+      <Link
+        href={`/games/${entry.id}`}
+        className="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-on-surface-muted hover:text-primary transition-colors duration-150"
+      >
+        <FiList size={13} />
+        Game log
+      </Link>
     </div>
   );
 }

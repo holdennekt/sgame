@@ -31,6 +31,8 @@ var RepoSet = wire.NewSet(
 	wire.Bind(new(repository.User), new(*mongoDatabase.UserRepository)),
 	mongoDatabase.NewRoomRepository,
 	wire.Bind(new(repository.Room), new(*mongoDatabase.RoomRepository)),
+	mongoDatabase.NewGameEventRepository,
+	wire.Bind(new(repository.GameEvent), new(*mongoDatabase.GameEventRepository)),
 	mongoDatabase.NewPackRepository,
 	wire.Bind(new(repository.Pack), new(*mongoDatabase.PackRepository)),
 	mongoDatabase.NewPackDraftRepository,
@@ -112,12 +114,12 @@ func provideRoomEventsProcessorGetter(roomCache cache.Room, roomRepo repository.
 	return eventsprocessor.NewRoomEventsProcessorGetter(pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomCache, roomRepo, packRepo, compressedStorage.Storage, cfg, validator, roomService.Disconnect)
 }
 
-func provideRoomInternalEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, packRepo repository.Pack, compressedStorage storage.Compressed, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentGetter StreamsPersistentChannelGetter, cfg *config.Config) eventsprocessor.RoomInternalEventsProcessorGetter {
-	return eventsprocessor.NewRoomInternalEventsProcessorGetter(pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomCache, roomRepo, packRepo, compressedStorage.Storage, cfg)
+func provideRoomInternalEventsProcessorGetter(roomCache cache.Room, roomRepo repository.Room, eventRepo repository.GameEvent, packRepo repository.Pack, compressedStorage storage.Compressed, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentGetter StreamsPersistentChannelGetter, cfg *config.Config) eventsprocessor.RoomInternalEventsProcessorGetter {
+	return eventsprocessor.NewRoomInternalEventsProcessorGetter(pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomCache, roomRepo, eventRepo, packRepo, compressedStorage.Storage, cfg)
 }
 
-func provideRoomService(packRepository repository.Pack, roomRepository repository.Room, roomCache cache.Room, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentGetter StreamsPersistentChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter, cfg *config.Config, validator ivalidator.AnswerValidator) *service.RoomService {
-	return service.NewRoomService(packRepository, roomRepository, roomCache, pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomInternalEventsProcessorGetter, cfg, validator)
+func provideRoomService(packRepository repository.Pack, roomRepository repository.Room, eventRepository repository.GameEvent, roomCache cache.Room, pubsubGetter PubSubChannelGetter, streamsGetter StreamsChannelGetter, persistentGetter StreamsPersistentChannelGetter, roomInternalEventsProcessorGetter eventsprocessor.RoomInternalEventsProcessorGetter, cfg *config.Config, validator ivalidator.AnswerValidator) *service.RoomService {
+	return service.NewRoomService(packRepository, roomRepository, eventRepository, roomCache, pubsubGetter.ChannelGetter, streamsGetter.ChannelGetter, persistentGetter.ChannelGetter, roomInternalEventsProcessorGetter, cfg, validator)
 }
 
 var ServiceSet = wire.NewSet(

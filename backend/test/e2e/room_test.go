@@ -93,7 +93,7 @@ func TestRoomEventBroadcast(t *testing.T) {
 
 // TestFullGame drives every RoomState in the happy path plus one wrong-answer detour.
 func TestFullGame(t *testing.T) {
-	_, host, p1, p2, _ := setupRoom(t)
+	app, host, p1, p2, roomId := setupRoom(t)
 	ctx := context.Background()
 
 	all := []roomActor{host, p1, p2}
@@ -180,6 +180,8 @@ func TestFullGame(t *testing.T) {
 	require.NoError(t, host.ws.Send(ctx, domain.ValidateFinalRoundAnswer, map[string]bool{"isCorrect": true}))
 	drainUntilBroadcastState(t, domain.GameOver, all...)
 	broadcastExpect(t, domain.RoomDeleted, all...)
+
+	assertFullGameLog(t, app, roomId, host, p1, p2)
 
 	t.Log("TestFullGame: all 12 RoomStates exercised")
 }

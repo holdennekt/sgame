@@ -51,7 +51,7 @@ func HandleQuestionStartedMessage(ctx context.Context, server realtime.Channel, 
 				return ErrDeferredFunctionCancelled
 			}
 
-			newRoom.EndQuestion()
+			newRoom.EndQuestion(domain.QuestionNobodyAnswered, domain.SYSTEM)
 			return nil
 		})
 		if err != nil {

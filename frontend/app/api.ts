@@ -12,6 +12,7 @@ import {
   RoomLobby,
 } from "@/types/room";
 import { SearchResponse } from "@/types/search";
+import { GameEventsResponse } from "@/types/game_event";
 import { User } from "@/middleware";
 
 const PAGE_QUERY_PARAM = "page";
@@ -148,6 +149,19 @@ export const getGameHistory = async (
   if (page) url.searchParams.set(PAGE_QUERY_PARAM, page.toString());
   const resp = await fetch(url, { cache: "no-store" });
   if (!resp.ok) throw await resp.json();
+  return resp.json();
+};
+
+export const getGameEvents = async (
+  id: string
+): Promise<GameEventsResponse> => {
+  const resp = await fetch(`/api/rooms/history/${id}/events`, {
+    cache: "no-store",
+  });
+  if (!resp.ok) {
+    const body = (await resp.json().catch(() => ({}))) as object;
+    throw { ...body, status: resp.status };
+  }
   return resp.json();
 };
 
